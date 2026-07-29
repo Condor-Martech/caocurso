@@ -1,0 +1,80 @@
+---
+import '../styles/global.css';
+import { SITE } from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Mês Pet Condor | Adote um AuMigo e inscreva seu pet no Cãocurso',
+  description = SITE.descricao,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#F09624" />
+    <link rel="icon" type="image/png" href="/assets/images/Selo.png" />
+
+    <!-- La fuente de marca es crítica para el render: precargar los pesos usados -->
+    <link
+      rel="preload"
+      href="/fonts/torus-700.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/torus-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={SITE.url} />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:image" content="/assets/images/Selo.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Marca que hay JS ANTES de pintar: sin esto, .reveal no oculta nada y el
+         contenido es visible aunque el IntersectionObserver nunca se dispare. -->
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+
+  <body>
+    <a href="#conteudo" class="sr-only">Pular para o conteúdo</a>
+    <slot />
+
+    <script>
+      // Scroll reveal — respeta prefers-reduced-motion vía la clase .reveal en CSS
+      const alvos = document.querySelectorAll('.reveal');
+      if (alvos.length) {
+        const io = new IntersectionObserver(
+          (entradas) => {
+            for (const e of entradas) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { threshold: 0.12 }
+        );
+        alvos.forEach((el) => io.observe(el));
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+---
+import { atracoes } from '../data/site';
+
+/**
+ * ATRAÇÕES — el título vive en un panel naranja claro; debajo, 3 cards blancas.
+ */
+---
+
+<section class="bg-[var(--c-orange)] pb-12 md:pb-16">
+  <div class="container-lp">
+    <div
+      class="mx-auto max-w-4xl rounded-3xl bg-[var(--c-orange-lite)] px-6 py-6 md:px-12"
+    >
+      <h2 class="text-center text-2xl font-bold text-[var(--c-blue)] sm:text-3xl">
+        Confira as outras atrações disponíveis:
+      </h2>
+    </div>
+
+    <ul class="mx-auto mt-8 grid max-w-4xl grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+      {
+        atracoes.map((a) => (
+          <li class="card-branca reveal flex flex-col items-center gap-1.5 rounded-2xl bg-white px-2 py-4 text-center shadow-md sm:gap-2 sm:px-4 sm:py-6">
+            <img
+              src={a.icone}
+              alt=""
+              aria-hidden="true"
+              class="h-9 w-9 object-contain sm:h-12 sm:w-12"
+              loading="lazy"
+            />
+            <p class="text-xs leading-tight font-bold text-[var(--c-blue)] sm:text-base">
+              {a.titulo}
+            </p>
+            <p class="text-[11px] leading-snug text-[var(--c-blue)] sm:text-sm">
+              {a.descricao}
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

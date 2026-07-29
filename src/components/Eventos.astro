@@ -1,0 +1,39 @@
+---
+import { eventos } from '../data/site';
+
+/**
+ * EVENTOS — grid 2×2 de cards azules.
+ * El título es bicolor: el primer fragmento en azul, el resto en blanco.
+ * Reglas blancas finas arriba y abajo del grid.
+ */
+---
+
+<section class="bg-[var(--c-orange)] pt-24 pb-12 md:pt-32 md:pb-16">
+  <div class="container-lp">
+    <h2
+      class="mx-auto max-w-3xl text-center text-2xl leading-tight font-bold sm:text-3xl lg:text-4xl"
+    >
+      <span class="text-[var(--c-blue)]">Em quatro datas,</span>{' '}
+      <span class="text-white">quatro chances de encontrar o amor mais leal.</span>
+    </h2>
+
+    <hr class="regla-branca mx-auto mt-8 max-w-3xl" />
+
+    <ul class="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:gap-6">
+      {
+        eventos.map((evento) => (
+          <li class="card-evento reveal rounded-2xl bg-[var(--c-blue)] px-3 py-5 text-center text-white shadow-lg sm:px-6 sm:py-6">
+            <p class="text-lg font-bold sm:text-2xl">
+              {evento.dia} {evento.mes}
+            </p>
+            <hr class="regla-branca mx-auto my-3 w-20 sm:w-32" />
+            <p class="text-xs sm:text-base">{evento.local}</p>
+            <p class="text-xs sm:text-base">{evento.horario}</p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <hr class="regla-branca mx-auto mt-8 max-w-3xl" />
+  </div>
+</section>

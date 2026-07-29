@@ -1,0 +1,88 @@
+---
+import { galeria } from '../data/site';
+
+/**
+ * GALERIA — panel naranja claro con las fotos de la edición anterior (2024).
+ *
+ * Desktop: 4 columnas × 3 filas, fotos en retrato (~4:5), como el original.
+ *
+ * Móvil: 2 por fila para que se vean con detalle, pero cuadradas en vez de
+ * retrato y mostrando 6 de entrada — 12 fotos en retrato a 2 columnas obligaban
+ * a un scroll larguísimo. El resto se despliega con "Ver mais fotos".
+ */
+
+const VISIBLES_MOVIL = 6;
+---
+
+<section id="galeria" class="bg-[var(--c-orange)] pb-12 md:pb-16">
+  <div class="container-lp">
+    <div
+      class="mx-auto max-w-5xl rounded-3xl bg-[var(--c-orange-lite)] px-4 py-10 md:px-10"
+    >
+      <h2
+        class="mx-auto max-w-lg text-center text-2xl leading-tight font-bold text-[var(--c-blue)] sm:text-3xl"
+      >
+        Confira como foi a edição anterior
+      </h2>
+      <hr class="regla-branca mx-auto my-4 w-56" />
+      <p class="text-center text-2xl font-bold text-[var(--c-blue)] sm:text-3xl">2024</p>
+
+      <ul
+        id="galeria-grid"
+        class="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+      >
+        {
+          galeria.map((foto, i) => (
+            <li
+              class:list={[
+                'foto-galeria reveal aspect-square overflow-hidden rounded-lg sm:aspect-4/5',
+                i >= VISIBLES_MOVIL && 'hidden sm:block',
+              ]}
+              data-extra={i >= VISIBLES_MOVIL ? '' : null}
+            >
+              <img
+                src={foto.src}
+                alt={foto.alt}
+                class="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </li>
+          ))
+        }
+      </ul>
+
+      <button
+        type="button"
+        id="galeria-mais"
+        class="btn-lp mx-auto mt-6 block rounded-full bg-[var(--c-blue)] px-8 py-3 text-sm font-bold text-white sm:hidden"
+        aria-controls="galeria-grid"
+        aria-expanded="false"
+      >
+        Ver mais fotos
+      </button>
+    </div>
+  </div>
+</section>
+
+<script>
+  const boton = document.getElementById('galeria-mais');
+  const grid = document.getElementById('galeria-grid');
+
+  if (boton && grid) {
+    const extras = grid.querySelectorAll<HTMLElement>('[data-extra]');
+
+    boton.addEventListener('click', () => {
+      const abierto = boton.getAttribute('aria-expanded') === 'true';
+
+      extras.forEach((el) => el.classList.toggle('hidden', abierto));
+      boton.setAttribute('aria-expanded', String(!abierto));
+      boton.textContent = abierto ? 'Ver mais fotos' : 'Ver menos';
+
+      // al plegar, volver al inicio de la galería para no quedar perdido abajo
+      if (abierto) {
+        document.getElementById('galeria')?.scrollIntoView({ block: 'start' });
+      }
+    });
+  }
+</script>

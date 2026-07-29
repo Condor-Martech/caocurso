@@ -1,0 +1,54 @@
+---
+/**
+ * ADOTE UM AUMIGO — perro a la izquierda, logo y tagline a la derecha.
+ */
+---
+
+<section id="adote" class="bg-patron relative bg-[var(--c-orange)]">
+  <div
+    class="container-lp grid grid-cols-1 items-center justify-items-center gap-8 pt-10 pb-0 md:grid-cols-[auto_auto] md:items-end md:justify-between md:pt-14"
+  >
+    <!--
+      El perro desborda hacia abajo: sus patas cuelgan por delante de la franja
+      siguiente, igual que en el original. `w-fit` es necesario: el -45,9% de
+      .emerge--patas (que va en el <img>) se resuelve contra el ancho de ESTE
+      contenedor, que así coincide con el de la imagen. Ver global.css.
+
+      El ancho del perro es fluido, no escalonado: es la referencia de la que
+      cuelga --faixa-h (17,6 % de este ancho), así que si saltara por breakpoint
+      la franja quedaría descompensada en las franjas intermedias.
+
+      En móvil va el ÚLTIMO de la columna (order-2): si fuera el primero, la
+      franja que tendría encima sería la de la sección anterior y las patas
+      colgarían sobre el vacío. El cintillo va debajo del perro, siempre.
+    -->
+    <div
+      class="emerge order-2 flex w-fit self-end justify-center md:order-1 md:justify-start"
+    >
+      <img
+        src="/assets/images/Dog.png"
+        alt="Cachorro preto e branco sorrindo"
+        class="emerge--patas w-[min(78vw,360px)] max-w-full md:w-[min(40vw,472px)]"
+        width="499"
+        height="638"
+        loading="lazy"
+      />
+    </div>
+
+    <div
+      class="order-1 flex flex-col items-center gap-6 text-center md:order-2 md:items-end md:pb-14 md:text-right"
+    >
+      <img
+        src="/assets/images/Selo-Adote-um-Aumigo.png"
+        alt="Adote um AuMigo — Condor"
+        class="w-[min(78vw,384px)] max-w-full md:w-[min(42vw,500px)]"
+        width="647"
+        height="475"
+        loading="lazy"
+      />
+      <h2 class="max-w-[614px] text-xl font-bold text-white sm:text-2xl lg:text-3xl">
+        Dê uma chance para aquele que nunca te abandona.
+      </h2>
+    </div>
+  </div>
+</section>

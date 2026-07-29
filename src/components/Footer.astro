@@ -1,0 +1,41 @@
+---
+import { socialLinks, copyright } from '../data/site';
+import IconeSocial from './icons/IconeSocial.astro';
+
+/**
+ * FOOTER — fondo azul medio (#0061B2). Logo Condor, copyright y 6 redes.
+ */
+---
+
+<footer class="bg-[var(--c-blue-mid)] py-8">
+  <div
+    class="container-lp flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left"
+  >
+    <img
+      src="/assets/images/Logo-Grande.png"
+      alt="Condor"
+      class="h-8 w-auto object-contain"
+      loading="lazy"
+    />
+
+    <p class="text-sm text-white">{copyright}</p>
+
+    <ul class="flex items-center gap-3">
+      {
+        socialLinks.map((s) => (
+          <li>
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.nome}
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--c-blue-mid)] transition-transform hover:scale-110"
+            >
+              <IconeSocial name={s.icon} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</footer>

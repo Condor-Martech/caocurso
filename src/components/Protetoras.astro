@@ -1,0 +1,41 @@
+---
+import { protetoras } from '../data/site';
+import IconeInstagram from './icons/IconeInstagram.astro';
+
+/**
+ * PROTETORAS — 3 cards blancas: logo, nombre e icono de Instagram.
+ * Esta sección faltaba por completo en la documentación previa.
+ */
+---
+
+<section class="bg-[var(--c-orange)] pb-12 md:pb-16">
+  <div class="container-lp">
+    <h2 class="sr-only">Protetoras parceiras</h2>
+    <ul class="mx-auto grid max-w-4xl grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+      {
+        protetoras.map((p) => (
+          <li class="card-branca reveal flex flex-col items-center gap-2 rounded-2xl bg-white px-2 py-4 text-center shadow-md sm:gap-3 sm:px-4 sm:py-6">
+            <img
+              src={p.logo}
+              alt={p.nome}
+              class="h-11 w-auto object-contain sm:h-16"
+              loading="lazy"
+            />
+            <p class="text-[11px] leading-tight font-bold text-[var(--c-blue)] sm:text-sm">
+              {p.nome}
+            </p>
+            <a
+              href={p.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[var(--c-blue)] transition-opacity hover:opacity-70"
+              aria-label={`Instagram de ${p.nome}`}
+            >
+              <IconeInstagram />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

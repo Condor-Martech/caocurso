@@ -1,0 +1,27 @@
+---
+import { requisitos } from '../data/site';
+
+/**
+ * REQUISITOS — UN SOLO panel naranja claro con una lista de 6 bullets en dos
+ * columnas. NO son tres cards con iconos ni bordes de color (eso era un error
+ * de la documentación previa). Ver docs/GROUND_TRUTH.md §3.
+ */
+---
+
+<section class="bg-[var(--c-orange)] pb-12 md:pb-16">
+  <div class="container-lp">
+    <div
+      class="mx-auto max-w-4xl rounded-3xl bg-[var(--c-orange-lite)] px-6 py-8 md:px-12 md:py-10"
+    >
+      <h2 class="text-center text-2xl font-bold text-[var(--c-blue)] sm:text-3xl">
+        Requisitos para adoção:
+      </h2>
+
+      <ul
+        class="mt-6 grid grid-cols-1 gap-x-10 gap-y-2 text-sm text-[var(--c-blue)] sm:text-base md:grid-cols-2"
+      >
+        {requisitos.map((item) => <li>&ndash; {item}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,269 @@
+@import 'tailwindcss';
+@import './animations.css';
+
+/* ==========================================================================
+   Torus (Paulo Goode) — fuente de marca de Condor, self-hosted.
+   Convertida desde los TTF originales en Migraciones/petCondor/assets/fonts/.
+   NO usar Google Fonts: Montserrat/Roboto sólo aparecían como defaults de Elementor.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-100.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-300.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-900.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   Design tokens — extraídos de assets/css/post-683.css y verificados por
+   muestreo de píxeles sobre docs/petCondor.png. Ver docs/GROUND_TRUTH.md §1.
+   ========================================================================== */
+
+@theme {
+  /* Azules — color de autoridad de la marca */
+  --color-brand-blue: #00419a;
+  --color-brand-blue-mid: #0061b2;
+
+  /* Naranjas — fondo de toda la página */
+  --color-brand-orange: #f09624;
+  --color-brand-orange-lite: #ffbb3e;
+  --color-brand-orange-deep: #fdb020;
+
+  /* Neutros */
+  --color-brand-gray: #a8a8a8;
+  --color-brand-gray-dark: #3e3e3e;
+
+  /* Alerta */
+  --color-brand-red: #e20614;
+
+  /* Tipografía */
+  --font-display: 'Torus', ui-rounded, system-ui, sans-serif;
+
+  /* Contenedor */
+  --spacing-container: 1200px;
+}
+
+/* Alias en :root para uso directo en CSS plano */
+:root {
+  --c-blue: #00419a;
+  --c-blue-mid: #0061b2;
+  --c-orange: #f09624;
+  --c-orange-lite: #ffbb3e;
+  --c-orange-deep: #fdb020;
+  --c-white: #ffffff;
+  --c-gray: #a8a8a8;
+  --c-gray-dark: #3e3e3e;
+  --c-red: #e20614;
+
+  /* Altura de la franja separadora de tiles.
+
+     Va ligada al tamaño de las mascotas que la cruzan, no a breakpoints: en el
+     original el cintillo mide el 17,6 % del ancho de Dog.png (88 px con el
+     perro a ~500 px). Fluida, esa proporción se mantiene a cualquier ancho.
+
+     Con los valores fijos anteriores (52 px móvil / 90 px escritorio) se
+     desajustaba en cada salto: a 640-767 px las patas asomaban 125 px sobre una
+     franja de 52 px, y a 768 px sólo 36 px sobre una de 90 px.
+
+     13,7 vw = 17,6 % del ancho del perro, que en móvil es min(78vw, 360px). */
+  --faixa-h: min(13.7vw, 63px);
+}
+
+/* En md+ el perro pasa a min(40vw, 472px) al abrirse la rejilla a dos
+   columnas, así que la franja sigue esa otra pendiente: 7vw ≈ 17,6 % de 40vw. */
+@media (min-width: 768px) {
+  :root {
+    --faixa-h: min(7vw, 83px);
+  }
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  /* compensa el nav sticky al saltar a #adote / #caocurso / #galeria */
+  scroll-padding-top: 80px;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--c-orange);
+  color: var(--c-blue);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Contenedor estándar de sección */
+.container-lp {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@media (min-width: 768px) {
+  .container-lp {
+    padding-inline: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-lp {
+    padding-inline: 48px;
+  }
+}
+
+/* ==========================================================================
+   Franja separadora de tiles.
+   NO son barras de color planas: es una tira a sangre de cuadros con un icono
+   de pata o hueso cada uno, más anchos que altos (1,48:1). Ver GROUND_TRUTH §4.
+
+   Usa `Pattern-tile.png`, recortado de `Pattern@2x.png` (el asset real) porque
+   éste NO es un tile: en el original era un <img> suelto que cerraba la tira,
+   así que se desvanece a transparente en sus últimos 75 px y arrastra 17 filas
+   de basura casi transparente arriba. Al repetirlo con repeat-x, ese
+   desvanecido abría un hueco naranja en CADA repetición y la franja se veía
+   más baja que --faixa-h. El recorte son 7 tiles completos y opacos
+   (1382×133), así que repite sin costura y --faixa-h es altura real.
+   ========================================================================== */
+
+.faixa {
+  width: 100%;
+  height: var(--faixa-h);
+  background-image: url('/assets/images/Pattern-tile.png');
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: auto 100%;
+}
+
+
+/* --------------------------------------------------------------------------
+   .bg-patron — textura de line-art (huesos, comederos, frisbees) sobre el
+   naranja. En el original es `Bg.jpg` aplicada con `cover` a 4 contenedores,
+   no un patrón repetido: por eso va por sección y no en el body.
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  .bg-patron {
+    background-image: url('/assets/images/Bg.jpg');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   .emerge — las mascotas SALEN del cintillo.
+   El recorte de los PNG es un borde duro: si la imagen termina por encima de la
+   franja se ve la línea de corte flotando sobre el naranja. Bajándola para que
+   se solape con los tiles, la franja tapa el corte y el animal parece emerger
+   de ella, como en el original.
+   Necesita z-index porque la franja es un hermano posterior.
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Medido sobre el original: el chihuahua del hero termina en y≈780 y los tiles
+     empiezan en y≈785. NO lo cruza: se apoya en él. Basta con que la sección no
+     lleve padding inferior para que el corte del PNG caiga sobre la franja. */
+  .emerge {
+    position: relative;
+    z-index: 20;
+  }
+
+  /* Excepción: el perro de "Adote um AuMigo" sí pasa POR DELANTE de la franja
+     y sus patas asoman por debajo (verificado en el original).
+
+     El corte del pecho de Dog.png está al 64,1% de su altura; por debajo sólo
+     quedan las patas. Para que no quede naranja entre el pecho y los tiles, la
+     imagen debe sobresalir el 35,9% restante de su alto.
+
+     Dog.png mide 499×638 (ratio 0,782), así que ese 35,9% del alto equivale al
+     45,9% del ancho. Los % de margen se resuelven contra el ancho del BLOQUE
+     CONTENEDOR, no contra el del propio elemento: por eso la clase va en el
+     <img> y su contenedor lleva `w-fit`, de modo que ese ancho coincide con el
+     de la imagen. (Puesta en el contenedor se resolvía contra el área de la
+     rejilla —327px en móvil— y el solape se pasaba de largo.)
+     Así es correcto a cualquier tamaño, sin valores fijos por breakpoint.
+
+     Se aplica en todos los tamaños: en móvil el perro se coloca el último de
+     la columna (order-2), así que también queda pegado a la franja. */
+  .emerge--patas {
+    margin-bottom: -45.9%;
+  }
+}
+
+/* ==========================================================================
+   Regla horizontal blanca fina — separa el título del contenido en Eventos
+   y cierra la sección 30 Agosto.
+   ========================================================================== */
+
+/* Va en @layer components a propósito: el CSS sin capa gana a las utilidades de
+   Tailwind v4, y un `margin: 0` suelto anulaba el `mx-auto` de cada <hr>,
+   descentrando las reglas. Dentro de la capa, mx-auto/my-* vuelven a mandar. */
+@layer components {
+  .regla-branca {
+    border: 0;
+    border-top: 2px solid var(--c-white);
+    opacity: 0.9;
+    margin-block: 0;
+    margin-inline: auto;
+  }
+}
+
+/* Accesibilidad: contenido sólo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Foco visible consistente en toda la LP */
+:focus-visible {
+  outline: 3px solid var(--c-white);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

@@ -1,0 +1,45 @@
+---
+/**
+ * HERO — "Mês Pet".
+ * El titular es una IMAGEN (Titulo.png), no texto: incluye la tipografía
+ * dibujada y la script manuscrita "e pra gatos também!".
+ */
+---
+
+<section class="bg-patron relative bg-[var(--c-orange)]" id="conteudo">
+  <div
+    class="container-lp grid grid-cols-1 items-center justify-items-center gap-6 pt-8 pb-0 md:grid-cols-[auto_auto] md:items-end md:justify-between md:gap-4 md:pt-10"
+  >
+    <!-- Columna izquierda: logo Mês Pet + titular -->
+    <div class="flex flex-col items-center gap-4 pb-8 md:items-start md:pb-10">
+      <img
+        src="/assets/images/Selo.png"
+        alt="Mês Pet Condor"
+        class="w-[min(60vw,224px)] max-w-full md:w-[min(28vw,358px)]"
+        width="685"
+        height="863"
+        fetchpriority="high"
+      />
+      <img
+        src="/assets/images/Titulo-1024x477.png"
+        alt="No mês do pet, tem preço baixo pra cachorro. E pra gatos também!"
+        class="w-full max-w-[338px]"
+        width="1024"
+        height="477"
+        fetchpriority="high"
+      />
+    </div>
+
+    <!-- Columna derecha: el chihuahua de gafas. Emerge de la franja siguiente. -->
+    <div class="emerge flex self-end justify-center md:justify-end">
+      <img
+        src="/assets/images/Pet-2.png"
+        alt="Cachorro de óculos escuros e jaqueta de couro"
+        class="w-[min(78vw,384px)] max-w-full md:w-[min(42vw,618px)]"
+        width="956"
+        height="966"
+        fetchpriority="high"
+      />
+    </div>
+  </div>
+</section>
