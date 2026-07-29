@@ -276,6 +276,58 @@ Contra esto juega un dato que ya está verificado y que conviene tener presente:
 2025) y las dos campañas auditadas comparten 8 de sus ~10 campos. El solapamiento no es una
 hipótesis. Eso justifica el destino; no justifica saltarse el orden.
 
+### 7.1 Schema-*shaped* desde el día uno; schema-*served* después
+
+**Decidido:** el Cãocurso lo codifica ingeniería. Marketing edita formularios más adelante,
+no en esta campaña.
+
+Ese «más adelante» es peligroso de dos maneras opuestas. Si se construye la plataforma
+completa ahora, se paga la abstracción hoy y la señal que la corrige no llega hasta dentro
+de un año. Si se codea el Cãocurso a mano sin más, la plataforma después es una reescritura.
+
+La salida es separar dos cosas que suelen ir juntas y no tienen por qué:
+
+| | Qué es | Cuándo |
+|---|---|---|
+| **Schema-shaped** | El formulario es una **estructura de datos** que un renderer genérico pinta. La estructura vive en el repo, tipada, como una constante | **Ahora** — coste extra ≈ 0 |
+| **Schema-served** | Esa estructura vive en la base, se sirve por API y se edita desde una UI | **Después** |
+
+```ts
+// packages/forms/campanhas/caocurso-2026.ts   ← hoy: una constante en el repo
+export const caocurso2026: FormSchema = {
+  slug: 'caocurso-2026',
+  versao: 1,
+  campos: [
+    { tipo: 'nome',      nome: 'tutorNome',  label: 'Nome do tutor', obrigatorio: true },
+    { tipo: 'cpf',       nome: 'tutorCpf',   label: 'CPF',           obrigatorio: true },
+    { tipo: 'foto',      nome: 'petFoto',    label: 'Foto do pet',   obrigatorio: true },
+    // …
+  ],
+  hooks: { beforeSubmit: 'caocurso/unicidadePorCpf' },
+}
+```
+
+Mañana esa constante se mueve a `cao_form_versao.schema`. **El renderer no cambia, el
+endpoint no cambia, los datos ya guardados no se migran.** Pasar de shaped a served es
+mover un objeto de un sitio a otro y añadir una UI encima; no es rehacer nada.
+
+**Lo que sí hay que acertar hoy porque después cuesta caro:**
+
+1. **La forma de almacenamiento definitiva** (§3): núcleo tipado + `dados` JSONB +
+   `form_versao_id` en cada envío, **aunque la versión 1 esté hardcodeada**. Si el Cãocurso
+   guarda sus campos como columnas planas, la plataforma después obliga a migrar datos
+   personales ya recogidos. Con la forma final desde el principio, no hay migración nunca.
+2. **P1, el stack del core.** Es la decisión que no se puede deshacer barata y hoy es gratis.
+3. **Los textos como dato, no como código.** Labels, placeholders, mensajes de error y
+   textos de consentimiento van dentro del schema desde el primer día. Es literalmente lo
+   primero que marketing va a querer tocar, y si está incrustado en JSX hay que sacarlo
+   luego a mano, campo por campo.
+4. **El catálogo de campos** (§2). Hace falta igual para esta campaña.
+
+**Lo que NO hay que construir ahora:** el constructor visual, el endpoint que sirve el
+schema, la UI de versionado y el motor de condiciones. Nada de eso hace falta mientras el
+schema sea una constante, y todo eso es lo caro.
+
 ---
 
 ## 8. Lo que hay que decidir
@@ -284,10 +336,9 @@ hipótesis. Eso justifica el destino; no justifica saltarse el orden.
 |---|---|---|
 | P1 | ¿El core del componente es vanilla o React? | `pet.condor.com.br` corría WordPress + Elementor. Si alguna LP futura no es Astro, React cierra la puerta. **Decidir por escrito antes de la primera línea** |
 | P2 | ¿El backoffice va en `*.condor.com.br`? | Si sí, es same-site: cookies normales, sin CHIPS, sin romperse en Safari. Es la decisión de mayor apalancamiento y es gratis |
-| P3 | ¿Marketing va a editar formularios de verdad? | Si la respuesta honesta es «no, lo hace ingeniería», las etapas 3 y 4 sobran y se ahorran semanas |
+| ~~P3~~ | ~~¿Marketing va a editar formularios de verdad?~~ | ✅ **Resuelto:** sí es el objetivo, pero no en el Cãocurso — esta campaña la codifica ingeniería. Ver §7.1 |
 | P4 | ¿CPF entra al formulario del Cãocurso? | Es la clave de cruce entre campañas y el ancla anti-fraude. El original lo pedía |
 | P5 | ¿Hotfix instantáneo o pinning por versión? | No se pueden tener los dos. Ver `FORMULARIOS_ARQUITECTURA.md` §5 |
 
-**P3 es la que más dinero mueve.** Si marketing no va a tocar el constructor, lo que quieren
-no es una plataforma de formularios: es un **paquete compartido con buenos defaults**, que
-cuesta 3–5 días en vez de un producto.
+Con P3 resuelto, **P1 pasa a ser la decisión más cara de equivocar**: es la única de la lista
+que no se puede deshacer barata, y hoy no cuesta nada tomarla.
