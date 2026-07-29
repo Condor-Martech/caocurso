@@ -334,11 +334,160 @@ schema sea una constante, y todo eso es lo caro.
 
 | # | Pregunta | Por qué importa |
 |---|---|---|
-| P1 | ¿El core del componente es vanilla o React? | `pet.condor.com.br` corría WordPress + Elementor. Si alguna LP futura no es Astro, React cierra la puerta. **Decidir por escrito antes de la primera línea** |
+| ~~P1~~ | ~~¿El core del componente es vanilla o React?~~ | ✅ **Resuelto:** el stack del equipo es React + Next + Astro. React para el renderer, core en TS plano. Ver §9 |
 | P2 | ¿El backoffice va en `*.condor.com.br`? | Si sí, es same-site: cookies normales, sin CHIPS, sin romperse en Safari. Es la decisión de mayor apalancamiento y es gratis |
 | ~~P3~~ | ~~¿Marketing va a editar formularios de verdad?~~ | ✅ **Resuelto:** sí es el objetivo, pero no en el Cãocurso — esta campaña la codifica ingeniería. Ver §7.1 |
 | P4 | ¿CPF entra al formulario del Cãocurso? | Es la clave de cruce entre campañas y el ancla anti-fraude. El original lo pedía |
 | P5 | ¿Hotfix instantáneo o pinning por versión? | No se pueden tener los dos. Ver `FORMULARIOS_ARQUITECTURA.md` §5 |
 
-Con P3 resuelto, **P1 pasa a ser la decisión más cara de equivocar**: es la única de la lista
-que no se puede deshacer barata, y hoy no cuesta nada tomarla.
+Con P1 y P3 resueltos, lo que queda por decidir es **P2** (dominio del backoffice), **P4**
+(CPF en el formulario) y **P5** (hotfix vs pinning).
+
+---
+
+## 9. Stack: React sí, pero con la costura en el sitio correcto
+
+**Dato nuevo:** el stack del equipo es **React + Next + Astro**, y ya hay **productos en
+producción con formularios en sus LPs** que se quieren migrar a esta plataforma.
+
+Eso resuelve P1 y obliga a revisar el calendario de §7.
+
+### 9.1 La decisión de stack
+
+React. Los tres entornos del equipo lo consumen: Astro como isla, Next de forma nativa, y el
+propio backoffice es Next. Escribir un core vanilla para una portabilidad que quizá no llegue
+es pagar hoy por un problema hipotético.
+
+Pero la costura importa. **No es «todo React», es un corte en dos paquetes:**
+
+```
+@condor/forms-core     ← TypeScript plano, CERO dependencias de UI
+  · tipos del schema          · validación isomorfa (misma en cliente y servidor)
+  · normalizadores (CPF, telefone, e-mail)  · cliente de upload firmado
+  · taxonomía de eventos      · serialización de la submissão
+
+@condor/forms-react    ← los componentes
+  · renderer del schema       · controles del catálogo
+  · modal, focus trap, uploader con preview
+```
+
+Lo que justifica el corte no es la portabilidad, es que **la validación del servidor vive en
+el core**. El backoffice valida el envío con exactamente el mismo código que lo validó en el
+navegador — que es la única forma de que no se desincronicen. Y el servidor no puede importar
+componentes React para hacerlo.
+
+El beneficio de portabilidad viene de regalo: si algún día cae un hotsite en WordPress —y
+`pet.condor.com.br` corría WordPress + Elementor, así que no es hipotético— sólo hay que
+escribir un renderer vanilla sobre el mismo core. Se reescribe la capa de pintar, no las
+reglas.
+
+**Regla dura:** si algo del core necesita importar de React, está en el paquete equivocado.
+
+### 9.2 Los formularios que ya están en producción cambian el calendario
+
+En §7 recomendé no construir el schema hasta la segunda campaña, con el argumento de que una
+abstracción diseñada con un solo caso delante suele ser la equivocada.
+
+**Ese argumento se debilita mucho si ya hay formularios en producción.** La segunda, tercera
+y cuarta evidencia ya existen: son formularios reales, escritos para necesidades reales, y
+están en el aire. No hay que esperarlos, hay que leerlos.
+
+Corrección del orden propuesto:
+
+| Antes | Ahora |
+|---|---|
+| Codear el Cãocurso, esperar a la campaña 2 para derivar el schema | **Inventariar primero los formularios existentes**, derivar el catálogo de su unión, y estrenar el Cãocurso ya encima de él |
+
+Lo que hay que sacar de ese inventario, por formulario:
+
+1. Campos, tipos, obligatoriedad, y **etiquetas exactas en pt-BR**
+2. Reglas de validación — y clasificarlas en los cuatro tipos de §1
+3. Reglas de negocio y efectos secundarios (los futuros hooks)
+4. Textos de consentimiento y su versión
+5. Manejo de archivos: ¿hay upload? ¿con qué límites? ¿pasa por una función serverless?
+6. Dónde aterrizan hoy los envíos
+
+Los campos que aparecen en **todos** son el catálogo. Los que aparecen en **uno** son campos
+de campaña. Es un ejercicio de un día o dos y sustituye la especulación por un censo.
+
+> Precedente que apunta al mismo sitio: las dos campañas de Condor auditadas comparten 8 de
+> sus ~10 campos. Si el inventario interno confirma ese solapamiento, el catálogo de §2 deja
+> de ser una propuesta y pasa a ser una constatación.
+
+**Lo que no cambia:** el constructor visual sigue siendo etapa 4, y sigue sin construirse
+hasta que marketing lo pida de verdad. Tener más casos de entrada justifica definir bien el
+catálogo y el schema; no justifica adelantar la UI de autoría.
+
+---
+
+## 10. El contexto real: esto es una pieza de la salida de WordPress
+
+**Dato nuevo y estructurante:** el trabajo del equipo es migrar **un ecosistema WordPress
+completo**, progresivamente, a Next/React y Astro. **Las LPs son Astro.**
+
+Entonces esta plataforma no es una utilidad interna: es **el reemplazo del plugin de
+formularios de WordPress**. Y `pet.condor.com.br` —WordPress + Elementor + JetFormBuilder,
+`data-form-id="379"`— no es una anécdota histórica: es un espécimen del corpus que se está
+migrando.
+
+### 10.1 El inventario de §9.2 se vuelve mucho más barato
+
+Las definiciones de formulario de WordPress **están en la base de datos y son legibles por
+máquina**. No hay que transcribirlas mirando páginas: se extraen.
+
+| Plugin | Dónde vive la definición |
+|---|---|
+| JetFormBuilder | CPT `jet-form-builder` + `post_content` con los bloques |
+| ACF Frontend Form | Field groups de ACF en `postmeta` |
+| Contact Form 7 | `postmeta` `_form` (su mini-DSL) |
+| Gravity Forms | Tabla propia `gf_form` / `gf_form_meta` (JSON) |
+
+Un script que recorra el WordPress y vuelque **todos** los formularios a JSON convierte el
+censo en un rato de trabajo. Con esa unión delante, el catálogo de §2 se define con datos, no
+con opinión. Y de paso queda el registro de qué campañas tenían qué, que hoy no existe en
+ninguna parte.
+
+> Ya hay una pista fuerte del resultado: las dos campañas de Condor auditadas comparten
+> 8 de sus ~10 campos, con cinco años y dos plugins distintos de por medio.
+
+### 10.2 La coexistencia obliga a reabrir el embed
+
+Durante la migración van a convivir, quizá años, **LPs ya en Astro y LPs todavía en
+WordPress**. Y eso reabre una opción que el análisis anterior había descartado.
+
+`docs/FORMULARIOS_ARQUITECTURA.md` dejó el iframe como *«plan B documentado sólo para LPs que
+la agencia no controle»*. Con este contexto, esa población existe y **no es de terceros: es
+el propio legacy**. La pregunta se vuelve concreta:
+
+> **¿La plataforma tiene que dar servicio a las LPs que siguen en WordPress, o cada LP se
+> queda con su formulario de plugin hasta que le toque migrar?**
+
+| | Sirve a WordPress | No sirve a WordPress |
+|---|---|---|
+| Coste | + renderer vanilla o embed | 0 |
+| Datos durante la transición | **Unificados desde el día uno** | Partidos en dos sistemas hasta el final |
+| LGPD | Un solo sitio con consentimientos y retención | Dos regímenes conviviendo |
+| Riesgo | Mantener dos renderers | Migrar formularios dos veces |
+
+El argumento fuerte a favor de servir a WordPress es **el dato, no el código**: si los
+formularios viejos siguen escribiendo en WordPress mientras los nuevos escriben en el
+backoffice, durante toda la transición hay dos fuentes de inscripciones, dos exportaciones y
+dos políticas de retención. Eso es exactamente lo que la migración pretende terminar.
+
+Y si se decide servirlos, el embed cambia de naturaleza: **es un artefacto de transición con
+fecha de caducidad**, no la arquitectura. Eso altera su análisis de coste —se construye
+sabiendo que muere— y elimina de golpe sus peores problemas, porque **son sitios propios**:
+el dominio se controla, la CSP se controla, las Torus se sirven desde el mismo origen y no
+hay paywall de proveedor.
+
+El corte en dos paquetes de §9.1 es justo lo que lo hace barato: sobre `@condor/forms-core`
+se escribe un renderer vanilla y se carga en WordPress con un shortcode. Se reescribe la capa
+de pintar; las reglas, la validación y el upload firmado son los mismos.
+
+### 10.3 Lo que hay que decidir con esto encima
+
+| # | Pregunta | Por qué importa |
+|---|---|---|
+| P6 | ¿La plataforma sirve a las LPs aún en WordPress? | Decide si hace falta renderer vanilla / embed, y si el dato se unifica ya o al final |
+| P7 | ¿Los envíos históricos de WordPress se migran? | Si sí, el modelo de §3 tiene que aceptar submissões sin `form_versao_id` real — o fabricar una versión sintética por formulario legado |
+| P8 | ¿Cuántos formularios hay ahí dentro? | Con 3 el catálogo se hace a ojo; con 30 el script de extracción se paga solo el primer día |
