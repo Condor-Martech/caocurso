@@ -35,7 +35,11 @@ jobs:
         id: revisor
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.1-pro-preview' }}
+          # Flash mantém camada gratuita; Pro exige Cloud Billing desde abr/2026.
+          # Para trocar de modelo ou de nível de raciocínio basta criar as
+          # variáveis de repositório — nenhuma mudança de código.
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
+          GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'HIGH' }}
         run: |
           set +e
           node ci/agente-revisor.mjs \
