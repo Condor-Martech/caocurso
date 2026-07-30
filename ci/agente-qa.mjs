@@ -43,10 +43,10 @@
 
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
+import { consultarGemini } from "./lib-gemini.mjs";
 
 const MODELO = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const NIVEL_RACIOCINIO = process.env.GEMINI_THINKING_LEVEL || "HIGH";
-const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
 const PLANE_API = "https://api.plane.so/api/v1";
 const WORKSPACE = process.env.PLANE_WORKSPACE || "capsula";
 const PROJETO = process.env.PLANE_PROJECT || "a7654283-f2dd-45fa-8d21-652646c0f27a";
@@ -262,28 +262,8 @@ ${diffstat.slice(0, 20000)}
 Em "passos", escreva o que clicar/verificar, não teoria. Em "por_que", diga
 qual mudança desta promoção justifica exercitar esse cenário.`;
 
-  const generationConfig = {
-    temperature: 0.1, responseMimeType: "application/json", responseSchema: ESQUEMA_QA,
-    thinkingConfig: { thinkingLevel: NIVEL_RACIOCINIO },
-  };
-  let r = await fetch(`${GEMINI_API}/models/${MODELO}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
-  });
-  if (r.status === 400 && /thinking/i.test(await r.clone().text())) {
-    delete generationConfig.thinkingConfig;
-    r = await fetch(`${GEMINI_API}/models/${MODELO}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
-    });
-  }
-  if (!r.ok) throw new Error(`Gemini HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const j = await r.json();
-  const txt = j?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!txt) throw new Error("resposta sem conteúdo");
-  return JSON.parse(txt);
+  return consultarGemini({ prompt, apiKey: chave, esquema: ESQUEMA_QA,
+                           modelo: MODELO, nivelRaciocinio: NIVEL_RACIOCINIO });
 }
 
 // ---------------------------------------------------------------- execução
