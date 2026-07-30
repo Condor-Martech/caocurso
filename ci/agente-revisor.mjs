@@ -38,6 +38,7 @@
 
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
+import { consultarGemini } from "./lib-gemini.mjs";
 
 // Flash com raciocínio estendido. Os modelos Pro passaram a exigir Cloud Billing
 // (abril/2026); Flash mantém camada gratuita. Como a tarefa entregue ao LLM é
@@ -316,48 +317,10 @@ Não relate questões de estilo. Não invente riscos para parecer útil: uma lis
 vazia é uma resposta válida e boa.`;
 }
 
-async function chamarGemini({ prompt, apiKey, comRaciocinio }) {
-  const generationConfig = {
-    temperature: 0.1,
-    responseMimeType: "application/json",
-    responseSchema: ESQUEMA,
-  };
-  // thinkingLevel só existe a partir do Gemini 3. Se o modelo configurado for
-  // mais antigo, a API devolve 400 — daí o fallback em revisarComGemini().
-  if (comRaciocinio) generationConfig.thinkingConfig = { thinkingLevel: NIVEL_RACIOCINIO };
-
-  const r = await fetch(`${API}/models/${MODELO}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
-  });
-  if (!r.ok) {
-    const corpo = (await r.text()).slice(0, 400);
-    const err = new Error(`Gemini HTTP ${r.status}: ${corpo}`);
-    err.status = r.status;
-    err.corpo = corpo;
-    throw err;
-  }
-  const j = await r.json();
-  const txt = j?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!txt) throw new Error(`resposta sem conteúdo: ${JSON.stringify(j).slice(0, 300)}`);
-  return JSON.parse(txt);
-}
-
-async function revisarComGemini({ prompt, apiKey }) {
-  try {
-    return await chamarGemini({ prompt, apiKey, comRaciocinio: true });
-  } catch (e) {
-    // Se o 400 for por causa do thinkingConfig, tenta de novo sem ele em vez de
-    // perder a camada inteira. Qualquer outro erro (429 de cota, 401 de chave)
-    // sobe normalmente — esses o operador precisa ver.
-    if (e.status === 400 && /thinking/i.test(e.corpo || "")) {
-      console.error("[aviso] modelo não aceita thinkingLevel; repetindo sem raciocínio estendido");
-      return chamarGemini({ prompt, apiKey, comRaciocinio: false });
-    }
-    throw e;
-  }
-}
+// Retentativa, fallback de thinkingLevel e tratamento de erro transitório
+// ficam em ci/lib-gemini.mjs, compartilhado com o agente de QA.
+const revisarComGemini = ({ prompt, apiKey }) =>
+  consultarGemini({ prompt, apiKey, esquema: ESQUEMA, modelo: MODELO, nivelRaciocinio: NIVEL_RACIOCINIO });
 
 async function listarModelos(apiKey) {
   const r = await fetch(`${API}/models`, { headers: { "x-goog-api-key": apiKey } });
