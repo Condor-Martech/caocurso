@@ -165,7 +165,10 @@ const RE_CONVENTIONAL = /^(feat|fix|chore|docs|test|refactor|perf|build|ci|style
 
 function commitsDoRange(base) {
   try {
-    return execSync(`git log ${base}..HEAD --format=%s`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+    // --no-merges é essencial: em eventos pull_request o GitHub faz checkout de
+    // um merge commit sintético ("Merge <sha> into <sha>") que nunca vai seguir
+    // Conventional Commits. Sem isto, o agente barra todos os PRs.
+    return execSync(`git log ${base}..HEAD --format=%s --no-merges`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
       .split("\n").map((s) => s.trim()).filter(Boolean);
   } catch { return []; }
 }
