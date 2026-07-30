@@ -47,7 +47,7 @@ Estados no board (Multica): `Backlog → Spec Ready → To Do → In Progress �
 Um job dedicado roda um **agente de IA usando Gemini** que:
 - Lê o **SPEC + cenários Gherkin** (`02-spec.md`) + o **diff do PR**.
 - Gera/roda a suíte de testes e verifica **cobertura por cenário Gherkin** (cada critério de aceitação tem teste).
-- Confere o **disclosure de IA** do PR (modelo usado, revisão linha a linha).
+- Confere o **disclosure de IA** do PR (tag `[ai-assisted]` nos commits, revisão linha a linha declarada).
 - Valida aderência ao `CLAUDE.md` (peso no servidor, sem credenciais no cliente, RLS, etc.).
 - Marca riscos de segurança/performance **com número de linha**.
 - Emite veredicto **aprovar / solicitar mudanças** como comentário no PR.
@@ -146,6 +146,10 @@ Exemplos que **NÃO** paralelizam:
 
 ## 6. Conventional Commits + disclosure de IA
 
-- `feat(voto): rpc idempotente registrar_voto [ai-assisted: claude-sonnet]`
-- `chore(ci): job do agente revisor gemini [ai-assisted: gemini]`
-- PR sempre com: issue fechado, checklist de Gherkin coberto, modelo de IA usado e se houve revisão linha a linha.
+- `feat(voto): rpc idempotente registrar_voto [ai-assisted]`
+- `chore(ci): job do agente revisor no pipeline [ai-assisted]`
+- `fix(db): corrige tipo de v_linhas em registrar_voto` (sem tag: escrito à mão)
+
+A tag `[ai-assisted]` sinaliza que houve assistência de IA. **Não se nomeia fornecedor nem modelo** — o que importa para a revisão é que houve geração assistida e que um humano revisou linha a linha.
+
+- PR sempre com: issue fechado, checklist de Gherkin coberto, e se houve assistência de IA com revisão linha a linha.

@@ -140,7 +140,7 @@ node ci/agente-revisor.mjs --spec 02-spec.md --diff <url> --claude-md CLAUDE.md
 - Um issue = uma branch = um PR (rastreabilidade completa). O ID da task (`PV-XXX`) vai na branch, nos commits e no título do PR.
 - Branches permanentes: **`main`** (produção) e **`homologacao`** (homologação/staging). PR de feature aponta para `homologacao`; `main` só recebe merge de `homologacao` após QA + aprovação manual.
 - Branches de trabalho: `feat/PV-XXX-...`, `fix/PV-XXX-...`, `chore/PV-XXX-...`, `spike/PV-XXX-...` (spike **nunca** é mergeada). Apagadas após o merge.
-- **Conventional Commits** com tag de IA, ex.: `feat(voto): rpc idempotente [ai-assisted: claude-sonnet]`.
+- **Conventional Commits** com tag de IA quando houve assistência, ex.: `feat(voto): rpc idempotente [ai-assisted]`.
 - PRs pequenos e focados.
 
 ## 5b. CI/CD (detalhe em `04-workflow-cicd.md`)
@@ -161,7 +161,7 @@ No monorepo o limite natural é o workspace. Exceções que **sempre** serializa
 
 - Referência ao issue que fecha.
 - Checklist dos **cenários Gherkin** cobertos (do `02-spec.md`).
-- **Disclosure de IA:** modelo usado e se o código foi revisado linha a linha.
+- **Disclosure de IA:** se houve assistência de IA e se o código foi revisado linha a linha. Não é preciso nomear fornecedor nem modelo — a tag `[ai-assisted]` nos commits basta.
 - Checklist: testes unitários, sem segredos no diff, migrações testadas, feature flags quando aplicável.
 
 ## 7. Governança por nível de risco

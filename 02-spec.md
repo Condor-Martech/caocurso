@@ -382,5 +382,5 @@ Regras do monorepo: contratos compartilhados (tipos do modelo de dados, nomes de
 - Peso do voto SEMPRE resolvido no servidor; cliente nunca envia `peso`.
 - Nenhuma credencial de PostHog/Emarsys/Condor no bundle do cliente.
 - Branches `feat/`, `fix/`, `chore/`, `spike/`; `staging` e `main` permanentes.
-- PR template com checklist de cenários Gherkin cobertos + disclosure de IA (`[ai-assisted: claude-...]`).
+- PR template com checklist de cenários Gherkin cobertos + disclosure de IA (tag `[ai-assisted]`, sem nomear fornecedor).
 - Mudanças em lógica de voto/auth = risco alto → 2 aprovações + QA manual + feature flag.
