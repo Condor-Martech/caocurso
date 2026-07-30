@@ -1,0 +1,80 @@
+name: agente-qa
+
+# Par simétrico do agente revisor:
+#   agente-revisor  →  PR para homologacao  (entrada)
+#   agente-qa       →  PR para main         (promoção a produção)
+#
+# Até aqui as promoções não tinham nenhuma rede automática — o revisor só
+# dispara em PRs para homologacao.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # precisa do histórico para calcular o delta
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Rodar agente de QA
+        id: qa
+        env:
+          PLANE_API_KEY: ${{ secrets.PLANE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
+          GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'HIGH' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set +e
+          node ci/agente-qa.mjs \
+            --base "origin/${{ github.event.pull_request.base.ref }}" \
+            --head "HEAD" \
+            --spec 02-spec.md \
+            > /tmp/qa.md 2> /tmp/qa-erro.log
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/qa.md
+          [ -s /tmp/qa-erro.log ] && cat /tmp/qa-erro.log
+          exit 0
+
+      - name: Comentar no PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          MARCA="<!-- agente-qa -->"
+          printf '%s\n%s\n' "$MARCA" "$(cat /tmp/qa.md)" > /tmp/comentario.md
+          ID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" \
+                 --jq "[.[] | select(.body | startswith(\"$MARCA\"))] | last | .id // empty")
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$ID" \
+              -F body=@/tmp/comentario.md >/dev/null
+          else
+            gh api -X POST "repos/${{ github.repository }}/issues/$PR/comments" \
+              -F body=@/tmp/comentario.md >/dev/null
+          fi
+
+      - name: Aplicar veredicto
+        run: |
+          # Bloqueia quando: card não chegou a QA/Done, decisão DEC-* aberta
+          # travando a task, ou aprovações abaixo do exigido em risco médio.
+          # Risco alto vira aviso, não bloqueio — a porta de 2 aprovações é hoje
+          # insatisfazível com 2 pessoas (DEC-12), e barrar aqui pararia o
+          # projeto por uma regra que ninguém pode cumprir.
+          if [ "${{ steps.qa.outputs.exit }}" != "0" ]; then
+            echo "::error::A promoção não está pronta. Veja o comentário do agente de QA no PR."
+            exit 1
+          fi
+          echo "Promoção liberada pelas verificações automáticas. QA manual segue obrigatório."
