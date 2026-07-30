@@ -1,0 +1,17 @@
+# <tipo>(<escopo>): <descrição no imperativo> [ai-assisted: <modelo>]
+#
+# Exemplos (CLAUDE.md §5 · 04-workflow-cicd.md §6):
+#   feat(voto): rpc idempotente registrar_voto [ai-assisted: claude-sonnet]
+#   fix(db): corrige tipo de v_linhas em registrar_voto [ai-assisted: claude-opus]
+#   chore(ci): job do agente revisor gemini [ai-assisted: gemini]
+#   docs(spec): sincroniza RLS com a regra de ouro nº 3
+#
+# tipo:   feat | fix | chore | docs | test | refactor | perf
+# escopo: voto | db | imagens | eventos | backoffice | landing | ci | repo
+#
+# A tag [ai-assisted: <modelo>] é obrigatória quando houve geração por IA.
+# O agente revisor de CI confere o disclosure no PR.
+#
+# Corpo (opcional): o porquê, não o quê. Quebra em 72 colunas.
+#
+# Rodapé: referência à task, ex.  Refs: PV-033

@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# Segredos — NUNCA comitar
+# ---------------------------------------------------------------------------
+# Regra de ouro nº 4 (CLAUDE.md §3): credenciais de PostHog, Emarsys, Condor,
+# MinIO, Supabase e Plane ficam só no servidor / fora do versionamento.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secret-key-*
+# CSVs ficam de fora por padrão: já chegaram tokens de API neste diretório
+# nesse formato. Se algum dia houver fixture .csv legítima, liberá-la com
+# uma exceção explícita (!caminho/da/fixture.csv), nunca removendo esta linha.
+*.csv
+
+# Arquivos de bloqueio do LibreOffice/OpenOffice (aparecem ao abrir planilhas)
+.~lock.*#
+
+# ---------------------------------------------------------------------------
+# Node / monorepo (a partir de PV-010)
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Turborepo
+.turbo/
+
+# Playwright (PV-CI2)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# ---------------------------------------------------------------------------
+# Logs e temporários
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+tmp/
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Editor e SO
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
