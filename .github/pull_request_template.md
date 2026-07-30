@@ -35,9 +35,9 @@ O agente revisor de CI valida esta cobertura cenário a cenário.
 
 <!-- CLAUDE.md §6 — obrigatório, o agente revisor confere. -->
 
-- **Modelo usado:**
+- [ ] Houve assistência de IA na escrita deste código
 - [ ] O código foi revisado **linha a linha** por um humano
-- [ ] Os commits levam a tag `[ai-assisted: <modelo>]`
+- [ ] Os commits afetados levam a tag `[ai-assisted]`
 
 ## Checklist
 

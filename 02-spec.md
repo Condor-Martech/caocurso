@@ -196,17 +196,20 @@ RLS: leitura pública em `cao` **apenas quando `status = 'aprovado'`** (feed, pe
 
 ```gherkin
 Feature: Cadastro de mascote
+  @cad-01
   Scenario: Cadastro com foto válido
     Given um participante registrado
     When ele envia o formulário com nome, raça e uma foto
     Then a mascote é criada com status "pendente", as fotos (1 a 5) persistem no MinIO e um slug único é gerado
     And a mascote NÃO aparece no feed, perfil público, widget nem rankings
 
+  @cad-02
   Scenario: Limite de 5 fotos
     Given uma mascote que já tem 5 fotos
     When o participante tenta enviar uma 6ª foto
     Then a requisição é rejeitada
 
+  @cad-03
   Scenario: Foto otimizada servida pela CDN
     Given uma foto recém-enviada ao MinIO
     When o worker de imagens processa o original
@@ -214,6 +217,7 @@ Feature: Cadastro de mascote
     And url_thumb/url_medium são preenchidas e status_proc = "ok"
 
 Feature: Feed estilo Instagram
+  @feed-01
   Scenario: Carrossel de fotos
     Given uma mascote aprovada com 3 fotos
     When o card aparece no feed
@@ -222,6 +226,7 @@ Feature: Feed estilo Instagram
     And o evento "cadastro_mascote" é enviado a PostHog e Emarsys
 
 Feature: Moderação de inscrições
+  @mod-01
   Scenario: Mascote pendente é aprovada
     Given uma mascote com status "pendente"
     And um moderador autenticado
@@ -229,6 +234,7 @@ Feature: Moderação de inscrições
     Then o status muda para "aprovado"
     And a mascote passa a aparecer no feed e a receber votos
 
+  @mod-02
   Scenario: Mascote pendente é reprovada
     Given uma mascote com status "pendente"
     And um moderador autenticado
@@ -236,12 +242,14 @@ Feature: Moderação de inscrições
     Then o status muda para "reprovado"
     And a mascote continua invisível ao público
 
+  @mod-03
   Scenario: Voto em mascote não aprovada é rejeitado
     Given uma mascote com status "pendente" ou "reprovado"
     When alguém tenta votar nessa mascote
     Then o voto é rejeitado
 
 Feature: Votação sem login
+  @voto-01
   Scenario: Primeiro voto é contabilizado
     Given uma mascote aprovada com peso_voto = 1
     And um votante que passou o desafio Turnstile
@@ -250,18 +258,21 @@ Feature: Votação sem login
     And o total da mascote aumenta em 1
     And o total ao vivo é atualizado nos clientes conectados via SSE
 
+  @voto-02
   Scenario: Redis fora do ar não perde votos
     Given o Redis está indisponível
     When um voto novo é registrado
     Then o voto persiste no Postgres normalmente
     And ao voltar, o contador do Redis é reconstruído a partir do Postgres
 
+  @voto-03
   Scenario: Voto duplicado do mesmo votante é rejeitado
     Given um votante que já votou na mascote X
     When ele tenta votar novamente na mascote X
     Then nenhum novo registro é criado
     And o total da mascote permanece igual
 
+  @voto-04
   Scenario: Requisição automatizada é bloqueada
     Given uma requisição de voto sem token Turnstile válido
     When ela chega ao endpoint de voto
@@ -269,6 +280,7 @@ Feature: Votação sem login
     And o evento "voto_bloqueado" é enviado a PostHog
 
 Feature: Peso x2 Clube Condor (atrás de ff_condor_x2, pendente aprovação do PO)
+  @condor-01
   Scenario: Voto em mascote de dono Condor vale 2
     Given a flag ff_condor_x2 está ON
     And uma mascote cujo dono foi validado como sócio Condor (peso_voto = 2)
@@ -276,23 +288,27 @@ Feature: Peso x2 Clube Condor (atrás de ff_condor_x2, pendente aprovação do P
     Then é criado 1 registro de voto com peso 2
     And o total ponderado da mascote aumenta em 2
 
+  @condor-02
   Scenario: Flag desligada trata todos como peso 1
     Given a flag ff_condor_x2 está OFF
     When qualquer votante vota em qualquer mascote
     Then o voto é registrado com peso 1
 
 Feature: Backoffice
+  @bo-01
   Scenario: Acesso restrito
     Given um usuário não autenticado
     When ele acessa qualquer rota /api/admin/*
     Then o acesso é negado (401)
 
+  @bo-02
   Scenario: Exportar participantes
     Given um moderador autenticado
     When ele solicita a exportação da lista de participantes
     Then recebe um arquivo CSV/Excel com participante + mascote
 
 Feature: Landing page
+  @land-01
   Scenario: Widget do feed e CTA
     Given um visitante na landing page
     When a página carrega
@@ -382,5 +398,5 @@ Regras do monorepo: contratos compartilhados (tipos do modelo de dados, nomes de
 - Peso do voto SEMPRE resolvido no servidor; cliente nunca envia `peso`.
 - Nenhuma credencial de PostHog/Emarsys/Condor no bundle do cliente.
 - Branches `feat/`, `fix/`, `chore/`, `spike/`; `staging` e `main` permanentes.
-- PR template com checklist de cenários Gherkin cobertos + disclosure de IA (`[ai-assisted: claude-...]`).
+- PR template com checklist de cenários Gherkin cobertos + disclosure de IA (tag `[ai-assisted]`, sem nomear fornecedor).
 - Mudanças em lógica de voto/auth = risco alto → 2 aprovações + QA manual + feature flag.
