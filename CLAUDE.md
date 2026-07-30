@@ -10,13 +10,33 @@ Autoridade de convenções deste repositório. Todo agente (e humano) lê este a
 
 ## 0. Estado atual do repositório (leia primeiro)
 
-⚠️ **Este repositório contém apenas documentação.** Não há código, `package.json`, `pnpm-workspace.yaml`, `turbo.json` nem repositório git inicializado. Tudo em §2b/§7 é a estrutura **planejada**, não a existente.
+⚠️ **Este repositório ainda não tem código de produto.** Não há `package.json`, `pnpm-workspace.yaml` nem `turbo.json`. Tudo em §2b/§7 é a estrutura **planejada**, não a existente.
+
+O que **já existe**: git inicializado com as duas branches permanentes (`main` e `homologacao`), `.gitignore`, template de PR (`.github/pull_request_template.md`) e template de commit (`.gitmessage`).
 
 Consequências práticas:
 - Não procure `apps/`, `packages/` ou `ci/` — não existem ainda.
-- A primeira task de código é **PV-010** (setup do monorepo). Antes dela vêm os spikes do Epic 0 (`01-poc-spikes.md`).
+- A primeira task de código é **PV-010** (setup do monorepo). Antes dela vêm os spikes do Epic 0.
 - Ao scaffoldar, siga exatamente a árvore de §2b — ela é contrato, não sugestão.
-- Git ainda não inicializado: o workflow de branches de §5 só passa a valer depois de `git init` + criação de `main`/`homologacao`.
+- **Não há repositório remoto**, portanto **não há proteção de branch**: a regra de §5 (nunca commitar direto em `main`) é convenção não aplicada. Trabalhe a partir de `homologacao`.
+
+### ⚠️ O backlog vive em Plane, não neste repositório
+
+**Antes de escolher ou começar qualquer task, consulte Plane** — workspace `capsula`, projeto **CaoCurso**. `03-tareas.md` está **congelado**: serve como registro do desglose inicial, não como backlog vivo.
+
+Repartição de autoridade:
+- **Plane** manda no **operacional**: estado, ordem, atribuição, o que está bloqueado.
+- **Git** manda no **conteúdo**: PRD, SPEC, Gherkin, este arquivo.
+
+Três prefixos de ID convivem, de propósito:
+
+| Prefixo | O que é | Onde aparece |
+|---|---|---|
+| `PV-XXX` | **Tarefa**, vinda de `03-tareas.md` | Branch, commit e título do PR (§5) |
+| `DEC-XX` | **Decisão pendente** — não é tarefa | State `Aguardando decisão`, módulo "Decisões pendentes" |
+| `CAOCURSO-n` | ID interno gerado por Plane | Só na UI de Plane |
+
+**Uma `DEC-` não se desenvolve, se resolve.** Tem dono (PO, jurídico, tech lead) e ao ser fechada destrava trabalho. Se a task que você pegou está `Blocked by` uma `DEC-` aberta, **ela não pode ser fechada** — escale a decisão em vez de improvisar uma resposta. O porquê de cada uma fica na Page "Registro de decisões (ADR)" de Plane.
 
 ### Mapa dos documentos
 
@@ -25,7 +45,8 @@ Consequências práticas:
 | `00-prd.md` | Escopo, personas, métricas, o que está **fora** da v1 | Dúvida se algo é requisito |
 | `01-poc-spikes.md` | Riscos técnicos abertos, critérios GO/NO-GO e **fallbacks** | Antes de implementar voto, realtime, imagens ou Condor |
 | `02-spec.md` | **Fonte da verdade técnica**: schema, RPC, contratos de API, Gherkin | Sempre; é o documento que o agente revisor de CI valida |
-| `03-tareas.md` | IDs `PV-XXX`, épicos e **grafo de dependências** | Antes de paralelizar ou escolher a próxima task |
+| `03-tareas.md` | ⚠️ **Congelado.** Registro do desglose inicial e do grafo original | Só para consultar a origem de um `PV-XXX` |
+| **Plane** (`capsula`/CaoCurso) | **Backlog vivo**: estado, dependências, decisões pendentes | **Antes de escolher, paralelizar ou fechar qualquer task** |
 | `04-workflow-cicd.md` | Branches, pipeline, regra de não-conflito entre agentes | Ao abrir branch/PR ou mexer em CI |
 | `MEMORY.md` | Preferências permanentes do owner (Alejandro) | Ao gerar qualquer documento |
 
@@ -119,7 +140,7 @@ node ci/agente-revisor.mjs --spec 02-spec.md --diff <url> --claude-md CLAUDE.md
 - Um issue = uma branch = um PR (rastreabilidade completa). O ID da task (`PV-XXX`) vai na branch, nos commits e no título do PR.
 - Branches permanentes: **`main`** (produção) e **`homologacao`** (homologação/staging). PR de feature aponta para `homologacao`; `main` só recebe merge de `homologacao` após QA + aprovação manual.
 - Branches de trabalho: `feat/PV-XXX-...`, `fix/PV-XXX-...`, `chore/PV-XXX-...`, `spike/PV-XXX-...` (spike **nunca** é mergeada). Apagadas após o merge.
-- **Conventional Commits** com tag de IA, ex.: `feat(voto): rpc idempotente [ai-assisted: claude-sonnet]`.
+- **Conventional Commits** com tag de IA quando houve assistência, ex.: `feat(voto): rpc idempotente [ai-assisted]`.
 - PRs pequenos e focados.
 
 ## 5b. CI/CD (detalhe em `04-workflow-cicd.md`)
@@ -130,7 +151,9 @@ node ci/agente-revisor.mjs --spec 02-spec.md --diff <url> --claude-md CLAUDE.md
 
 ## 5c. Agentes em paralelo
 
-Vários agentes só rodam ao mesmo tempo se **não houver conflito**: arquivos disjuntos, sem dependência entre tasks (respeitar as setas de `03-tareas.md`), sem tocar a mesma migração/tabela. Cada agente usa **sua própria branch e PR** — nunca dois na mesma branch. Havendo sobreposição, executa-se em série.
+Vários agentes só rodam ao mesmo tempo se **não houver conflito**: arquivos disjuntos, sem dependência entre tasks, sem tocar a mesma migração/tabela. Cada agente usa **sua própria branch e PR** — nunca dois na mesma branch. Havendo sobreposição, executa-se em série.
+
+**Confira o campo `Blocked by` em Plane, não a intuição nem o grafo congelado de `03-tareas.md`.** Hoje só ~12 das 38 tasks estão realmente livres, e quase todas são spikes do Epic 0 ou CI — a maioria está travada pelo seu próprio spike. Os gargalos atuais: `PV-050` trava 5 itens, `PV-012` e `PV-011` travam 4 cada, `DEC-01` trava 3.
 
 No monorepo o limite natural é o workspace. Exceções que **sempre** serializam, porque todo mundo depende delas: `packages/db` (schema/migrações) e `packages/config`.
 
@@ -138,7 +161,7 @@ No monorepo o limite natural é o workspace. Exceções que **sempre** serializa
 
 - Referência ao issue que fecha.
 - Checklist dos **cenários Gherkin** cobertos (do `02-spec.md`).
-- **Disclosure de IA:** modelo usado e se o código foi revisado linha a linha.
+- **Disclosure de IA:** se houve assistência de IA e se o código foi revisado linha a linha. Não é preciso nomear fornecedor nem modelo — a tag `[ai-assisted]` nos commits basta.
 - Checklist: testes unitários, sem segredos no diff, migrações testadas, feature flags quando aplicável.
 
 ## 7. Governança por nível de risco
@@ -146,6 +169,8 @@ No monorepo o limite natural é o workspace. Exceções que **sempre** serializa
 - **Baixo** (docs, config, boilerplate): agente revisor + 1 aprovação humana.
 - **Médio** (features de negócio, endpoints não críticos): agente + 1 aprovação + testes E2E se toca fluxos compartilhados.
 - **Alto** (voto, autenticação, migrações de dados, integração Condor): agente + **2 aprovações** + QA manual em staging + **feature flag obrigatória**. Alvo de rollback < 10 min.
+
+⚠️ **A porta de risco alto é hoje insatisfazível e está em disputa (`DEC-12`).** O time tem 2 pessoas: descontando o autor, sobra **1 aprovador possível**, não 2. Isso trava exatamente o núcleo do produto (`PV-011` schema, `PV-033` voto, `PV-034` anti-fraude, `PV-050` auth). Enquanto `DEC-12` não fechar, não invente uma regra alternativa por conta própria — escale.
 
 ## 8. Feature flags
 
