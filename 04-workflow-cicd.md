@@ -123,13 +123,26 @@ Múltiplos agentes podem trabalhar **simultaneamente** apenas se **não houver r
 
 Se dois agentes precisam do mesmo arquivo, tabela ou de uma task bloqueante, roda-se **em série**. Cada agente abre **sua própria branch e PR** — nunca dois agentes na mesma branch. Em caso de conflito detectado, o segundo PR rebaseia sobre o primeiro já mergeado.
 
-Exemplo de lote paralelo seguro (após a fundação):
+**Antes de montar um lote, confira o grafo em Plane** (`Blocked by` no item), não a intuição. A maioria das tasks está travada por seu próprio spike do Epic 0.
+
+Lote válido **hoje** — os spikes são independentes entre si:
 ```
-Agente A → feat/PV-014 (MinIO)        }
-Agente B → feat/PV-012 (tracking)     }  paralelos: arquivos e domínios disjuntos
-Agente C → feat/PV-040 (landing)      }
+Agente A → spike/PV-001 (voto concorrente)   }
+Agente B → spike/PV-002 (eventos)            }  domínios disjuntos, nenhum bloqueia o outro
+Agente C → spike/PV-004 (imagens)            }
 ```
-Exemplo que NÃO paraleliza: `PV-033` (voto) e `PV-035` (realtime) — 035 depende de 033.
+
+Lote válido **depois que os spikes do Epic 0 fecharem** (não "após a fundação": `PV-014` faz parte da fundação, quem o trava é o spike `PV-004`):
+```
+Agente A → feat/PV-014 (MinIO)        }  liberado por PV-004
+Agente B → feat/PV-012 (tracking)     }  liberado por PV-002
+Agente C → feat/PV-040 (landing)      }  livre desde o início
+```
+
+Exemplos que **NÃO** paralelizam:
+- `PV-033` (voto) e `PV-035` (realtime) — 035 depende de 033.
+- Qualquer par que toque `packages/db`: `PV-011` e `PV-055` alteram schema/RLS.
+- Nada que dependa de uma decisão `DEC-*` ainda aberta — não é conflito de arquivos, é trabalho que não pode ser fechado.
 
 ## 6. Conventional Commits + disclosure de IA
 
