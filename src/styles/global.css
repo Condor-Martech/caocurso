@@ -152,13 +152,11 @@
 
   /* Altura del hero: EXACTAMENTE una pantalla, ni más ni menos.
 
-     `--nav-h` es lo que la barra de navegación le quita a esa pantalla, y
-     cambia con el régimen del <header> (ver Nav.astro). Medido en el navegador,
-     no estimado:
-       · < md    72 px — logo + hamburguesa (h-12) + py-3, barra en el flujo
-       · md–lg   60 px — sin hamburguesa, la barra sigue en el flujo
-       · ≥ lg     0 px — el <header> es `absolute` y flota sobre el hero, así
-                         que no le resta nada (el hero arranca en y=0)
+     `--nav-h` es lo que la barra de navegación le quita a esa pantalla. Hoy la
+     LP no lleva nav —se retiró—, así que vale 0 en todos los regímenes y el
+     hero arranca en y=0. Se conserva la variable, y no se sustituye por el 0
+     literal, porque si el nav vuelve este es el único sitio que hay que tocar:
+     con barra en el flujo medían 72 px por debajo de md y 60 px entre md y lg.
 
      Y también se descuenta `--faixa-h`: el cintillo de tiles que cierra el hero
      tiene que ENTRAR en esa pantalla. Con el hero a `100svh - --nav-h` la franja
@@ -173,20 +171,8 @@
      visible: el hero entra entero desde el primer instante y no se mueve. El
      precio es que, cuando la barra se esconde, asoma una tira de la franja por
      abajo — que es como el KV termina el bloque de todos modos. */
-  --nav-h: 72px;
+  --nav-h: 0px;
   --hero-h: calc(100svh - var(--nav-h) - var(--faixa-h));
-}
-
-@media (min-width: 768px) {
-  :root {
-    --nav-h: 60px;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --nav-h: 0px;
-  }
 }
 
 /* ==========================================================================
@@ -195,8 +181,10 @@
 
 html {
   scroll-behavior: smooth;
-  /* compensa el nav sticky al saltar a #adote / #caocurso / #galeria */
-  scroll-padding-top: 80px;
+  /* Compensaba el nav sticky al saltar a #adote / #caocurso / #galeria. Sin
+     nav no hay nada que se solape con el destino del ancla, y 80 px de
+     colchón dejaban la sección arrancando por debajo del borde. */
+  scroll-padding-top: 0;
 }
 
 body {
