@@ -191,24 +191,24 @@
   "patrocinio": {
     "titulo": "Patrocínio:",
     "marcas": [
-      { "nome": "Nestlé Purina", "logo": "/assets/2026/logo-nestle-purina.webp", "larguraMax": 160 },
-      { "nome": "Friskies", "logo": "/assets/patrocinadores/Logo-Friskies@2x.png", "larguraMax": 100 },
-      { "nome": "Dog Chow", "logo": "/assets/patrocinadores/Logo-dog-Chow.png", "larguraMax": 95 },
-      { "nome": "Fancy Feast", "logo": null, "larguraMax": 110 },
-      { "nome": "Kelcat", "logo": "/assets/patrocinadores/AF_LOGO_KELCAT-CROMIA-002@2x.png", "larguraMax": 100 },
-      { "nome": "Keldog", "logo": "/assets/patrocinadores/AF_LOGO_KELDOG_CROMIA-002.png", "larguraMax": 105 }
+      { "nome": "Nestlé Purina", "logo": "/assets/2026/logo-nestle-purina.webp", "largura": 600, "altura": 64 },
+      { "nome": "Friskies", "logo": "/assets/patrocinadores/Logo-Friskies@2x.png", "largura": 140, "altura": 140 },
+      { "nome": "Dog Chow", "logo": "/assets/patrocinadores/Logo-dog-Chow.png", "largura": 92, "altura": 92 },
+      { "nome": "Fancy Feast", "logo": null },
+      { "nome": "Kelcat", "logo": "/assets/patrocinadores/AF_LOGO_KELCAT-CROMIA-002@2x.png", "largura": 124, "altura": 106 },
+      { "nome": "Keldog", "logo": "/assets/patrocinadores/AF_LOGO_KELDOG_CROMIA-002.png", "largura": 66, "altura": 57 }
     ]
   },
 
   "apoio": {
     "titulo": "Apoio:",
     "marcas": [
-      { "nome": "MARS Petcare", "logo": null, "larguraMax": 90 },
-      { "nome": "brf pet", "logo": "/assets/patrocinadores/Image-5@2x.png", "larguraMax": 100 },
-      { "nome": "Caats", "logo": null, "larguraMax": 75 },
-      { "nome": "Doogs", "logo": "/assets/2026/logo-doogs.webp", "larguraMax": 95 },
-      { "nome": "Procão", "logo": "/assets/2026/logo-procao.webp", "larguraMax": 110 },
-      { "nome": "Doguitos", "logo": null, "larguraMax": 85 }
+      { "nome": "MARS Petcare", "logo": null },
+      { "nome": "brf pet", "logo": "/assets/patrocinadores/Image-5@2x.png", "largura": 304, "altura": 192 },
+      { "nome": "Caats", "logo": null },
+      { "nome": "Doogs", "logo": "/assets/2026/logo-doogs.webp", "largura": 574, "altura": 252 },
+      { "nome": "Procão", "logo": "/assets/2026/logo-procao.webp", "largura": 291, "altura": 160 },
+      { "nome": "Doguitos", "logo": null }
     ]
   },
 
