@@ -28,9 +28,10 @@
  *   del bloque 6 más el formulario. Orden fijo, Cãocurso delante: su ventana de
  *   inscripción es la que caduca (03/08–21/08).
  *
- * · Pestañas CON NOMBRE, no puntos. Un punto anónimo no se pulsa porque nadie
- *   sabe qué hay detrás; una pestaña etiquetada convierte el carrusel en un
- *   selector. Van bajo la columna derecha, que es lo que gobiernan.
+ * · Los controles —flechas y contador— SÓLO existen de tablet en horizontal
+ *   para arriba. En móvil la pantalla es el recurso escaso y ahí sobran: la
+ *   pista se pasa con el dedo y la rotación automática enseña la segunda
+ *   oferta sola. Ese carril de abajo es el que le da cuerpo al sello.
  *
  * · Funciona SIN JavaScript: la pista es `scroll-snap` nativo y se pasa con el
  *   dedo o con la rueda aunque el script no cargue. El JS sólo añade la
@@ -248,8 +249,12 @@ const [slideCao, slideAdote] = hero.slides;
     height: var(--hero-h);
     min-height: 32rem;
 
-    /* Alturas de las filas de la diapositiva. Móvil primero. */
-    --h-logo: min(30vw, 130px, calc(var(--hero-h) * 0.18));
+    /* Alturas de las filas de la diapositiva. Móvil primero.
+       El sello del Cãocurso pide más cuerpo que el resto: en el móvil es lo
+       único que identifica de qué va la tarjeta, y a 117 px se leía como un
+       icono. El sitio para crecer sale de las flechas, que en esta anchura ya
+       no se pintan. */
+    --h-logo: min(38vw, 168px, calc(var(--hero-h) * 0.22));
     --h-msg: min(50vw, 110px, calc(var(--hero-h) * 0.13));
     --h-dados: 3.2rem;
   }
@@ -264,7 +269,7 @@ const [slideCao, slideAdote] = hero.slides;
      vertical. */
   @media (max-height: 700px) {
     .hero {
-      --h-logo: min(26vw, 104px, calc(var(--hero-h) * 0.125));
+      --h-logo: min(32vw, 132px, calc(var(--hero-h) * 0.16));
       --h-msg: min(40vw, 84px, calc(var(--hero-h) * 0.085));
       --h-dados: 2.5rem;
     }
@@ -288,13 +293,18 @@ const [slideCao, slideAdote] = hero.slides;
     text-align: center;
   }
 
+  /* En móvil el sello y su claim SON el título de la página: no hay nav ni
+     titular de texto por encima, así que si no pesan, la primera pantalla no
+     dice de quién es. Van al ancho que permite la caja —de ahí los 44vw y
+     60vw—, con el tercer término atado a `--hero-h` para que en una pantalla
+     baja encojan antes de empujar la tarjeta. */
   .selo-mespet {
-    width: min(36vw, 132px, calc(var(--hero-h) * 0.15));
+    width: min(44vw, 176px, calc(var(--hero-h) * 0.19));
     filter: drop-shadow(0 14px 28px rgb(0 0 0 / 0.32));
   }
 
   .mote-mespet {
-    width: min(48vw, 194px, calc(var(--hero-h) * 0.23));
+    width: min(60vw, 240px, calc(var(--hero-h) * 0.28));
   }
 
   /* ── Bloque carrusel ──────────────────────────────────────────────────── */
@@ -311,8 +321,36 @@ const [slideCao, slideAdote] = hero.slides;
     min-width: 0;
     min-height: 0;
     flex-direction: column;
-    padding-top: 1.25rem;
-    padding-bottom: 2.5rem;
+    padding-top: 0.75rem;
+    /* Sin flechas ni contador debajo no hay carril que reservar: esos 2,5rem
+       eran su sitio. Se devuelven a la tarjeta y al título. */
+    padding-bottom: 0.5rem;
+  }
+
+  /* Segunda mitad del recorte para pantallas bajas. Va aquí, y no arriba junto
+     al `max-height` que ajusta las filas, porque estas reglas tienen que ir
+     DESPUÉS de las que corrigen: misma especificidad, gana la última.
+     Medido en 360×640 la tarjeta se quedaba a 5 px de la pista; el aire sale
+     del interlineado de la retícula y del carril del carrusel, no del sello,
+     que es lo que hay que poder leer. */
+  @media (max-height: 700px) {
+    .selo-mespet {
+      width: min(38vw, 140px, calc(var(--hero-h) * 0.17));
+    }
+
+    .mote-mespet {
+      width: min(52vw, 208px, calc(var(--hero-h) * 0.26));
+    }
+
+    .hero-grade {
+      gap: 0.35rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .bloco-slider {
+      padding-top: 0.35rem;
+    }
   }
 
   .pista {
@@ -390,6 +428,19 @@ const [slideCao, slideAdote] = hero.slides;
     border-radius: inherit;
     background: url('/assets/2026/trama-linhas.webp') center / cover no-repeat;
     opacity: 0.1;
+  }
+
+  /* Pantallas de 320: el CTA se parte en dos líneas y la nota también, así que
+     la tarjeta pedía unos 48 px más de los que tiene la pista y ésta recortaba
+     por los dos extremos —el sello del Cãocurso por arriba, la fecha de cierre
+     por abajo—. Ya pasaba antes de agrandar nada; aquí se cierra apretando lo
+     prescindible (aire y relleno) en vez de encoger el sello, que es
+     precisamente lo que hay que leer. */
+  @media (max-width: 359px) {
+    .oferta {
+      gap: 0.3rem;
+      padding: 0.6rem 0.7rem 0.7rem;
+    }
   }
 
   /* Tablet en vertical: la columna del carrusel es altísima y el panel, a alto
@@ -480,12 +531,18 @@ const [slideCao, slideAdote] = hero.slides;
   /* ══ Flechas ═════════════════════════════════════════════════════════════
      Flanquean la oferta en vez de acumularse en una barra al pie. Puestas a los
      lados hacen de paréntesis: el bloque queda centrado ENTRE ellas, que es lo
-     que le quita la sensación de disperso. */
+     que le quita la sensación de disperso.
+
+     EN MÓVIL NO SE PINTAN. Ahí la pista se pasa con el dedo —es `scroll-snap`
+     nativo, no hace falta JavaScript— y la rotación automática enseña la
+     segunda oferta sola, así que las flechas sólo estaban gastando la franja
+     inferior de la única pantalla que tenemos. Siguen en el DOM: el script las
+     escucha igual y el contador guarda el estado de la rotación. */
   .seta {
     position: absolute;
     bottom: 0;
     z-index: 3;
-    display: inline-flex;
+    display: none;
     height: 2.1rem;
     width: 2.1rem;
     align-items: center;
@@ -556,7 +613,7 @@ const [slideCao, slideAdote] = hero.slides;
   .estado {
     position: absolute;
     z-index: 3;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 0.55rem;
     inset-block-end: 0;
@@ -623,6 +680,27 @@ const [slideCao, slideAdote] = hero.slides;
     background: var(--c-orange-lite);
   }
 
+  /* La otra mitad del apaño de 320 px: con este cuerpo y este relleno «Quero
+     inscrever meu pet» cabe en UNA línea, que es la que sobraba. Va aquí abajo
+     y no junto a la regla de `.oferta` porque las de los botones se declaran
+     después: a igual especificidad manda la última, y puesta arriba no pintaba
+     nada. */
+  @media (max-width: 359px) {
+    .btn-primario,
+    .btn-claro {
+      min-height: 2.9rem;
+      padding-inline: 1.1rem;
+      font-size: 0.9375rem;
+    }
+
+    /* Los 28 px de la flecha son los que partían el rótulo en dos. Es
+       decorativa —ya va `aria-hidden`—, así que a este ancho se cae ella antes
+       que el texto. */
+    .btn-primario svg {
+      display: none;
+    }
+  }
+
   /* ══ Dos columnas ════════════════════════════════════════════════════════
      La condición es la misma que la variante `fila:` de global.css —ancho Y
      orientación—, porque en un iPad vertical las dos columnas dejarían media
@@ -673,14 +751,23 @@ const [slideCao, slideAdote] = hero.slides;
       gap: 0.9rem;
     }
 
-    /* Carril para las flechas: sin él pisarían el lettering. */
+    /* Carril para las flechas: sin él pisarían el lettering. Aquí sí vuelven
+       —hay ancho de sobra a los lados y puntero con el que pulsarlas—, y con
+       ellas el contador y el carril inferior que ocupa. */
     .bloco-slider {
+      padding-top: 1.25rem;
+      padding-bottom: 2.5rem;
       padding-inline: 2.75rem;
+    }
+
+    .estado {
+      display: flex;
     }
 
     .seta {
       top: 50%;
       bottom: auto;
+      display: inline-flex;
       height: 2.75rem;
       width: 2.75rem;
       translate: 0 -50%;
