@@ -123,8 +123,15 @@ Regular, SemiBold, Bold, Heavy) convertidos a `.woff2`.
 - **`POST /api/inscricao`** con **`multipart/form-data`** (`petFoto` es un archivo y no
   cabe en un body JSON).
 - Requiere `output: 'server'` + un adapter SSR en `astro.config.mjs`, o las rutas API no
-  se ejecutan. **Adapter actual: `@astrojs/vercel`** (antes era `@astrojs/node`; la doc
-  de `docs/` todavía menciona el de node en varios sitios).
+  se ejecutan. **Adapter actual: `@astrojs/vercel`.**
+
+  ⚠️ **Pero producción NO es Vercel: el sitio va a un VPS con Docker.** La decisión
+  está tomada; la migración del adapter está *aplazada a propósito*, no olvidada. No
+  optimices para Vercel ni des por bueno el build de `.vercel/output` como artefacto
+  de despliegue. Cuando toque: `@astrojs/node` en modo `standalone`, fuera
+  `vercel.json` y la opción `imageService: false` (es del adapter de Vercel), y un
+  Dockerfile multi-stage con `.dockerignore` — sin él el contexto de build se traga
+  `assets-fonte/`, casi 1 GB.
 - **Astro 7 rechaza los POST sin `Origin` propio** (protección CSRF por defecto). Desde
   el navegador funciona solo; desde `curl` hay que mandar
   `-H "Origin: http://localhost:4321"` o recibes un **403**, no un error de validación.
@@ -133,11 +140,13 @@ Regular, SemiBold, Bold, Heavy) convertidos a `.woff2`.
 - **`/api/feedback` NO sirve aquí:** pertenece a la documentación interna del proyecto
   central, exige `pageId` + `content` y devuelve **400** con el payload de inscripción.
 
-⚠️ **Bloqueante conocido para producción:** el endpoint persiste con `fs` en `uploads/`.
-En Vercel el sistema de archivos de una función es de sólo lectura salvo `/tmp`, y
-`/tmp` es efímero y por instancia: desplegado, `fs.mkdir` falla y responde **500**, y la
-deduplicación por tutor+pet tampoco puede funcionar porque cada instancia vería su
-propio fichero. **Destino decidido: la ficha va a Supabase y la foto a MinIO.** Es el
+**Persistencia del endpoint:** hoy escribe con `fs` en `uploads/`. En Vercel eso era
+un bloqueante duro —sistema de archivos de sólo lectura salvo `/tmp`, efímero y por
+instancia: `fs.mkdir` falla, responde **500**, y la deduplicación por tutor+pet no
+puede funcionar porque cada instancia ve su propio fichero—. **En un VPS con Docker
+y un volumen montado deja de serlo:** escribible, persistente y con una sola
+instancia. O sea que ya no impide desplegar; sigue siendo el camino equivocado a
+medio plazo. **Destino decidido: la ficha va a Supabase y la foto a MinIO.** Es el
 siguiente trabajo después del saneamiento. Al migrarlo, el formulario pasa a ser una
 **isla React** —por eso `@astrojs/react` sigue instalado aunque hoy no haya ninguna
 isla— y debe montarse con `client:visible`: vive muy por debajo del pliegue, así que
