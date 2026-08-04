@@ -1,0 +1,67 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import Faixa from '../components/Faixa.astro';
+import AdoteAumigo from '../components/AdoteAumigo.astro';
+import Eventos from '../components/Eventos.astro';
+import Requisitos from '../components/Requisitos.astro';
+import Protetoras from '../components/Protetoras.astro';
+import Caocurso from '../components/Caocurso.astro';
+import Evento30Agosto from '../components/Evento30Agosto.astro';
+import Atracoes from '../components/Atracoes.astro';
+import FormularioInscricao from '../components/FormularioInscricao.astro';
+import Galeria from '../components/Galeria.astro';
+import Patrocinadores from '../components/Patrocinadores.astro';
+import Footer from '../components/Footer.astro';
+
+/**
+ * Orden de bloques y de las 4 <Faixa /> verificado contra la referencia
+ * `docs/Desktop - CãoCurso.png`:
+ *   y≈755   franja tras el Hero
+ *   y≈1379  franja tras "Adote um AuMigo" (el perro la cruza con las patas)
+ *   y≈3130  franja antes de la banda Cãocurso
+ *   y≈3885  franja después de la banda Cãocurso
+ * Entre Eventos, Requisitos y Protetoras NO hay franja: comparten fondo azul.
+ *
+ * El formulario NO va en el flujo de la página: se abre como modal desde el
+ * botón «Inscreva-se» del bloque Cãocurso, que sólo aparece dentro del período
+ * de inscripción (src/lib/inscricao.ts).
+ *
+ * Va montado al final a propósito. Con JavaScript da igual dónde esté, porque
+ * está oculto hasta que se abre; sin JavaScript se pinta como una sección normal
+ * ahí abajo, y el botón —que es un <a href="#modal-inscricao">— salta hasta él.
+ * Por eso el componente se renderiza siempre, en los tres estados del período:
+ * quitarlo del HTML cuando está cerrado dejaría el ancla apuntando a la nada.
+ */
+---
+
+<Layout title="Mês Pet Condor 2026 - Cãocurso">
+  <Hero />
+
+  <Faixa />
+  <AdoteAumigo />
+
+  <Faixa />
+  <Eventos />
+  <Requisitos />
+  <Protetoras />
+
+  <Faixa />
+  <Caocurso />
+
+  <Faixa />
+  <Evento30Agosto />
+  <Atracoes />
+
+  <!-- Galería de la edición 2025 -->
+  <Galeria />
+
+  <!-- Patrocinadores y Apoyo -->
+  <Patrocinadores />
+
+  <!-- Formulario de inscripción. Oculto y abierto como modal cuando hay JS;
+       sección visible al final de la página cuando no lo hay. -->
+  <FormularioInscricao />
+
+  <Footer />
+</Layout>

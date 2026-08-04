@@ -1,63 +1,49 @@
-# ---------------------------------------------------------------------------
-# Segredos — NUNCA comitar
-# ---------------------------------------------------------------------------
-# Regra de ouro nº 4 (CLAUDE.md §3): credenciais de PostHog, Emarsys, Condor,
-# MinIO, Supabase e Plane ficam só no servidor / fora do versionamento.
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-secret-key-*
-# CSVs ficam de fora por padrão: já chegaram tokens de API neste diretório
-# nesse formato. Se algum dia houver fixture .csv legítima, liberá-la com
-# uma exceção explícita (!caminho/da/fixture.csv), nunca removendo esta linha.
-*.csv
-
-# Arquivos de bloqueio do LibreOffice/OpenOffice (aparecem ao abrir planilhas)
-.~lock.*#
-
-# ---------------------------------------------------------------------------
-# Node / monorepo (a partir de PV-010)
-# ---------------------------------------------------------------------------
-node_modules/
-.pnpm-store/
+# build output
 dist/
-build/
-coverage/
+.astro/
 
-# Next.js
-.next/
-out/
-next-env.d.ts
+# dependencies
+node_modules/
 
-# Turborepo
-.turbo/
-
-# Playwright (PV-CI2)
-test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
-
-# ---------------------------------------------------------------------------
-# Logs e temporários
-# ---------------------------------------------------------------------------
-*.log
+# logs
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.cache/
-tmp/
-*.tsbuildinfo
+pnpm-debug.log*
 
-# ---------------------------------------------------------------------------
-# Editor e SO
-# ---------------------------------------------------------------------------
+# environment variables
+.env
+.env.production
+
+# uploads del formulario de inscripción (no versionar fotos de usuarios)
+uploads/
+
+# macOS / editores
 .DS_Store
+*.local
 Thumbs.db
-.idea/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vercel
+
+# Material de origen: los ficheros tal como los entrega marketing —resolución de
+# imprenta, vectoriales y manuales de marca de terceros—. Vive AQUÍ y no bajo
+# public/ por dos motivos distintos que conviene no confundir:
+#   · fuera de git, porque son ~1 GB que, una vez en la historia, no se sacan
+#     sin reescribirla;
+#   · fuera de public/, porque .gitignore no impide publicar: todo lo que cuelga
+#     de public/ se copia al build y queda servido en una URL.
+# Lo que se sirve es un fichero plano por marca en public/assets/patrocinadores/,
+# generado a partir de assets-fonte/patrocinadores/.
+assets-fonte/
+
+# Configuración local del agente (skills, no código del proyecto)
+.claude/
+
+# Arte aprobado y briefing de la campaña. Se quedan en docs/ para trabajar, pero
+# NO se versionan: el repositorio de origen (Condor-Martech/caocurso) es público,
+# y una vez empujados quedan indexados y cacheados aunque después se borren.
+# El .docx es material interno de marketing y el PNG es el KV antes de campaña.
+# Si el repo pasa a privado, se quita esta regla y entran en un commit aparte.
+# La referencia de contenido sigue siendo la de CLAUDE.md; los ficheros están en
+# la carpeta del proyecto central, no sólo aquí.
+docs/*.png
+docs/*.docx

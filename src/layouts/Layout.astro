@@ -1,0 +1,95 @@
+---
+import '../styles/global.css';
+import { SITE } from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /* Sólo para páginas internas (p. ej. /lab/hero, el comparador de pruebas de
+     concepto del hero): impide que acaben indexadas si el laboratorio llega a
+     desplegarse por descuido. La LP nunca lo pasa. */
+  noindex?: boolean;
+}
+
+const {
+  title = 'Mês Pet Condor | Adote um AuMigo e inscreva seu pet no Cãocurso',
+  description = SITE.descricao,
+  noindex = false,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <!-- Azul oscuro del arranque del degradado del hero (#005BAA = --c-blue-deep),
+         muestreado en la referencia 2026. Antes era el naranja de la campaña 2025. -->
+    <meta name="theme-color" content="#005BAA" />
+    <!-- Sello 2026. El anterior (/assets/images/Selo.png) era el sello ROJO de 2025.
+         WebP como favicon lo soportan todos los navegadores modernos. -->
+    <link rel="icon" type="image/webp" href="/assets/2026/selo-mespet-2026.webp" />
+
+    <!-- La fuente de marca es crítica para el render: precargar los pesos usados -->
+    <link
+      rel="preload"
+      href="/fonts/torus-700.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/torus-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={SITE.url} />
+    <meta property="og:locale" content="pt_BR" />
+    <!-- URL absoluta: los scrapers de Facebook/WhatsApp/LinkedIn no resuelven rutas
+         relativas. Se usa el sello 2026 en WebP porque es lo que hay hoy; lo ideal
+         sería un JPG dedicado de 1200×630 (el sello es cuadrado, 760×799, así que
+         algunas plataformas lo recortarán), pero esa pieza aún no existe. -->
+    <meta property="og:image" content={new URL('/assets/2026/selo-mespet-2026.webp', SITE.url).href} />
+    <meta property="og:image:alt" content="Selo Mês Pet Condor 2026" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Marca que hay JS ANTES de pintar: sin esto, .reveal no oculta nada y el
+         contenido es visible aunque el IntersectionObserver nunca se dispare. -->
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+
+  <body>
+    <a href="#conteudo" class="sr-only">Pular para o conteúdo</a>
+    <slot />
+
+    <script>
+      // Scroll reveal — respeta prefers-reduced-motion vía la clase .reveal en CSS
+      const alvos = document.querySelectorAll('.reveal');
+      if (alvos.length) {
+        const io = new IntersectionObserver(
+          (entradas) => {
+            for (const e of entradas) {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                io.unobserve(e.target);
+              }
+            }
+          },
+          { threshold: 0.12 }
+        );
+        alvos.forEach((el) => io.observe(el));
+      }
+    </script>
+  </body>
+</html>

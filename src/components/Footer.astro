@@ -1,0 +1,64 @@
+---
+import { footer } from '../data/site';
+import { socialLinks, copyright } from '../data/site';
+import IconeSocial from './icons/IconeSocial.astro';
+
+/**
+ * FOOTER 2026 — banda azul a todo el ancho, medida sobre la referencia
+ * `docs/Desktop - CãoCurso.png` (recorte y=7000-8000, a 1366 px de ancho):
+ *
+ *   · fondo      #00419A EXACTO (muestreado) = --c-blue / brand-blue.
+ *                Antes era #003882, que no existe en la paleta.
+ *   · banda      empieza en y=7772 y llega al final de la página: ~226 px de
+ *                alto con el contenido (44 px) centrado, o sea ~92 px de aire
+ *                arriba y abajo → md:py-24.
+ *   · izquierda  logo Condor ≈150×41 px  → h-10 sobre un archivo de 480×130.
+ *   · centro     copyright en blanco puro, 434 px de ancho de línea ≈ 20 px de
+ *                cuerpo en Torus Regular → md:text-xl.
+ *   · derecha    seis insignias sociales de 36 px con 7 px de aire entre ellas.
+ *                Van A COLOR DE MARCA, no monocromas sobre blanco: el chip
+ *                completo lo dibuja IconeSocial.astro.
+ *
+ * El sexto icono es THREADS (en 2025 era X). No hay borde superior: en la
+ * referencia el lavanda de Patrocínio entrega directamente al azul.
+ */
+---
+
+<footer class="w-full bg-brand-blue py-12 text-brand-white md:py-24">
+  <div
+    class="container-lp flex flex-col items-center justify-between gap-8 text-center md:flex-row md:gap-8 md:text-left"
+  >
+    <img
+      src={footer.logo.src}
+      alt={footer.logo.alt}
+      class="h-9 w-auto shrink-0 object-contain md:h-10"
+      width="480"
+      height="130"
+      loading="lazy"
+      decoding="async"
+    />
+
+    <!-- ~20 px en la referencia: la línea mide 434 px de ancho a 1366, y con
+         Torus Regular eso sale a 20-21 px de cuerpo. -->
+    <p class="text-base md:text-xl">{copyright}</p>
+
+    <!-- gap-2 = 8 px, el aire que hay entre insignias en el mockup (7 px) -->
+    <ul class="flex flex-wrap items-center justify-center gap-2">
+      {
+        socialLinks.map((s) => (
+          <li>
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.nome}
+              class="block transition-opacity hover:opacity-80"
+            >
+              <IconeSocial name={s.icon} size={36} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</footer>

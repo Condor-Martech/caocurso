@@ -1,0 +1,250 @@
+/* ==========================================================================
+   Animaciones — Pet Condor LP
+   Colores alineados a los tokens reales (ver docs/GROUND_TRUTH.md §1).
+   Sólo se animan `transform` y `opacity` (aceleradas por GPU).
+   ========================================================================== */
+
+/* --- Keyframes ---------------------------------------------------------- */
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Patas del gato que cuelgan sobre la franja anterior a Eventos */
+@keyframes patasFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* --- Clases reutilizables ----------------------------------------------- */
+
+.animate-fade-in {
+  animation: fadeIn 200ms ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 400ms ease-out both;
+}
+
+.patas-gato {
+  animation: patasFloat 4s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* --- Transiciones por elemento ------------------------------------------ */
+
+/* Card de evento (fondo azul) */
+.card-evento {
+  transition:
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-evento:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 28px rgb(0 0 0 / 0.22);
+}
+
+.card-evento:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+/* Cards blancas: protetoras y atrações */
+.card-branca {
+  transition:
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-branca:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 28px rgb(0 0 0 / 0.18);
+}
+
+/* Botones */
+.btn-lp {
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out,
+    box-shadow 200ms ease-out,
+    transform 200ms ease-out;
+}
+
+.btn-lp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.2);
+}
+
+.btn-lp:active {
+  transform: scale(0.98);
+}
+
+/* Fotos de la galería */
+.foto-galeria {
+  overflow: hidden;
+}
+
+.foto-galeria img {
+  transition:
+    transform 250ms ease-out,
+    filter 250ms ease-out;
+}
+
+.foto-galeria:hover img {
+  transform: scale(1.05);
+  filter: brightness(1.06);
+}
+
+/* Nav */
+.nav-link {
+  transition:
+    opacity 200ms ease-out,
+    border-color 200ms ease-out;
+}
+
+/* --- Estados del formulario --------------------------------------------- */
+
+.form-input {
+  transition:
+    border-color 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.form-input:focus {
+  border-color: var(--c-blue);
+  box-shadow: 0 0 0 3px rgb(0 65 154 / 0.15);
+  outline: none;
+}
+
+/* Estado válido: borde azul de marca (el verde no es color de Condor) */
+.form-input.is-valid {
+  border-color: var(--c-blue);
+}
+
+.form-input.is-error {
+  border-color: var(--c-red);
+  animation: shake 200ms ease-in-out;
+}
+
+/* Spinner del botón "Enviando…" */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Preview de la foto de la mascota al seleccionarla */
+.foto-preview {
+  animation: slideUp 250ms ease-out;
+}
+
+/* --- Scroll reveal ------------------------------------------------------
+   Se oculta SÓLO si hay JS (la clase .js la pone un script inline en <head>).
+   Sin JS el contenido se ve siempre: nunca debe quedar invisible porque el
+   IntersectionObserver no haya llegado a dispararse.
+   ------------------------------------------------------------------------ */
+
+.js .reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 600ms ease-out,
+    transform 600ms ease-out;
+}
+
+.js .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Preferencias de movimiento ----------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}

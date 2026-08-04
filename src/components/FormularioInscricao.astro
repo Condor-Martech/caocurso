@@ -1,0 +1,1090 @@
+---
+/**
+ * FORMULÁRIO DE INSCRIÇÃO — Cãocurso 2026.
+ *
+ * Se abre como MODAL desde el botón «Inscreva-se» de `Evento30Agosto.astro`, que
+ * sólo aparece cuando el período está abierto (ver `src/lib/inscricao.ts`).
+ *
+ * ── Por qué no es un modal «de verdad» ───────────────────────────────────────
+ *
+ * El bloque vive en el documento como una sección normal, y el modal es una capa
+ * de presentación encima. Sin JavaScript no hay velo ni botón de cerrar: el
+ * formulario se pinta como una tarjeta al final de la página y el enlace del
+ * botón —un `<a href="#modal-inscricao">`— salta hasta él. Se rellena y se envía
+ * igual, porque el `<form>` conserva `action`, `method` y `enctype` reales.
+ *
+ * Con JavaScript, la clase `.js` que `Layout.astro` pone en `<html>` antes de
+ * pintar lo oculta, y el clic en el botón lo muestra centrado sobre un velo.
+ *
+ * Un `<dialog>` habría sido más corto, pero sin JS es `display:none` y no hay
+ * forma de abrirlo: el formulario dejaría de existir para quien no ejecute
+ * scripts. Aquí la degradación es que se ve peor, no que desaparece.
+ *
+ * `role="dialog"` y `aria-modal` los pone el script AL ABRIR, no el HTML: sin JS
+ * no hay comportamiento modal que anunciar, y prometérselo a un lector de
+ * pantalla sería mentirle.
+ *
+ * ── Maqueta ──────────────────────────────────────────────────────────────────
+ *
+ * Tarjeta blanca redondeada. Medida contra `docs/Desktop - CãoCurso.png` a 1366 px
+ * (donde el formulario iba embebido; el contenido de la tarjeta no cambió):
+ *
+ *   tarjeta      x 220…1145 (926 px, centrada) · y 5213…6321 · radio ≈28 px
+ *   contenido    x 286…1085 (800 px) → padding lateral ≈64 px, vertical ≈48 px
+ *   dos columnas 332 px + hueco 65 px + 402 px  → ≈ 5fr / 6fr con gap-16
+ *   campos       alto 44 px, radio píldora, contorno gris, placeholder gris
+ *   textarea     alto ≈320 px, radio ≈20 px
+ *   botón        336×60 px, azul sólido, texto blanco
+ *
+ * Neutros: la paleta 2026 no tiene gris, pero la referencia sí lo usa en el
+ * contorno de los campos (#E9E9E9 muestreado) y en el placeholder (#A8A8A8).
+ * Para no abrir la paleta con dos HEX nuevos se expresan como NEGRO CON ALFA
+ * sobre blanco, que da exactamente esos dos valores: 9 % → #E9E9E9 y
+ * 34 % → #A8A8A8. Son neutros de interfaz, no colores de marca.
+ *
+ * El checkbox de aceite NO está en el mockup: lo pidió el cliente y es
+ * obligatorio por LGPD (regulamento + cesión de imagen del pet).
+ *
+ * Envío: POST multipart a /api/inscricao. Con JS lo intercepta el <script> de
+ * abajo y pinta la respuesta en la propia tarjeta; sin JS el POST nativo sigue
+ * funcionando (el usuario acaba en la respuesta JSON, feo pero no roto).
+ */
+import { formulario } from '../data/site';
+
+const { campos: c } = formulario;
+---
+
+<div id="modal-inscricao" class="modal" data-modal>
+  <!-- Velo. Sólo existe en modo modal; sin JS no se pinta (ver el CSS). -->
+  <div class="modal__fundo" data-fechar></div>
+
+  <div class="modal__caixa">
+    <button class="modal__fechar" type="button" data-fechar aria-label={formulario.fecharAria}>
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M6 6l12 12M18 6L6 18"></path>
+      </svg>
+    </button>
+
+    <h2
+      id="modal-inscricao-titulo"
+      class="mb-3 text-center text-2xl font-black tracking-tight sm:text-3xl md:mb-4 md:text-[2rem]"
+    >
+      {formulario.titulo}
+    </h2>
+
+    <form
+      id="form-inscricao"
+      action="/api/inscricao"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      {/* ------------------------------------------------ Dados do Tutor */}
+      <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
+
+      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+        <div class="col-span-full">
+          <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="tutorNome"
+            name="tutorNome"
+            placeholder={c.tutorNome.placeholder}
+            autocomplete="name"
+            minlength="3"
+            maxlength="120"
+            required
+          />
+        </div>
+
+        <div>
+          <!-- type="text" y no type="date" a propósito: ver el <script>. -->
+          <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="tutorNascimento"
+            name="tutorNascimento"
+            placeholder={c.tutorNascimento.placeholder}
+            inputmode="numeric"
+            pattern="\d{2}/\d{2}/\d{4}"
+            title={c.tutorNascimento.title}
+            maxlength="10"
+            autocomplete="bday"
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="tutorCpf">{c.tutorCpf.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="tutorCpf"
+            name="tutorCpf"
+            placeholder={c.tutorCpf.placeholder}
+            inputmode="numeric"
+            maxlength="14"
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="tutorEmail">{c.tutorEmail.label}</label>
+          <input
+            class="campo"
+            type="email"
+            id="tutorEmail"
+            name="tutorEmail"
+            placeholder={c.tutorEmail.placeholder}
+            autocomplete="email"
+            maxlength="150"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="tutorTelefone">{c.tutorTelefone.label}</label>
+          <input
+            class="campo"
+            type="tel"
+            id="tutorTelefone"
+            name="tutorTelefone"
+            placeholder={c.tutorTelefone.placeholder}
+            inputmode="tel"
+            autocomplete="tel"
+            maxlength="16"
+            required
+          />
+        </div>
+      </div>
+
+      {/* -------------------------------------------------- Dados do Pet */}
+      <h3 class="mt-3 mb-2.5 text-xl font-bold md:mt-4 md:text-2xl">{formulario.secoes.pet}</h3>
+
+      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+        <div class="col-span-full">
+          <label class="sr-only" for="petNome">{c.petNome.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="petNome"
+            name="petNome"
+            placeholder={c.petNome.placeholder}
+            maxlength="60"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="petRaca">{c.petRaca.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="petRaca"
+            name="petRaca"
+            placeholder={c.petRaca.placeholder}
+            maxlength="60"
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="petSexo">{c.petSexo.label}</label>
+          <input
+            class="campo"
+            type="text"
+            id="petSexo"
+            name="petSexo"
+            placeholder={c.petSexo.placeholder}
+            maxlength="20"
+          />
+        </div>
+
+        <div class="col-span-full">
+          <label class="sr-only" for="petDescricao">{c.petDescricao.label}</label>
+          <textarea
+            class="campo campo--area"
+            id="petDescricao"
+            name="petDescricao"
+            rows="3"
+            maxlength="1000"
+            placeholder={c.petDescricao.placeholder}></textarea>
+        </div>
+      </div>
+
+      {/* ------------------------------------- Aceite (LGPD) — no mockup */}
+      <div class="aceite mt-3">
+        <input
+          class="aceite__box"
+          type="checkbox"
+          id="aceiteRegulamento"
+          name="aceiteRegulamento"
+          required
+        />
+        <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
+             palabra «regulamento» debe pasar a ser un enlace al documento. -->
+        <label class="aceite__texto" for="aceiteRegulamento">{formulario.aceite}</label>
+      </div>
+
+      {/* ------------------------------------------- Retorno para o usuário */}
+      <div class="status mt-3" data-status role="status" aria-live="polite" hidden></div>
+
+      {/* ------------------------------------------- Foto + envio */}
+      <div class="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="w-full md:w-auto">
+          <div class="arquivo">
+            <input
+              class="arquivo__input"
+              type="file"
+              id="petFoto"
+              name="petFoto"
+              accept="image/jpeg,image/png,image/webp"
+              aria-describedby="petFoto-ajuda"
+              required
+            />
+            <label class="arquivo__pill" for="petFoto">
+              <svg
+                class="arquivo__clipe"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                ></path>
+              </svg>
+              <span>{formulario.arquivo.rotulo}</span>
+            </label>
+          </div>
+
+          <p class="arquivo__nome" data-arquivo aria-live="polite" hidden></p>
+          <p class="arquivo__ajuda" id="petFoto-ajuda">{formulario.arquivo.ajuda}</p>
+        </div>
+
+        <button class="btn-enviar" type="submit" data-enviar>{formulario.enviar}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  /* `hidden` tiene que ganar a los display de más abajo: van en el mismo nivel
+     de especificidad y sin esto el contenedor de estado se vería siempre. */
+  [hidden] {
+    display: none !important;
+  }
+
+  #modal-inscricao {
+    /* Neutros de interfaz, no colores de marca. Negro con alfa sobre el blanco
+       de la tarjeta = exactamente los valores muestreados en la referencia:
+       9 % → #E9E9E9 (contorno) · 34 % → #A8A8A8 (placeholder y texto de ayuda). */
+    --campo-borda: rgb(0 0 0 / 0.09);
+    --campo-suave: rgb(0 0 0 / 0.34);
+  }
+
+  /* El foco global de la LP es un contorno BLANCO, pensado para los fondos de
+     color; dentro de la tarjeta blanca sería invisible. Aquí manda el azul. */
+  #modal-inscricao :focus-visible {
+    outline: 3px solid var(--c-blue);
+    outline-offset: 2px;
+    border-radius: 9999px;
+  }
+
+  /* ================================================================== modal
+
+     Dos modos, y el interruptor es la clase `.js` que Layout.astro pone en
+     <html> antes de pintar.
+
+     SIN JS — lo de abajo no se aplica: `.modal` es una sección lavanda normal
+     al final de la página, con su tarjeta blanca. El velo y el botón de cerrar
+     no se pintan porque no harían nada.
+
+     CON JS — oculto hasta que se abra; abierto, ocupa la ventana entera.
+     -------------------------------------------------------------------- */
+
+  .modal {
+    background: var(--c-purple);
+    padding-bottom: 4rem;
+  }
+
+  .modal__fundo,
+  .modal__fechar {
+    display: none;
+  }
+
+  .modal__caixa {
+    margin-inline: auto;
+    width: min(100% - 3rem, 58rem);
+    border-radius: 28px;
+    background: var(--c-white);
+    padding: clamp(1.25rem, 2.5svh, 2.5rem) 1.5rem;
+    color: var(--c-blue);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  @media (min-width: 768px) {
+    .modal {
+      padding-bottom: 5rem;
+    }
+
+    .modal__caixa {
+      padding: clamp(1.5rem, 3.5svh, 3rem) 4rem;
+    }
+  }
+
+  :global(html.js) .modal {
+    display: none;
+    background: none;
+    padding-bottom: 0;
+  }
+
+  :global(html.js) .modal.aberto {
+    /* `flex` + `align-items: flex-start` + `margin-block: auto` en la caja, y no
+       `place-items: center`: cuando el formulario es más alto que la ventana
+       —que en móvil es siempre, son once campos— centrar recorta la tarjeta por
+       ARRIBA y deja el primer campo fuera de alcance, sin scroll que lo
+       recupere. Con margen automático se centra mientras cabe y se ancla arriba
+       cuando no. */
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    inset: 0;
+    /* El scroll se queda como red de seguridad, no como diseño: el objetivo es
+       que la tarjeta entre en una pantalla, y a partir de md lo hace. En
+       ventanas muy bajas —un móvil en horizontal son ~390 px de alto— once
+       campos no caben de ninguna manera, y ahí desplazar es mejor que recortar. */
+    overflow-y: auto;
+    /* Aire mínimo. Antes era `clamp(1rem, 4vh, 3rem)`, que en un portátil se
+       comía 61 px de los 768 disponibles sólo en margen. */
+    padding: clamp(0.5rem, 1.5svh, 1rem) 1rem;
+    overscroll-behavior: contain;
+  }
+
+  :global(html.js) .modal.aberto .modal__fundo {
+    position: fixed;
+    display: block;
+    /* Un velo no es un color de marca: es una capa de contraste, y la paleta
+       2026 no tiene ningún neutro oscuro. Con brand-blue se confundiría con la
+       propia página, que ya es azul. */
+    background: rgb(0 0 0 / 0.6);
+    inset: 0;
+  }
+
+  :global(html.js) .modal.aberto .modal__caixa {
+    position: relative;
+    z-index: 1;
+    margin-block: auto;
+    width: min(100%, 58rem);
+  }
+
+  /* El título va centrado en la tarjeta y el botón de cerrar en su esquina: sin
+     este hueco, en móvil «Formulário de inscrição:» pasa por debajo de la aspa.
+     Se reserva a los dos lados para que el texto siga centrado respecto a la
+     tarjeta y no respecto al espacio que sobra. */
+  :global(html.js) .modal.aberto .modal__caixa h2 {
+    padding-inline: 2.75rem;
+  }
+
+  :global(html.js) .modal.aberto .modal__fechar {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: var(--c-blue);
+    cursor: pointer;
+  }
+
+  :global(html.js) .modal.aberto .modal__fechar:hover {
+    background: rgb(0 0 0 / 0.06);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .modal.aberto .modal__caixa {
+      animation: modal-entra 0.22s ease-out both;
+    }
+  }
+
+  @keyframes modal-entra {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  /* ---------------------------------------------------- modo compacto
+
+     Se activa por ALTO de ventana, no por ancho: el problema no es el
+     dispositivo, es cuántos píxeles verticales hay. Un portátil de 1366×768 con
+     la barra de marcadores abierta deja ~660 px reales, y ahí el formulario no
+     entra con el ritmo normal.
+
+     Lo que NO se toca aquí, y es deliberado:
+       · `font-size: 1rem` de los campos — por debajo de 16 px iOS hace zoom al
+         enfocar, y el formulario se descoloca solo;
+       · el alto mínimo de los objetivos táctiles del bloque de envío.
+     -------------------------------------------------------------------- */
+
+  @media (max-height: 820px) {
+    .campo {
+      padding-block: 0.375rem;
+    }
+
+    .btn-enviar {
+      padding-block: 0.625rem;
+      font-size: 1.125rem;
+    }
+
+    .modal__caixa h2 {
+      margin-bottom: 0.625rem;
+    }
+  }
+
+  @media (max-height: 820px) and (min-width: 768px) {
+    .btn-enviar {
+      font-size: 1.25rem;
+    }
+
+    .modal__caixa form > div {
+      row-gap: 0.625rem;
+    }
+
+    .modal__caixa form > h3 {
+      margin-bottom: 0.5rem;
+    }
+
+    .modal__caixa form > h3 + * {
+      margin-top: 0;
+    }
+  }
+
+  /* Segundo escalón: portátil de 768 px con la barra de marcadores abierta deja
+     unos 660 px de ventana, y es de las medidas más frecuentes que hay. */
+  @media (max-height: 720px) and (min-width: 768px) {
+    .modal__caixa h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+    }
+
+    .modal__caixa form > h3 {
+      margin-top: 0.625rem;
+      margin-bottom: 0.375rem;
+      font-size: 1.25rem;
+    }
+
+    .modal__caixa form > div {
+      row-gap: 0.5rem;
+    }
+
+    .campo {
+      padding-block: 0.3125rem;
+    }
+
+    .campo--area {
+      height: 3rem;
+    }
+
+    .modal__caixa {
+      padding-block: clamp(1rem, 2svh, 2rem);
+    }
+
+    .btn-enviar {
+      padding-block: 0.5rem;
+      font-size: 1.125rem;
+    }
+
+    .aceite {
+      margin-top: 0.5rem;
+    }
+
+    /* El aire alrededor de la tarjeta también cuenta contra la ventana: a 660 px
+       eran los últimos 16 que faltaban. */
+    :global(html.js) .modal.aberto {
+      padding-block: 0.25rem;
+    }
+  }
+
+  /* ------------------------------------------------------------- campos */
+
+  .campo {
+    width: 100%;
+    /* La referencia dibuja un contorno de 4 px; a 2 px sigue leyéndose igual de
+       nítido sin engordar la píldora, que mide 44 px de alto. */
+    border: 2px solid var(--campo-borda);
+    border-radius: 9999px;
+    background-color: var(--c-white);
+    color: var(--c-blue);
+    font-family: inherit;
+    /* 16 px en móvil no es capricho: por debajo de eso iOS hace zoom al enfocar. */
+    font-size: 1rem;
+    line-height: 1.5;
+    padding: 0.5rem 1.25rem;
+    /* «CPF cadastrado no Clube Condor» no cabe en una píldora de 360 px, y
+       bajar el cuerpo por debajo de 16 px dispararía el zoom de iOS. Con esto
+       el recorte se lee como recorte y no como un corte a mitad de letra. */
+    text-overflow: ellipsis;
+    transition: border-color 0.15s ease;
+  }
+
+  .campo::placeholder {
+    color: var(--campo-suave);
+    opacity: 1; /* Firefox lo baja a 0.54 por su cuenta */
+  }
+
+  .campo:hover {
+    border-color: rgb(0 0 0 / 0.18);
+  }
+
+  .campo:focus {
+    border-color: var(--c-blue);
+    outline: none;
+  }
+
+  .campo[aria-invalid='true'] {
+    border-color: var(--c-red);
+  }
+
+  /* El mockup dibuja este campo a 320 px de alto, y era el que impedía que el
+     formulario entrara en una pantalla: 304 px reales en escritorio, de los
+     ~1.190 de la tarjeta, para un campo OPCIONAL. Ahora se escala con el alto de
+     la ventana y arranca en 4 rem.
+
+     `svh` y no `vh`: en móvil `vh` mide la pantalla sin la barra del navegador,
+     así que el campo saldría más alto de lo que cabe justo cuando menos sitio
+     hay. Sigue siendo `resize: vertical`, así que quien quiera escribir más lo
+     estira. */
+  .campo--area {
+    border-radius: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    height: clamp(4rem, 11svh, 6.5rem);
+    resize: vertical;
+  }
+
+  /* --------------------------------------------------------- aceite LGPD */
+
+  .aceite {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+  }
+
+  .aceite__box {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    accent-color: var(--c-blue);
+    cursor: pointer;
+  }
+
+  .aceite__box[aria-invalid='true'] {
+    outline: 2px solid var(--c-red);
+    outline-offset: 2px;
+  }
+
+  .aceite__box[aria-invalid='true'] ~ .aceite__texto {
+    color: var(--c-red);
+  }
+
+  .aceite__texto {
+    color: var(--c-blue);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    cursor: pointer;
+  }
+
+  /* ----------------------------------------------------- anexar foto */
+
+  /* El <input type="file"> va PRIMERO y en absoluto, transparente, cubriendo
+     toda la píldora: así recibe el clic directamente y —a diferencia de un
+     .sr-only— tiene caja real, que es lo que Chrome necesita para anclar el
+     globo de validación de `required`. Con .sr-only el envío se bloqueaba en
+     silencio ("An invalid form control is not focusable").
+     Al ir antes que el <label> se puede estilar la píldora con `~`, sin :has(). */
+  .arquivo {
+    position: relative;
+    display: block;
+    width: 100%;
+  }
+
+  .arquivo__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .arquivo__pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: 100%;
+    border: 2px solid var(--campo-borda);
+    border-radius: 9999px;
+    padding: 0.5rem 1.5rem;
+    color: var(--campo-suave);
+    font-size: 1rem;
+    line-height: 1.5;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .arquivo__clipe {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .arquivo__input:hover ~ .arquivo__pill {
+    border-color: rgb(0 0 0 / 0.18);
+  }
+
+  .arquivo__input:focus-visible ~ .arquivo__pill {
+    outline: 3px solid var(--c-blue);
+    outline-offset: 2px;
+  }
+
+  .arquivo__input[aria-invalid='true'] ~ .arquivo__pill {
+    border-color: var(--c-red);
+    color: var(--c-red);
+  }
+
+  .arquivo__nome {
+    margin-top: 0.375rem;
+    color: var(--c-blue);
+    font-size: 0.75rem;
+    font-weight: 700;
+    word-break: break-all;
+  }
+
+  .arquivo__ajuda {
+    margin-top: 0.25rem;
+    color: var(--campo-suave);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  /* ------------------------------------------------------------ estado */
+
+  .status {
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .status[data-estado='enviando'] {
+    border: 2px solid var(--campo-borda);
+    color: var(--c-blue);
+  }
+
+  .status[data-estado='ok'] {
+    background-color: var(--c-blue);
+    color: var(--c-white);
+  }
+
+  .status[data-estado='erro'] {
+    background-color: var(--c-red);
+    color: var(--c-white);
+  }
+
+  /* ------------------------------------------------------------ enviar */
+
+  .btn-enviar {
+    width: 100%;
+    border-radius: 9999px;
+    background-color: var(--c-blue);
+    color: var(--c-white);
+    font-family: inherit;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0.875rem 2.5rem;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .btn-enviar:hover {
+    background-color: var(--c-blue-deep);
+  }
+
+  .btn-enviar:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  @media (min-width: 768px) {
+    .campo,
+    .arquivo__pill {
+      font-size: 1.125rem;
+    }
+
+    .campo--area {
+      height: clamp(4.5rem, 10svh, 8rem);
+    }
+
+    .aceite__texto {
+      font-size: 0.875rem;
+    }
+
+    .arquivo {
+      width: auto;
+    }
+
+    .arquivo__pill {
+      width: auto;
+      justify-content: flex-start;
+    }
+
+    .btn-enviar {
+      width: auto;
+      font-size: 1.75rem;
+      padding: 0.875rem 2.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .campo,
+    .arquivo__pill,
+    .btn-enviar {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Envío sin salir de la página.
+   *
+   * Sin este script el <form> hace un POST nativo y el usuario termina mirando
+   * el JSON crudo de la API en una pestaña en blanco. Con él: fetch multipart,
+   * botón bloqueado mientras va, respuesta pintada en la tarjeta y el campo que
+   * la API señala (`campo`) marcado en rojo. Si el JS no carga, el POST nativo
+   * sigue existiendo: nada de esto es un requisito para poder inscribirse.
+   *
+   * Por qué la fecha es type="text" y no type="date":
+   *   1. type="date" no admite placeholder — siempre enseña «dd/aaaa/mm» del
+   *      navegador y rompe la composición de la referencia, que muestra
+   *      «Data de nascimento» en gris como todos los demás campos.
+   *   2. Es una fecha de NACIMIENTO: el selector nativo abre en el mes actual y
+   *      obliga a retroceder décadas. Teclear 8 dígitos con el teclado numérico
+   *      es más rápido en móvil, y el `inputmode="numeric"` ya lo levanta.
+   *   3. El widget nativo es inconsistente entre navegadores (rueda en iOS,
+   *      tres cajitas en Firefox), así que ni siquiera se gana coherencia.
+   * A cambio se añade una máscara dd/mm/aaaa y el `pattern` protege también el
+   * camino sin JS. El servidor acepta las dos formas, dd/mm/aaaa y aaaa-mm-dd,
+   * por si algún día se cambia de idea.
+   */
+
+  const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+
+  const form = document.querySelector<HTMLFormElement>('#form-inscricao');
+  if (form) iniciar(form);
+
+  iniciarModal();
+
+  /**
+   * Abrir y cerrar el formulario como modal.
+   *
+   * El HTML no declara `role="dialog"` ni `aria-modal`: se ponen al abrir y se
+   * quitan al cerrar. Mientras el bloque está oculto o funcionando como sección
+   * normal no hay ningún diálogo, y anunciarlo como tal sería describir algo
+   * que no existe.
+   */
+  function iniciarModal() {
+    const modal = document.querySelector<HTMLElement>('[data-modal]');
+    if (!modal) return;
+
+    const caixa = modal.querySelector<HTMLElement>('.modal__caixa');
+    if (!caixa) return;
+
+    /* Quién tenía el foco antes de abrir, para devolvérselo al cerrar. Sin
+       esto, cerrar el modal manda el foco al <body> y quien navega con teclado
+       vuelve a empezar desde el principio de la página. */
+    let focoPrevio: HTMLElement | null = null;
+
+    const FOCABLES =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function abrir() {
+      if (modal!.classList.contains('aberto')) return;
+
+      focoPrevio = document.activeElement as HTMLElement | null;
+
+      modal!.classList.add('aberto');
+      modal!.setAttribute('role', 'dialog');
+      modal!.setAttribute('aria-modal', 'true');
+      modal!.setAttribute('aria-labelledby', 'modal-inscricao-titulo');
+
+      /* Bloquear el scroll del fondo compensando el ancho de la barra: sin la
+         compensación, al desaparecer la barra la página entera se desplaza unos
+         píxeles y todo pega un salto lateral al abrir el modal. */
+      const barra = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (barra > 0) document.body.style.paddingRight = `${barra}px`;
+
+      document.addEventListener('keydown', aoTeclado);
+
+      /* Al primer campo, no al botón de cerrar: quien abre el formulario quiere
+         escribir. `preventScroll` evita que el navegador salte por su cuenta
+         antes de que el modal termine de colocarse. */
+      const primeiro = modal!.querySelector<HTMLElement>('#tutorNome');
+      (primeiro ?? caixa!).focus({ preventScroll: true });
+    }
+
+    function fechar() {
+      if (!modal!.classList.contains('aberto')) return;
+
+      modal!.classList.remove('aberto');
+      modal!.removeAttribute('role');
+      modal!.removeAttribute('aria-modal');
+      modal!.removeAttribute('aria-labelledby');
+
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+
+      document.removeEventListener('keydown', aoTeclado);
+
+      /* Devolver el foco a quien lo tenía. Si no lo tenía nadie —el caso real es
+         llegar por un enlace con la ancla puesta, donde el modal abre solo al
+         cargar— `document.activeElement` era el <body>, y enfocar el <body> deja
+         el foco en la nada: quien navega con teclado tendría que tabular la
+         página entera otra vez. En ese caso se cae al disparador, que es donde
+         habría estado si hubiera llegado por su propio pie. */
+      const destino =
+        focoPrevio && focoPrevio !== document.body
+          ? focoPrevio
+          : document.querySelector<HTMLElement>('[data-abrir-inscricao]');
+      destino?.focus();
+      focoPrevio = null;
+    }
+
+    function aoTeclado(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        fechar();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      /* Trampa de foco. Sin esto el tabulador se escapa al contenido de detrás
+         —que está oculto pero sigue siendo focalizable— y el usuario se queda
+         tecleando en una página que no ve. */
+      const focables = Array.from(modal!.querySelectorAll<HTMLElement>(FOCABLES)).filter(
+        (el) => el.offsetParent !== null || el === document.activeElement
+      );
+      if (!focables.length) return;
+
+      const primeiro = focables[0]!;
+      const ultimo = focables[focables.length - 1]!;
+
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    }
+
+    /* El disparador es un <a href="#modal-inscricao">, así que sin JS ya
+       funciona como ancla. Aquí se intercepta para abrirlo como modal. */
+    document.querySelectorAll<HTMLElement>('[data-abrir-inscricao]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        abrir();
+      });
+    });
+
+    modal.querySelectorAll<HTMLElement>('[data-fechar]').forEach((el) => {
+      el.addEventListener('click', fechar);
+    });
+
+    /* Un enlace compartido con la ancla puesta abre el formulario directamente,
+       en vez de dejar al visitante mirando una página donde no pasa nada. */
+    if (window.location.hash === '#modal-inscricao') abrir();
+  }
+
+  function iniciar(form: HTMLFormElement) {
+    const botao = form.querySelector<HTMLButtonElement>('[data-enviar]');
+    const status = form.querySelector<HTMLElement>('[data-status]');
+    const inputFoto = form.querySelector<HTMLInputElement>('#petFoto');
+    const nomeArquivo = form.querySelector<HTMLElement>('[data-arquivo]');
+    const rotuloBotao = botao ? botao.textContent : '';
+    let enviando = false;
+
+    /* ---------------------------------------------------------- máscaras */
+
+    const mascarar = (id: string, formatar: (digitos: string) => string) => {
+      const el = form.querySelector<HTMLInputElement>(`#${id}`);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const noFim = el.selectionStart === el.value.length;
+        el.value = formatar(el.value.replace(/\D/g, ''));
+        // Sólo se reposiciona el cursor si ya estaba al final; si el usuario
+        // está corrigiendo en medio, se le deja donde estaba.
+        if (noFim) el.setSelectionRange(el.value.length, el.value.length);
+        limpar(el);
+      });
+    };
+
+    // dd/mm/aaaa — nunca deja una barra colgando, así el borrado no se atasca.
+    mascarar('tutorNascimento', (d) => {
+      d = d.slice(0, 8);
+      let saida = d.slice(0, 2);
+      if (d.length > 2) saida += `/${d.slice(2, 4)}`;
+      if (d.length > 4) saida += `/${d.slice(4)}`;
+      return saida;
+    });
+
+    // 000.000.000-00
+    mascarar('tutorCpf', (d) => {
+      d = d.slice(0, 11);
+      let saida = d.slice(0, 3);
+      if (d.length > 3) saida += `.${d.slice(3, 6)}`;
+      if (d.length > 6) saida += `.${d.slice(6, 9)}`;
+      if (d.length > 9) saida += `-${d.slice(9)}`;
+      return saida;
+    });
+
+    // (41) 3333-4444 · (41) 99999-8888
+    mascarar('tutorTelefone', (d) => {
+      d = d.slice(0, 11);
+      if (!d) return '';
+      const celular = d.length > 10;
+      let saida = `(${d.slice(0, 2)}`;
+      if (d.length > 2) saida += `) ${celular ? d.slice(2, 7) : d.slice(2, 6)}`;
+      if (d.length > 6) saida += `-${celular ? d.slice(7) : d.slice(6)}`;
+      return saida;
+    });
+
+    /* ------------------------------------------------------ marcas de erro */
+
+    function limpar(el: Element) {
+      el.removeAttribute('aria-invalid');
+    }
+
+    function limparTudo() {
+      form.querySelectorAll('[aria-invalid]').forEach(limpar);
+    }
+
+    function marcar(campo: string) {
+      const alvo = form.querySelector<HTMLElement>(`#${campo}`);
+      if (!alvo) return;
+      alvo.setAttribute('aria-invalid', 'true');
+      alvo.focus();
+    }
+
+    // Al reescribir un campo señalado, se le quita la marca roja.
+    form.querySelectorAll('input, textarea').forEach((el) => {
+      el.addEventListener('input', () => limpar(el));
+    });
+
+    /* --------------------------------------------------- nome do arquivo */
+
+    if (inputFoto) {
+      inputFoto.addEventListener('change', () => {
+        const arquivo = inputFoto.files && inputFoto.files[0];
+        if (nomeArquivo) {
+          nomeArquivo.textContent = arquivo ? arquivo.name : '';
+          nomeArquivo.hidden = !arquivo;
+        }
+        // Se avisa del tamaño aquí y no tras subir 8 MB por una red móvil.
+        if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
+          inputFoto.setAttribute('aria-invalid', 'true');
+          mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
+        }
+      });
+    }
+
+    /* ----------------------------------------------------------- estado */
+
+    function mostrar(texto: string, estado: 'enviando' | 'ok' | 'erro') {
+      if (!status) return;
+      status.textContent = texto;
+      status.dataset.estado = estado;
+      status.hidden = false;
+    }
+
+    /* ----------------------------------------------------------- envio */
+
+    form.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      if (enviando) return;
+
+      const arquivo = inputFoto && inputFoto.files && inputFoto.files[0];
+      if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
+        marcar('petFoto');
+        mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
+        return;
+      }
+
+      enviando = true;
+      limparTudo();
+      if (botao) {
+        botao.disabled = true;
+        botao.textContent = 'Enviando…';
+      }
+      mostrar('Enviando sua inscrição…', 'enviando');
+
+      try {
+        const resposta = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { Accept: 'application/json' },
+        });
+        const dados = await resposta.json().catch(() => null);
+
+        if (resposta.ok && dados && dados.success) {
+          mostrar(dados.message || 'Inscrição enviada com sucesso!', 'ok');
+          form.reset();
+          if (nomeArquivo) {
+            nomeArquivo.textContent = '';
+            nomeArquivo.hidden = true;
+          }
+        } else {
+          mostrar(
+            (dados && dados.message) ||
+              'Não foi possível enviar a inscrição. Tente novamente.',
+            'erro'
+          );
+          if (dados && dados.campo) marcar(String(dados.campo));
+        }
+      } catch {
+        mostrar('Falha de conexão. Verifique sua internet e tente de novo.', 'erro');
+      } finally {
+        enviando = false;
+        if (botao) {
+          botao.disabled = false;
+          botao.textContent = rotuloBotao;
+        }
+      }
+    });
+  }
+</script>

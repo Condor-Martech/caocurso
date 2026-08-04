@@ -1,0 +1,96 @@
+---
+import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
+
+/**
+ * PROTETORAS — PLACEHOLDER 2026 (bloque 5).
+ *
+ * El briefing del cliente dice literalmente: «ONGS: Em definição ainda, apenas
+ * prever o local». La referencia (`docs/Desktop - CãoCurso.png`, recorte
+ * y=2000-3000, tarjetas en y=2799..3051) pinta exactamente eso: tres tarjetas
+ * BLANCAS VACÍAS sobre el azul de sección, con SÓLO el icono de Instagram en
+ * contorno azul cerca del borde inferior. Ni nombres ni logos.
+ *
+ * Por eso aquí no hay texto: las tres protectoras de 2025 (Instituto Seres &
+ * Vidas, SOS 4 Patas PR, Marcia Santos) se retiraron de `src/data/site.ts`, que
+ * ahora expone tres huecos `{ nome: null, logo: null, instagram: null }`. Se
+ * itera ese array en vez de escribir un «3» a pelo, para que el bloque crezca o
+ * mengüe con el dato real.
+ *
+ * CAMINO PREPARADO PARA CUANDO LLEGUE EL DATO:
+ * en cuanto una entrada del array traiga `instagram`, la tarjeta pinta sola un
+ * enlace estirado sobre el icono (patrón stretched-link, ver abajo) con su
+ * `aria-label`. Mientras el dato sea `null` el icono es puramente decorativo y
+ * NO es un <a>: un enlace a ninguna parte sería un enlace roto. Cuando además
+ * lleguen `nome`/`logo` habrá que añadir el <img>/<span> dentro de la tarjeta,
+ * arriba del icono, y quitar el `aria-hidden` del contenedor de tarjetas.
+ *
+ * Medidas tomadas de la referencia a 1366 px de ancho:
+ *   · rejilla 926 px = 3 × 290 + 2 × 28 de hueco
+ *   · tarjeta 290 × 253 px (razón 290/253) · radio de esquina 18 px
+ *   · SIN sombra: el borde blanco corta a plano contra el azul #2F8FE5
+ *   · icono 43 × 43 px, centrado, a 19 px del borde inferior
+ *
+ * Nota: la sección NO lleva padding superior a propósito. El aire entre el
+ * panel de Requisitos y las tarjetas (51 px en la referencia) lo pone el
+ * padding inferior de la sección Requisitos; duplicarlo aquí lo doblaría.
+ */
+---
+
+<section class="bg-brand-blue-sec pb-12 sm:pb-16 lg:pb-20">
+  <div class="container-lp">
+    <h2 class="sr-only">{protetorasTitulo}</h2>
+
+    {/* El estado del bloque, para lectores de pantalla: sin esto la sección
+        queda con un título y absolutamente nada debajo. Copy del briefing. */}
+    <p class="sr-only">{protetorasAviso}</p>
+
+    {/* Las tarjetas vacías no aportan información: hoy son decorativas. */}
+    <div
+      class="mx-auto grid max-w-231.5 grid-cols-3 gap-3 sm:gap-5 lg:gap-7"
+      aria-hidden={protetoras.every((p) => !p.instagram) ? 'true' : undefined}
+    >
+      {
+        protetoras.map((p) => (
+          <div class="flex aspect-290/253 items-end justify-center rounded-[18px] bg-brand-white pb-2 sm:pb-3 lg:pb-5">
+            <span class="relative inline-flex text-brand-blue">
+              {/* Icono de Instagram en contorno, sin círculo de fondo.
+                  Va inline y no con `IconeInstagram.astro`, que es la variante
+                  MACIZA (cuadrado sólido con el anillo calado) y no coincide
+                  con la referencia. Grosor y geometría muestreados del mockup
+                  (icono de 43 px: trazo 3,75 px = 2,1/24; anillo de diámetro
+                  exterior 21 px → r≈4,85; punto de 2,4 px en (17,8 · 5,6)).
+                  El rectángulo va a 1,05 y no a 1 para que el trazo quepa
+                  entero dentro del viewBox y no lo recorte el borde. */}
+              <svg
+                class="h-6 w-6 sm:h-8 sm:w-8 lg:h-11 lg:w-11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect x="1.05" y="1.05" width="21.9" height="21.9" rx="6" />
+                <circle cx="12" cy="12" r="4.85" />
+                <circle cx="17.8" cy="5.6" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+
+              {/* Enlace estirado: sólo existe cuando hay perfil que enlazar. */}
+              {p.instagram && (
+                <a
+                  href={p.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="absolute -inset-2 rounded-full"
+                  aria-label={p.nome ? `Instagram de ${p.nome}` : 'Instagram da protetora'}
+                />
+              )}
+            </span>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

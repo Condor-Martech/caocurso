@@ -1,0 +1,89 @@
+---
+import { eventos, eventosTitulo } from '../data/site';
+
+/* `cor` es un token cerrado en el JSON; aquí se traduce a la paleta. El JSON no
+   puede meter un color fuera del sistema. */
+const COR = { azul: 'text-brand-blue', branco: 'text-brand-white' } as const;
+
+/**
+ * EVENTOS — las tres datas de adoção de agosto de 2026.
+ *
+ * Referencia: `docs/Desktop - CãoCurso.png`, y≈1660–2355 (recortes ref_1 / ref_2).
+ * Medidas tomadas píxel a píxel sobre esa referencia (1366 px de ancho):
+ *
+ *   · Fondo #2F8FE5 LISO. Aquí NO va la textura `.bg-patron`: el degradado con
+ *     line-art se queda en el Hero.
+ *   · Título en TRES líneas fijas, alternando color palabra a palabra:
+ *       línea 1  «Em três datas,» azul  + «três» blanco
+ *       línea 2  «chances» blanco       + «de encontrar o» azul
+ *       línea 3  «amor mais leal.» blanco
+ *     Cada línea es un <span class="block"> para que el corte sea el del mockup
+ *     y no dependa del ancho disponible. Cuerpo medido: cap-height 43 px con la
+ *     cap-height de Torus (0,657 em) ⇒ 64 px; ancho de la línea más larga
+ *     11,21 em ⇒ a 26 px sigue entrando en un móvil de 360 px sin romperse.
+ *   · Reglas blancas de 800 px centradas encima y debajo del bloque de cards.
+ *   · Las cards NO van en fila de tres: DOS arriba y UNA CENTRADA debajo.
+ *     Se resuelve con flex-wrap + justify-center (la tercera se centra sola),
+ *     no con grid-cols-3. Card real: 352 px de ancho, 185 px de alto, gap 32/24.
+ *   · Card: rectángulo #00419A sin borde y sin hover — en la referencia no hay
+ *     ni contorno ni sombra. Fecha blanca extrabold 44 px, regla blanca corta al
+ *     80 %, local en peso normal y horario en bold, ambos blancos a 22 px.
+ */
+---
+
+<section
+  aria-labelledby="eventos-titulo"
+  class="bg-brand-blue-sec pb-0 pt-36 md:pt-44 lg:pt-50"
+>
+  <!--
+    El padding superior es grande a propósito: el perro de "Adote um AuMigo"
+    cuelga de la franja con `.emerge--patas` (margin-bottom negativo, no empuja
+    el flujo) y sus patas invaden esta sección ~150 px a 1366 px. Este colchón
+    es el que impide que se le monten encima del título.
+  -->
+  <div class="container-lp">
+    <h2
+      id="eventos-titulo"
+      class="mx-auto max-w-200 text-center text-[1.625rem] font-black leading-none sm:text-[2.5rem] md:text-[3.25rem] lg:text-[4rem]"
+    >
+      {
+        eventosTitulo.map((linha) => (
+          <span class="block">
+            {linha.map((f, i) => (
+              <>
+                {i > 0 ? ' ' : ''}
+                <span class={COR[f.cor]}>{f.texto}</span>
+              </>
+            ))}
+          </span>
+        ))
+      }
+    </h2>
+
+    <!-- Las dos reglas anchas de esta sección son de 4 px en la referencia
+         (medido en blanco puro); las demás de la LP son de 3 px, que es la base
+         de `.regla-branca`. De ahí el override sólo aquí. -->
+    <hr class="regla-branca my-10 w-full max-w-200 border-t-4" />
+
+    <ul role="list" class="mx-auto flex max-w-184 flex-wrap justify-center gap-x-8 gap-y-6">
+      {
+        eventos.map((evento) => (
+          <li class="w-full rounded-2xl bg-brand-blue px-6 pb-6 pt-7 text-center text-brand-white md:w-[calc(50%-1rem)]">
+            <p class="text-3xl font-black uppercase leading-none md:text-4xl lg:text-[2.75rem]">
+              {evento.dia} DE {evento.mes}
+            </p>
+            {/* Separador decorativo: <div> y no <hr> para no meter un
+                "separator" por card en el árbol de accesibilidad. */}
+            <div class="regla-branca my-4 w-4/5" />
+            <p class="text-lg leading-snug lg:text-[1.375rem]">{evento.local}</p>
+            <p class="text-lg font-bold leading-snug lg:text-[1.375rem]">{evento.horario}</p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- Cierre del bloque. Sin margen inferior ni padding en la sección: el aire
+         hasta el panel de requisitos lo pone `Requisitos.astro` con su pt. -->
+    <hr class="regla-branca mt-10 w-full max-w-200 border-t-4" />
+  </div>
+</section>

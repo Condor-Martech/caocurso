@@ -1,0 +1,354 @@
+@import 'tailwindcss';
+@import './animations.css';
+
+/* --------------------------------------------------------------------------
+   Variante `fila:` — cuándo el hero se pone en DOS COLUMNAS (sello a la
+   izquierda, mascotas a la derecha), que es la composición del mockup.
+
+   No basta con el ancho. Desde que el hero mide exactamente una pantalla, en un
+   iPad en vertical (768×1024) las dos columnas dejan media pantalla de textura
+   vacía: el arte es proporcional al ancho, y con 768 px de ancho y 1024 de alto
+   no hay con qué llenarla. El bloque apilado —el mismo de móvil— sí escala con
+   el alto y la llena. De ahí las dos condiciones:
+
+     · ≥ 768 px Y apaisado → dos columnas (tablet horizontal, portátiles)
+     · ≥ 1024 px           → dos columnas siempre, también en vertical
+
+   La segunda no es redundante: a partir de lg el <header> flota sobre el hero
+   (ver Nav.astro) y el bloque apilado le metería el sello centrado justo debajo
+   de los enlaces. Un monitor en vertical vuelve a quedar airoso, pero eso es
+   preferible a un sello ilegible bajo el nav.
+   -------------------------------------------------------------------------- */
+
+@custom-variant fila {
+  @media (min-width: 768px) and (orientation: landscape) {
+    @slot;
+  }
+  @media (min-width: 1024px) {
+    @slot;
+  }
+}
+
+/* ==========================================================================
+   Torus (Paulo Goode) — fuente de marca de Condor, self-hosted.
+   Convertida desde los TTF originales en Migraciones/petCondor/assets/fonts/.
+   NO usar Google Fonts: Montserrat/Roboto sólo aparecían como defaults de Elementor.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-100.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-300.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Torus';
+  src: url('/fonts/torus-900.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   Design tokens — campaña Mês Pet / Cãocurso 2026.
+
+   La campaña 2025 era NARANJA; la 2026 es AZUL / CIANO / LAVANDA. Estos valores
+   están muestreados píxel a píxel sobre la referencia `docs/Desktop - CãoCurso.png`
+   (1366 px de ancho), que es la fuente de verdad del rebuild.
+
+   La paleta es CERRADA: cualquier otro HEX está prohibido, y también lo están
+   las utilidades de color por defecto de Tailwind (yellow-300, cyan-200,
+   purple-50, gray-600…). En las clases se usan los alias `brand-*` que genera
+   este @theme: bg-brand-blue-sec, text-brand-blue, bg-brand-purple…
+   ========================================================================== */
+
+@theme {
+  /* Azules */
+  --color-brand-blue: #00419a; /* títulos, cards de evento, footer, texto sobre lavanda/naranja */
+  --color-brand-blue-sec: #2f8fe5; /* fondo azul de Hero/Adote/Eventos/Requisitos/Protetoras */
+  --color-brand-blue-deep: #005baa; /* parte oscura del degradado del hero */
+
+  /* Morados */
+  --color-brand-purple: #c38adb; /* fondo lavanda de 29-Agosto/Atrações/Formulário/Galeria/Patrocínio */
+  --color-brand-purple-deep: #823d9b; /* blob morado de la banda Cãocurso */
+
+  /* Ciano — banda Cãocurso (normalmente cubierta por bg-caocurso.webp) */
+  --color-brand-cyan: #3fafc8;
+
+  /* Amarillos */
+  --color-brand-orange-pan: #ffaf1c; /* panel "Requisitos para adoção" */
+  --color-brand-orange-lite: #ffbb3e; /* card amarilla de la Galeria */
+
+  /* Neutro y alerta */
+  --color-brand-white: #ffffff;
+  --color-brand-red: #e20614; /* errores de validación */
+
+  /* Tipografía */
+  --font-display: 'Torus', ui-rounded, system-ui, sans-serif;
+
+  /* Contenedor */
+  --spacing-container: 1200px;
+}
+
+/* Alias en :root para uso directo en CSS plano y en valores arbitrarios de
+   Tailwind: class="bg-[var(--c-purple)]" */
+:root {
+  --c-blue: #00419a;
+  --c-blue-sec: #2f8fe5;
+  --c-blue-deep: #005baa;
+  --c-purple: #c38adb;
+  --c-purple-deep: #823d9b;
+  --c-cyan: #3fafc8;
+  --c-orange-pan: #ffaf1c;
+  --c-orange-lite: #ffbb3e;
+  --c-white: #ffffff;
+  --c-red: #e20614;
+
+  /* Altura de la franja separadora de tiles.
+
+     Medida sobre la referencia 2026: la franja ocupa y=755..820 a 1366 px de
+     ancho, o sea 66 px = 4,83 vw. Los tiles del SVG miden 119×80,55 unidades
+     (razón 1,477:1) y se repiten de 7 en 7, así que con `background-size: auto
+     100%` la altura manda y el ancho de cada tile sale solo: a 66 px de alto,
+     97,5 px de ancho, exactamente como en el mockup.
+
+     Fluida pero acotada por los dos extremos:
+     · suelo de 44 px para que en móvil el icono de pata/hueso siga siendo
+       legible (por debajo el tile baja de 65 px de ancho y se emborrona);
+     · techo de 66 px, el valor del mockup, para que en monitores anchos el
+       cintillo no se coma la página.
+     Un solo `clamp()` en lugar de un salto por breakpoint: así no hay
+     discontinuidad a 768 px, que era el defecto de la versión 2025. */
+  --faixa-h: clamp(44px, 4.83vw, 66px);
+
+  /* Altura del hero: EXACTAMENTE una pantalla, ni más ni menos.
+
+     `--nav-h` es lo que la barra de navegación le quita a esa pantalla. Hoy la
+     LP no lleva nav —se retiró—, así que vale 0 en todos los regímenes y el
+     hero arranca en y=0. Se conserva la variable, y no se sustituye por el 0
+     literal, porque si el nav vuelve este es el único sitio que hay que tocar:
+     con barra en el flujo medían 72 px por debajo de md y 60 px entre md y lg.
+
+     Y también se descuenta `--faixa-h`: el cintillo de tiles que cierra el hero
+     tiene que ENTRAR en esa pantalla. Con el hero a `100svh - --nav-h` la franja
+     empezaba exactamente en el borde inferior, o sea que no se veía ni un píxel
+     de ella hasta hacer scroll, y es la pieza que remata el bloque y anuncia que
+     la página sigue. Restándosela, hero + cintillo suman una pantalla justa.
+
+     `svh` y no `dvh`/`vh`: en móvil `vh` mide la pantalla SIN la barra del
+     navegador, así que el hero se saldría justo lo que ocupa esa barra al
+     entrar; `dvh` cabe siempre pero re-mide al ocultarse la barra y el hero
+     crece de golpe mientras haces scroll. `svh` es el alto con la barra
+     visible: el hero entra entero desde el primer instante y no se mueve. El
+     precio es que, cuando la barra se esconde, asoma una tira de la franja por
+     abajo — que es como el KV termina el bloque de todos modos. */
+  --nav-h: 0px;
+  --hero-h: calc(100svh - var(--nav-h) - var(--faixa-h));
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  /* Compensaba el nav sticky al saltar a #adote / #caocurso / #galeria. Sin
+     nav no hay nada que se solape con el destino del ancla, y 80 px de
+     colchón dejaban la sección arrancando por debajo del borde. */
+  scroll-padding-top: 0;
+}
+
+body {
+  font-family: var(--font-display);
+  /* Fondo base de la campaña 2026: el azul de sección. Cada bloque pinta el
+     suyo encima (lavanda, ciano, azul oscuro del footer); esto sólo evita que
+     asome el blanco del navegador en el rebote del scroll. */
+  background-color: var(--c-blue-sec);
+  color: var(--c-blue);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Contenedor estándar de sección */
+.container-lp {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@media (min-width: 768px) {
+  .container-lp {
+    padding-inline: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-lp {
+    padding-inline: 48px;
+  }
+}
+
+/* ==========================================================================
+   Franja separadora de tiles.
+   NO son barras de color planas: es una tira a sangre de cuadros con un icono
+   de pata o hueso cada uno, más anchos que altos (1,477:1).
+
+   Asset 2026: `/assets/2026/pattern-horizontal.svg` (viewBox 833,04×80,55 =
+   7 tiles completos). Al ser vectorial repite sin costura y sin los problemas
+   del PNG de 2025 (`Pattern@2x.png` no era un tile: se desvanecía a
+   transparente en sus últimos 75 px y abría un hueco de fondo en cada
+   repetición). `background-size: auto 100%` deja que --faixa-h mande sobre la
+   altura y el ancho del tile salga de la razón nativa del SVG.
+   ========================================================================== */
+
+.faixa {
+  width: 100%;
+  height: var(--faixa-h);
+  background-image: url('/assets/2026/pattern-horizontal.svg');
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: auto 100%;
+}
+
+
+/* --------------------------------------------------------------------------
+   .bg-patron — textura de line-art (huesos, comederos, frisbees, cepillos)
+   sobre el azul. En 2026 es el degradado `bg-mespet.webp` (1920×768), que ya
+   trae la textura incrustada; se aplica con `cover` sección a sección, no como
+   patrón repetido, por eso va por bloque y no en el body.
+   (La versión 2025 era `assets/images/Bg.jpg`, naranja: ya no se usa.)
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  .bg-patron {
+    background-image: url('/assets/2026/bg-mespet.webp');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   .emerge — las mascotas SALEN del cintillo.
+   El recorte de los PNG/WEBP es un borde duro: si la imagen termina por encima
+   de la franja se ve la línea de corte flotando sobre el azul. Bajándola para
+   que se solape con los tiles, la franja tapa el corte y el animal parece
+   emerger de ella, como en la referencia.
+   Necesita z-index porque la franja es un hermano posterior.
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Medido sobre la referencia 2026: el gato+perro del hero termina en y≈754 y
+     los tiles empiezan en y≈755. NO los cruza: se apoya en ellos. Basta con que
+     la sección no lleve padding inferior para que el corte caiga sobre la
+     franja. */
+  .emerge {
+    position: relative;
+    z-index: 20;
+  }
+
+  /* Excepción: el perro de "Adote um AuMigo" sí pasa POR DELANTE de la franja
+     y sus patas asoman por debajo (verificado en la referencia 2026, recorte
+     y=1000-2000: las patas manchadas cuelgan del cintillo).
+
+     La imagen es `/assets/images/Dog.png`, el perro blanco y negro CON PATAS
+     de la campaña 2025, que el briefing autoriza a reutilizar ("Adote um
+     aumigo: podemos utilizar o KV do ano passado"). NO es viralata-01.webp,
+     que no tiene patas y por tanto no puede cruzar la franja.
+
+     El corte del pecho de Dog.png está al 64,1% de su altura; por debajo sólo
+     quedan las patas. Para que no quede fondo entre el pecho y los tiles, la
+     imagen debe sobresalir el 35,9% restante de su alto.
+
+     Dog.png mide 499×638 (ratio 0,782), así que ese 35,9% del alto equivale al
+     45,9% del ancho. Los % de margen se resuelven contra el ancho del BLOQUE
+     CONTENEDOR, no contra el del propio elemento: por eso la clase va en el
+     <img> y su contenedor lleva `w-fit`, de modo que ese ancho coincide con el
+     de la imagen. (Puesta en el contenedor se resolvía contra el área de la
+     rejilla —327px en móvil— y el solape se pasaba de largo.)
+     Así es correcto a cualquier tamaño, sin valores fijos por breakpoint.
+
+     Se aplica en todos los tamaños: en móvil el perro se coloca el último de
+     la columna (order-2), así que también queda pegado a la franja. */
+  .emerge--patas {
+    margin-bottom: -45.9%;
+  }
+}
+
+/* ==========================================================================
+   Regla horizontal blanca fina — separa el título del contenido en Eventos
+   y cierra la sección 30 Agosto.
+   ========================================================================== */
+
+/* Va en @layer components a propósito: el CSS sin capa gana a las utilidades de
+   Tailwind v4, y un `margin: 0` suelto anulaba el `mx-auto` de cada <hr>,
+   descentrando las reglas. Dentro de la capa, mx-auto/my-* vuelven a mandar. */
+@layer components {
+  /* Grosor y opacidad medidos sobre la referencia 2026 a 1366 px, contando
+     píxeles de blanco PURO (255,255,255) en el perfil vertical de cada regla:
+       · regla interior de las cards de evento ....... 3 px
+       · reglas de la sección 29 de agosto (×2) ...... 3 px
+       · regla bajo el título de la Galeria .......... 3 px
+       · reglas anchas de Eventos (sobre y bajo las
+         cards) ...................................... 4 px  → `border-t-4`
+     De ahí que la base sean 3 px y sólo las dos de Eventos lleven override.
+
+     Sin `opacity`: en la referencia el blanco es puro. Con el 0,9 anterior la
+     regla salía rgb(234,244,253) sobre el azul, visiblemente lavada. */
+  .regla-branca {
+    border: 0;
+    border-top: 3px solid var(--c-white);
+    margin-block: 0;
+    margin-inline: auto;
+  }
+}
+
+/* Accesibilidad: contenido sólo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Foco visible consistente en toda la LP */
+:focus-visible {
+  outline: 3px solid var(--c-white);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

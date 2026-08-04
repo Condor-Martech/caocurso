@@ -1,0 +1,75 @@
+---
+import { gruposMarcas, type Marca } from '../data/site';
+
+/**
+ * PATROCÍNIO / APOIO 2026
+ *
+ * Referencia: docs/Desktop - CãoCurso.png, y=7377..7633 (recorte ref_7.png).
+ * Dos tarjetas blancas MUY redondeadas (r≈26 px sobre una caja de 105 px de
+ * alto a 1366 px), separadas por aire, sobre el fondo lavanda. Sin sombra:
+ * en el mockup el borde es limpio.
+ *
+ * Cada tarjeta = etiqueta a la izquierda + fila de logos a la derecha.
+ * La etiqueta va CENTRADA en su columna: medido en el mockup, «Patrocínio:»
+ * ocupa x=245..359 (centro 302) y «Apoio:» x=261..335 (centro 298). No están
+ * alineadas a la izquierda, comparten centro. De ahí el ancho fijo de columna
+ * con `text-center` en ≥md.
+ *
+ * Alturas: los logos NO se igualan al mismo alto bruto. En el mockup los
+ * sellos casi cuadrados llegan a ~80 px y los lockups horizontales se quedan
+ * en ~40 px porque topan antes con su ancho. Se replica con una caja de alto
+ * común + `object-contain` + un `larguraMax` por marca (definido en site.ts).
+ *
+ * Marcas sin logo oficial: se pinta el NOMBRE en brand-blue dentro de la misma
+ * caja. Nunca el logo de otra empresa — ver los TODO de site.ts.
+ */
+
+interface Grupo {
+  titulo: string;
+  marcas: Marca[];
+}
+
+/* Los dos grupos y su rótulo salen de site.json, como el resto del contenido. */
+const grupos: Grupo[] = gruposMarcas;
+---
+
+{/* pt corto: la Galeria (misma franja lavanda) ya aporta su propio pb.
+    pb largo: en el mockup hay ~140 px de lavanda entre la 2ª tarjeta y el footer. */}
+<section id="patrocinio" class="bg-brand-purple pt-6 pb-24 md:pt-8 md:pb-36">
+  <div class="container-lp flex flex-col gap-8 md:gap-11">
+    {
+      grupos.map((grupo) => (
+        <div class="flex flex-col items-center gap-6 rounded-[1.75rem] bg-brand-white px-6 py-7 md:flex-row md:gap-4 md:rounded-4xl md:px-8 md:py-8">
+          <h2 class="text-brand-blue text-center text-xl font-bold italic md:w-40 md:shrink-0 md:text-2xl">
+            {grupo.titulo}
+          </h2>
+
+          <ul class="flex w-full flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-6 sm:gap-x-8 lg:flex-nowrap lg:justify-between lg:gap-x-5">
+            {grupo.marcas.map((marca) => (
+              <li
+                class="flex h-12 min-w-0 shrink items-center justify-center sm:h-16 lg:h-20"
+                style={`max-width:${marca.larguraMax}px`}
+              >
+                {marca.logo ? (
+                  <img
+                    src={marca.logo}
+                    alt={marca.nome}
+                    class="max-h-full max-w-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  /* TODO: falta el logo oficial de esta marca (ver site.ts).
+                     Hueco honesto en texto hasta que llegue el archivo. */
+                  <span class="text-brand-blue text-center text-sm leading-tight font-bold text-balance sm:text-base">
+                    {marca.nome}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</section>

@@ -1,0 +1,132 @@
+---
+import { galeria, galeriaTitulo } from '../data/site';
+
+/**
+ * GALERIA — "Confira como foi a edição anterior" (2025).
+ *
+ * Tarjeta amarilla (#FFBB3E = brand-orange-lite) sobre el fondo lavanda, medida
+ * sobre la referencia `docs/Desktop - CãoCurso.png`:
+ *   · tarjeta      x 226..1152 (926 px de ancho) · y 6395..7321 · radio ≈ 22 px
+ *   · padding      32 px a los lados, 32 arriba, ~40 abajo
+ *   · fotos        4 columnas de ~205 px con 12-14 px de calle
+ *   · SIN borde blanco y SIN esquinas redondeadas en las fotos: en la referencia
+ *     los rectángulos van a hueso contra el amarillo (comprobado píxel a píxel;
+ *     la versión anterior les ponía `border-2 border-white rounded-2xl`).
+ */
+
+/* Nº de fotos visibles en móvil antes de pulsar "Ver mais fotos" (3 filas × 2). */
+const VISIBLES_MOVIL = 6;
+
+/**
+ * MOSAICO — proporciones (ancho/alto) foto a foto.
+ *
+ * La rejilla de la referencia NO es de cuadrados iguales: es un mosaico donde
+ * cada hueco tiene su propia altura y las columnas acaban todas a la misma
+ * cota. Medidas de la referencia, columna por columna (ancho 204-207 px):
+ *   col 1 → 237 / 136 / 227 px   →  0,873 · 1,522 · 0,912
+ *   col 2 → 227 / 138 / 236 px   →  0,907 · 1,493 · 0,873
+ *   col 3 → 136 / 136 / 306 px   →  1,500 · 1,500 · 0,667
+ *   col 4 →  99 / 354 / 136 px   →  2,061 · 0,576 · 1,500
+ *
+ * Se respetan todas menos las dos de la columna 4, suavizadas a los extremos ya
+ * presentes en el mosaico (2,061 → 1,5 y 0,576 → 0,667): nuestras 12 fotos son
+ * verticales 3:4 (1620×2160) y un recorte 2,06:1 se queda con el 36 % del alto,
+ * o sea con un perro sin cabeza. El ritmo del mosaico se mantiene y las cuatro
+ * columnas siguen sumando prácticamente lo mismo (2,83-2,92 anchos de columna).
+ *
+ * El orden es el de las columnas CSS (de arriba abajo y luego a la derecha), que
+ * es como reparte `columns-*`.
+ */
+const PROPORCOES = [
+  0.873, 1.5, 0.912, // columna 1
+  0.907, 1.5, 0.873, // columna 2
+  1.5, 1.5, 0.667, // columna 3
+  1.5, 0.667, 1.5, // columna 4
+];
+---
+
+<section id="galeria" class="bg-brand-purple pt-4 pb-6">
+  <div class="container-lp">
+    <div
+      class="mx-auto max-w-232 rounded-3xl bg-brand-orange-lite px-5 pt-8 pb-8 text-brand-blue shadow-lg sm:px-8 sm:pb-10"
+    >
+      <h2
+        class="text-center text-3xl leading-[1.15] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]"
+      >
+        {galeriaTitulo.map((linha, i) => (i === 0 ? <>{linha}<br /></> : linha))}
+      </h2>
+
+      <hr class="regla-branca mt-6 w-[46%] max-w-100 border-t-[3px] md:mt-8" />
+
+      <p class="mt-5 text-center text-4xl leading-none font-black md:text-[2.5rem]">
+        2025
+      </p>
+
+      <!-- Mosaico. `columns-*` reparte en vertical y equilibra la altura de las
+           columnas: es la única forma de conseguir masonry sin JS. La calle
+           vertical la da el `mb-3` de cada <li> (en multicolumna `row-gap` no
+           aplica), y el `-mb-3` del <ul> se come el sobrante de la última fila. -->
+      <ul
+        id="galeria-grid"
+        class="mt-5 -mb-3 columns-2 gap-3 sm:columns-3 lg:columns-4"
+      >
+        {
+          galeria.map((foto, i) => (
+            <li
+              class:list={[
+                'mb-3 overflow-hidden break-inside-avoid',
+                i >= VISIBLES_MOVIL && 'hidden sm:block',
+              ]}
+              data-extra={i >= VISIBLES_MOVIL ? '' : null}
+            >
+              <img
+                src={foto.src}
+                alt={foto.alt}
+                style={{ aspectRatio: String(PROPORCOES[i % PROPORCOES.length]) }}
+                class="block w-full object-cover transition-transform duration-300 hover:scale-105"
+                loading="lazy"
+                decoding="async"
+              />
+            </li>
+          ))
+        }
+      </ul>
+
+      <button
+        type="button"
+        id="galeria-mais"
+        class="mx-auto mt-6 block rounded-full bg-brand-blue px-8 py-3 text-sm font-bold text-brand-white shadow-lg sm:hidden"
+        aria-controls="galeria-grid"
+        aria-expanded="false"
+      >
+        Ver mais fotos
+      </button>
+    </div>
+  </div>
+</section>
+
+<script>
+  // "Ver mais fotos" — sólo existe en móvil (<640 px), donde el mosaico se
+  // recorta a 6 fotos. A partir de sm las extras las muestra el CSS
+  // (`hidden sm:block`) y el botón desaparece.
+  const boton = document.getElementById('galeria-mais');
+  const grid = document.getElementById('galeria-grid');
+
+  if (boton && grid) {
+    const extras = grid.querySelectorAll<HTMLElement>('[data-extra]');
+
+    boton.addEventListener('click', () => {
+      const abierto = boton.getAttribute('aria-expanded') === 'true';
+
+      // `hidden` es display:none, así que la foto sale del flujo de la
+      // multicolumna y el navegador vuelve a equilibrar las dos columnas.
+      extras.forEach((el) => el.classList.toggle('hidden', abierto));
+      boton.setAttribute('aria-expanded', String(!abierto));
+      boton.textContent = abierto ? 'Ver mais fotos' : 'Ver menos';
+
+      if (abierto) {
+        document.getElementById('galeria')?.scrollIntoView({ block: 'start' });
+      }
+    });
+  }
+</script>
