@@ -248,6 +248,22 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
     --h-dados: 3.2rem;
   }
 
+  /* Ventanas bajas: con los factores de arriba la tarjeta pedía 404 px y la
+     pista sólo tiene 335, así que la pista —que lleva `overflow-y: hidden`—
+     recortaba en silencio por los dos extremos: el logo del concurso por arriba
+     y el «Período de inscrição» por abajo. Se ve como una tarjeta cortada, no
+     como un desbordamiento.
+
+     Va por ALTO de ventana, no por ancho: el que se queda sin sitio es el eje
+     vertical. */
+  @media (max-height: 700px) {
+    .hero {
+      --h-logo: min(26vw, 104px, calc(var(--hero-h) * 0.125));
+      --h-msg: min(40vw, 84px, calc(var(--hero-h) * 0.085));
+      --h-dados: 2.5rem;
+    }
+  }
+
   .hero-grade {
     display: grid;
     height: 100%;
@@ -276,9 +292,17 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
   }
 
   /* ── Bloque carrusel ──────────────────────────────────────────────────── */
+  /* `min-width: 0` no es decorativo: un ítem de grid —y uno de flex— no baja por
+     defecto del min-content de lo que lleva dentro. Con los `white-space: nowrap`
+     de las fechas, ese mínimo son 356 px, así que a 320 el bloque se salía 84 px
+     por la derecha y la tarjeta aparecía cortada: «21/08/20…». No se veía como
+     desbordamiento de la página porque la sección lleva `overflow-hidden`, que
+     lo recortaba en silencio.
+     Es el mismo motivo por el que ya estaba el `min-height: 0`, en el otro eje. */
   .bloco-slider {
     position: relative;
     display: flex;
+    min-width: 0;
     min-height: 0;
     flex-direction: column;
     padding-top: 1.25rem;
@@ -287,6 +311,7 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
 
   .pista {
     display: flex;
+    min-width: 0;
     min-height: 0;
     flex: 1;
     overflow-x: auto;
@@ -309,6 +334,7 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
   .slide {
     display: flex;
     height: 100%;
+    min-width: 0;
     flex: 0 0 100%;
     flex-direction: column;
     justify-content: center;
