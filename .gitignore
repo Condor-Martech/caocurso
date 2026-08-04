@@ -37,3 +37,13 @@ assets-fonte/
 
 # Configuración local del agente (skills, no código del proyecto)
 .claude/
+
+# Arte aprobado y briefing de la campaña. Se quedan en docs/ para trabajar, pero
+# NO se versionan: el repositorio de origen (Condor-Martech/caocurso) es público,
+# y una vez empujados quedan indexados y cacheados aunque después se borren.
+# El .docx es material interno de marketing y el PNG es el KV antes de campaña.
+# Si el repo pasa a privado, se quita esta regla y entran en un commit aparte.
+# La referencia de contenido sigue siendo la de CLAUDE.md; los ficheros están en
+# la carpeta del proyecto central, no sólo aquí.
+docs/*.png
+docs/*.docx
