@@ -15,7 +15,7 @@ español; los textos visibles del sitio, no.
 **Estado:** LP realineada al **KV 2026** y **saneada**. Build limpio, `astro check`
 0 errores, sin rutas de assets rotas. El rebuild está commiteado y etiquetado
 `v2026-base`: ese es el punto al que volver. Siguiente trabajo: persistencia del
-formulario en Supabase + MinIO.
+formulario en Supabase, con espejo en Google Sheets para marketing.
 
 **Carpeta del Proyecto Central (Referencia):** `/home/diego/armando/Migraciones/petCondor/site`
 
@@ -52,15 +52,14 @@ Son **tres archivos**, y ninguno sobra:
 
 1. **`docs/Desktop - CãoCurso.png`** 🎯 — el arte aprobado 2026. Manda sobre todo
 2. **`docs/LP Cão Curso.docx`** 🎯 — el briefing. Manda en fechas, copy y marcas
-3. **`docs/PLATAFORMA.md`** — a dónde va la persistencia: Supabase + MinIO, modelo de
-   datos, anti-fraude de la votación, LGPD y el orden de trabajo
+3. **`docs/PLATAFORMA.md`** — a dónde va la persistencia: Supabase, el espejo en
+   Google Sheets, el modelo de datos, LGPD y el orden de trabajo
 
 Más este archivo, que es el que describe la LP tal como está construida.
 
-> Antes había trece documentos, 8.619 líneas. Describían la campaña de 2025 y
-> arrastraban decisiones ya tomadas presentadas como abiertas —Vercel, InsForge,
-> campos del formulario que hoy existen—. Se consolidaron en `PLATAFORMA.md` (646
-> líneas) y el resto se eliminó. Está todo en la historia de git hasta `1796aa1`.
+> Antes había trece documentos, 8.619 líneas: la campaña de 2025, un modal que ya no
+> existe y una plataforma de votación con feed público, anti-fraude y moderación que
+> nunca fue el alcance. Hoy son 259 líneas. Está todo en la historia de git.
 
 ---
 
@@ -141,7 +140,9 @@ instancia: `fs.mkdir` falla, responde **500**, y la deduplicación por tutor+pet
 puede funcionar porque cada instancia ve su propio fichero—. **En un VPS con Docker
 y un volumen montado deja de serlo:** escribible, persistente y con una sola
 instancia. O sea que ya no impide desplegar; sigue siendo el camino equivocado a
-medio plazo. **Destino decidido: la ficha va a Supabase y la foto a MinIO.** Es el
+medio plazo. **Destino decidido: la ficha va a Supabase**; el storage de la foto
+(MinIO o Supabase Storage) está sin decidir y no bloquea, porque la base guarda la
+`key` y no la URL. Es el
 siguiente trabajo después del saneamiento. Al migrarlo, el formulario pasa a ser una
 **isla React** —por eso `@astrojs/react` sigue instalado aunque hoy no haya ninguna
 isla— y debe montarse con `client:visible`: vive muy por debajo del pliegue, así que
@@ -323,7 +324,7 @@ frío. Se quitan poniendo `image: { service: passthroughImageService() }`.
 4. **Fotos de la galería:** el arte muestra 13 fotos y en el repo hay 12, que además no
    son la misma selección que usó el diseñador.
 
-Lo que viene después está en `docs/PLATAFORMA.md` §12.
+Lo que viene después está en `docs/PLATAFORMA.md` §6.
 
 ---
 
@@ -419,7 +420,7 @@ Esta carpeta es **aislada y autosuficiente**:
 └── docs/
     ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre todo
     ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda en contenido
-    └── PLATAFORMA.md           (Supabase + MinIO, modelo de datos, LGPD, orden de trabajo)
+    └── PLATAFORMA.md           (Supabase + Google Sheet, modelo de datos, LGPD)
 ```
 
 ---
@@ -443,7 +444,7 @@ Esta carpeta es **aislada y autosuficiente**:
 | Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, listos para servir |
 | Assets 2026 (origen) | `assets-fonte/` | 920 MB de imprenta, gitignorado |
 | Conversor de assets | `scripts/optimizar-assets.mjs` | origen → WebP web |
-| Plataforma y persistencia | `docs/PLATAFORMA.md` | Supabase + MinIO, modelo de datos, LGPD |
+| Plataforma y persistencia | `docs/PLATAFORMA.md` | Supabase + Google Sheet, modelo de datos, LGPD |
 | Animaciones | `src/styles/animations.css` | 8 keyframes, comentados en el propio archivo |
 | Fuentes Torus | `public/fonts/` (origen en `…/petCondor/assets/fonts/`) | 6 pesos woff2 |
 | 📕 Docs de **2025** | historia de git, hasta `1796aa1` | Eliminados del repo: su paleta, assets y campos ya no aplican |
