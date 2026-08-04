@@ -243,10 +243,23 @@ export const galeria = dados.galeria.fotos.map((src, i) => ({
  *
  * El orden de las marcas se leyó una a una del mockup, recorte y=7000-8000.
  */
+/**
+ * `largura` y `altura` son las dimensiones REALES del archivo, no un tamaño de
+ * presentación. De ellas sale la proporción, y de la proporción el tamaño con el
+ * que cada logo se pinta (ver Patrocinadores.astro).
+ *
+ * Antes había un `larguraMax` afinado a ojo por marca, y ese era el problema:
+ * topar por ancho convierte un lockup de 9,38:1 en una tira de 17 px de alto al
+ * lado de un sello cuadrado de 80. Medido en la página, la desproporción entre
+ * el logo más y menos presente era de 2,7×.
+ *
+ * Las marcas sin archivo no llevan dimensiones: se pintan como texto.
+ */
 export interface Marca {
   nome: string;
   logo: string | null;
-  larguraMax: number;
+  largura?: number;
+  altura?: number;
 }
 
 export const patrocinio: Marca[] = dados.patrocinio.marcas;
