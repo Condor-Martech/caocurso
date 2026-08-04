@@ -1,576 +1,582 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with this isolated Pet Condor LP project.
+Este arquivo orienta o Claude Code (claude.ai/code) no trabalho com este projeto
+isolado da LP do Pet Condor.
 
-## Proyecto: Pet Condor LP Rebuild
+## Projeto: Pet Condor LP Rebuild
 
-**Objetivo:** Construir la landing page de **pet.condor.com.br** (campaña *Mês Pet* /
-*Cãocurso* de la rede Condor) usando Astro + Tailwind CSS + React.
+**Objetivo:** construir a landing page de **pet.condor.com.br** (campanha *Mês Pet* /
+*Cãocurso* da rede Condor) usando Astro + Tailwind CSS + React.
 
 **Stack:** Astro 7.x (`output: 'server'` + `@astrojs/vercel`) | React 19 | Tailwind CSS v4 | TypeScript | Node.js ≥22.12.0
 
-**Idioma del sitio:** **portugués de Brasil (pt-BR), 100%.** La documentación está en
-español; los textos visibles del sitio, no.
+**Idioma:** **português do Brasil (pt-BR), 100%** — tanto os textos visíveis do site
+quanto a documentação e as mensagens de commit deste repositório.
 
-**Estado:** LP realineada al **KV 2026** y **saneada**. Build limpio, `astro check`
-0 errores, sin rutas de assets rotas. El rebuild está commiteado y etiquetado
-`v2026-base`: ese es el punto al que volver. Siguiente trabajo: persistencia del
-formulario en Supabase, con espejo en Google Sheets para marketing.
+**Estado:** LP realinhada ao **KV 2026** e **saneada**. Build limpo, `astro check` com 0
+erros, sem caminhos de assets quebrados. O rebuild está commitado e marcado com a tag
+`v2026-base`: é para esse ponto que se volta. Próximo trabalho: persistência do
+formulário no Supabase, com espelho numa planilha do Google para o marketing.
 
-**Carpeta del Proyecto Central (Referencia):** `/home/diego/armando/Migraciones/petCondor/site`
-
----
-
-## 🔒 Regla de Precedencia
-
-La campaña **cambió de KV en 2026**: el arte de 2025 era naranja, el de 2026 es
-azul / ciano / lavanda. Los bloques de la página son los mismos; cambiaron los
-assets, los colores y parte del copy.
-
-Manda, en este orden:
-
-1. **`docs/Desktop - CãoCurso.png`** (1366×8000) — el arte aprobado de 2026. Es la
-   referencia visual: layout, colores, tipografía y qué es imagen y qué es texto.
-2. **`docs/LP Cão Curso.docx`** — el briefing de contenido de 2026 (fechas, textos,
-   lista de patrocinadores). **Si el .docx y el PNG discrepan en un dato de contenido,
-   gana el .docx** (así se resolvió el período de inscripción: 03/08, no 10/08).
-3. **El código.** Cuando el arte y el código discrepen en un detalle de
-   implementación, gana lo que está construido y verificado — pero cualquier cambio
-   de contenido vuelve a 1 y 2.
-
-La documentación de 2025 (13 archivos, 8.619 líneas: `GROUND_TRUTH.md`,
-`DESIGN_SYSTEM.md`, `WIREFRAMES_DETALLADAS.md`, `FORM_ESPECIFICACION.md`,
-`CONTENIDO_DATOS.md`…) **se eliminó del repo**. Describía la campaña naranja, un modal
-de 8 campos que ya no existe y un nav que ya no se renderiza; a estas alturas confundía
-más de lo que ayudaba. Sigue recuperable de la historia de git hasta `1796aa1`.
+**Pasta do Projeto Central (Referência):** `/home/diego/armando/Migraciones/petCondor/site`
 
 ---
 
-## 📚 Documentación Disponible en Esta Carpeta
+## 🔒 Regra de Precedência
 
-Son **tres archivos**, y ninguno sobra:
+A campanha **mudou de KV em 2026**: a arte de 2025 era laranja, a de 2026 é azul / ciano
+/ lavanda. Os blocos da página são os mesmos; mudaram os assets, as cores e parte do
+copy.
 
-1. **`docs/Desktop - CãoCurso.png`** 🎯 — el arte aprobado 2026. Manda sobre todo
-2. **`docs/LP Cão Curso.docx`** 🎯 — el briefing. Manda en fechas, copy y marcas
-3. **`docs/PLATAFORMA.md`** — a dónde va la persistencia: Supabase, el espejo en
-   Google Sheets, el modelo de datos, LGPD y el orden de trabajo
+Manda, nesta ordem:
 
-Más este archivo, que es el que describe la LP tal como está construida.
+1. **`docs/Desktop - CãoCurso.png`** (1366×8000) — a arte aprovada de 2026. É a
+   referência visual: layout, cores, tipografia e o que é imagem e o que é texto.
+2. **`docs/LP Cão Curso.docx`** — o briefing de conteúdo de 2026 (datas, textos, lista de
+   patrocinadores). **Se o .docx e o PNG divergirem num dado de conteúdo, ganha o .docx**
+   (foi assim que se resolveu o período de inscrição: 03/08, não 10/08).
+3. **O código.** Quando a arte e o código divergirem num detalhe de implementação, ganha
+   o que está construído e verificado — mas qualquer mudança de conteúdo volta ao 1 e ao 2.
 
-> Antes había trece documentos, 8.619 líneas: la campaña de 2025, un modal que ya no
-> existe y una plataforma de votación con feed público, anti-fraude y moderación que
-> nunca fue el alcance. Hoy son 259 líneas. Está todo en la historia de git.
+> ⚠️ **A arte e o briefing não estão versionados.** Este repositório é público, então
+> `docs/*.png` e `docs/*.docx` estão no `.gitignore`: o KV aprovado de uma campanha e o
+> briefing interno de marketing não devem ficar indexados. Os arquivos vivem em `docs/`
+> na máquina de trabalho e na pasta do projeto central. Quando o repositório passar a
+> privado, retira-se a regra e eles entram num commit à parte.
+
+A documentação de 2025 (13 arquivos, 8.619 linhas: `GROUND_TRUTH.md`, `DESIGN_SYSTEM.md`,
+`WIREFRAMES_DETALLADAS.md`, `FORM_ESPECIFICACION.md`, `CONTENIDO_DATOS.md`…) **foi
+removida do repositório**. Descrevia a campanha laranja, um modal de 8 campos que já não
+existe e um nav que não é renderizado; a esta altura confundia mais do que ajudava.
+Continua recuperável do histórico do git até `1796aa1`.
 
 ---
 
-## ⛔ Reglas Duras
+## 📚 Documentação Disponível Nesta Pasta
 
-### Paleta permitida (única y cerrada) — KV 2026
+São **três arquivos**, e nenhum sobra:
 
-Muestreada píxel a píxel de `docs/Desktop - CãoCurso.png`. Vive en
-`src/styles/global.css`, a la vez como alias `:root` y como `@theme` de Tailwind v4
-(`--color-brand-*`, que genera las clases `bg-brand-blue`, `text-brand-purple`…).
+1. **`docs/Desktop - CãoCurso.png`** 🎯 — a arte aprovada 2026. Manda sobre tudo
+2. **`docs/LP Cão Curso.docx`** 🎯 — o briefing. Manda em datas, copy e marcas
+3. **`docs/PLATAFORMA.md`** — para onde vai a persistência: Supabase, o espelho na
+   planilha do Google, o modelo de dados, LGPD e a ordem de trabalho
+
+Mais este arquivo, que é o que descreve a LP tal como está construída.
+
+> Antes eram treze documentos, 8.619 linhas: a campanha de 2025, um modal que já não
+> existe e uma plataforma de votação com feed público, antifraude e moderação que nunca
+> foi o escopo. Hoje são 259 linhas. Está tudo no histórico do git.
+
+---
+
+## ⛔ Regras Duras
+
+### Paleta permitida (única e fechada) — KV 2026
+
+Amostrada pixel a pixel de `docs/Desktop - CãoCurso.png`. Vive em
+`src/styles/global.css`, ao mesmo tempo como alias `:root` e como `@theme` do Tailwind v4
+(`--color-brand-*`, que gera as classes `bg-brand-blue`, `text-brand-purple`…).
 
 ```css
 :root {
   --c-blue:        #00419A;  /* títulos, cards de evento, footer, texto sobre lavanda */
-  --c-blue-sec:    #2F8FE5;  /* fondo azul: Hero, Adote, Eventos, Requisitos, Protetoras */
-  --c-blue-deep:   #005BAA;  /* zona oscura del degradado del hero */
-  --c-purple:      #C38ADB;  /* fondo lavanda: 29-Agosto, Atrações, Formulário, Galeria, Patrocínio */
-  --c-purple-deep: #823D9B;  /* blob de la banda Cãocurso */
-  --c-cyan:        #3FAFC8;  /* banda Cãocurso (normalmente cubierta por bg-caocurso.webp) */
-  --c-orange-pan:  #FFAF1C;  /* panel "Requisitos para adoção" */
-  --c-orange-lite: #FFBB3E;  /* card amarilla de la Galeria */
+  --c-blue-sec:    #2F8FE5;  /* fundo azul: Hero, Adote, Eventos, Requisitos, Protetoras */
+  --c-blue-deep:   #005BAA;  /* zona escura do degradê do hero */
+  --c-purple:      #C38ADB;  /* fundo lavanda: 29-Agosto, Atrações, Formulário, Galeria, Patrocínio */
+  --c-purple-deep: #823D9B;  /* blob da faixa Cãocurso */
+  --c-cyan:        #3FAFC8;  /* faixa Cãocurso (normalmente coberta por bg-caocurso.webp) */
+  --c-orange-pan:  #FFAF1C;  /* painel "Requisitos para adoção" */
+  --c-orange-lite: #FFBB3E;  /* card amarelo da Galeria */
   --c-white:       #FFFFFF;
-  --c-red:         #E20614;  /* errores de validación */
+  --c-red:         #E20614;  /* erros de validação */
 }
 ```
 
-Cualquier otro HEX está prohibido, **y también las utilidades de color por defecto de
-Tailwind** (`text-yellow-300`, `bg-purple-50`, `text-gray-600`…): usa los tokens
-`brand-*` o `var(--c-*)`. Única excepción documentada: los colores de marca de las
-redes sociales, confinados a `src/components/icons/IconeSocial.astro` — un Facebook
-repintado de azul corporativo deja de ser Facebook.
+Qualquer outro HEX é proibido, **e também os utilitários de cor padrão do Tailwind**
+(`text-yellow-300`, `bg-purple-50`, `text-gray-600`…): use os tokens `brand-*` ou
+`var(--c-*)`. Única exceção documentada: as cores de marca das redes sociais, confinadas
+em `src/components/icons/IconeSocial.astro` — um Facebook repintado de azul corporativo
+deixa de ser o Facebook.
 
-Los verdes/rosas/morados de la franja separadora viven dentro de
-`pattern-horizontal.svg`, no son tokens del sistema.
+Os verdes/rosas/roxos da faixa separadora vivem dentro de `pattern-horizontal.svg`, não
+são tokens do sistema.
 
-**Contraste heredado del KV:** tres combinaciones del arte original no llegan a
-WCAG AA («Em três datas,» azul sobre azul 2,78; «14h às 18h» blanco sobre lavanda
-2,63; texto pequeño azul sobre lavanda 3,59). Una cuarta —el nav blanco sobre el
-azul del hero, 3,40— dejó de aplicar al retirarse el nav.
-Se replicaron tal cual porque manda el arte. Si Condor necesita cumplir AA, hay que
-retocar la paleta del KV — es decisión de diseño, no un defecto de implementación.
+**Contraste herdado do KV:** três combinações da arte original não alcançam o WCAG AA
+(«Em três datas,» azul sobre azul 2,78; «14h às 18h» branco sobre lavanda 2,63; texto
+pequeno azul sobre lavanda 3,59). Uma quarta —o nav branco sobre o azul do hero, 3,40—
+deixou de se aplicar quando o nav foi retirado. Foram replicadas tal e qual porque manda
+a arte. Se a Condor precisar cumprir AA, é preciso retocar a paleta do KV — é decisão de
+design, não um defeito de implementação.
 
-### Tipografía
+### Tipografia
 
-**Torus** (Paulo Goode), **self-hosted** desde `assets/fonts/`, 6 pesos (Thin, Light,
-Regular, SemiBold, Bold, Heavy) convertidos a `.woff2`.
-**Prohibido** Montserrat, Inter o cualquier Google Font para el display.
+**Torus** (Paulo Goode), **self-hosted** a partir de `assets/fonts/`, 6 pesos (Thin,
+Light, Regular, SemiBold, Bold, Heavy) convertidos para `.woff2`.
+**Proibido** Montserrat, Inter ou qualquer Google Font para o display.
 
 ```css
 :root { --font-display: 'Torus', system-ui, sans-serif; }
 ```
 
-### Endpoint del formulario
+### Endpoint do formulário
 
-- **`POST /api/inscricao`** con **`multipart/form-data`** (`petFoto` es un archivo y no
-  cabe en un body JSON).
-- Requiere `output: 'server'` + un adapter SSR en `astro.config.mjs`, o las rutas API no
-  se ejecutan. **Adapter actual: `@astrojs/vercel`.**
+- **`POST /api/inscricao`** com **`multipart/form-data`** (`petFoto` é um arquivo e não
+  cabe num body JSON).
+- Exige `output: 'server'` + um adapter SSR em `astro.config.mjs`, ou as rotas de API não
+  são executadas. **Adapter atual: `@astrojs/vercel`.**
 
-  ⚠️ **Pero producción NO es Vercel: el sitio va a un VPS con Docker.** La decisión
-  está tomada; la migración del adapter está *aplazada a propósito*, no olvidada. No
-  optimices para Vercel ni des por bueno el build de `.vercel/output` como artefacto
-  de despliegue. Cuando toque: `@astrojs/node` en modo `standalone`, fuera
-  `vercel.json` y la opción `imageService: false` (es del adapter de Vercel), y un
-  Dockerfile multi-stage con `.dockerignore` — sin él el contexto de build se traga
-  `assets-fonte/`, casi 1 GB.
-- **Astro 7 rechaza los POST sin `Origin` propio** (protección CSRF por defecto). Desde
-  el navegador funciona solo; desde `curl` hay que mandar
-  `-H "Origin: http://localhost:4321"` o recibes un **403**, no un error de validación.
-- El `<form>` envía por `fetch()` y pinta la respuesta en la página; si el JS falla,
-  el POST nativo sigue funcionando.
-- **`/api/feedback` NO sirve aquí:** pertenece a la documentación interna del proyecto
-  central, exige `pageId` + `content` y devuelve **400** con el payload de inscripción.
+  ⚠️ **Mas produção NÃO é a Vercel: o site vai para um VPS com Docker.** A decisão está
+  tomada; a migração do adapter está *adiada de propósito*, não esquecida. Não otimize
+  para a Vercel nem tome o build de `.vercel/output` como artefato de deploy. Quando for
+  a hora: `@astrojs/node` em modo `standalone`, fora o `vercel.json` e a opção
+  `imageService: false` (é do adapter da Vercel), e um Dockerfile multi-stage com
+  `.dockerignore` — sem ele o contexto de build engole `assets-fonte/`, quase 1 GB.
+- **O Astro 7 rejeita POSTs sem `Origin` próprio** (proteção CSRF por padrão). Do
+  navegador funciona sozinho; do `curl` é preciso mandar
+  `-H "Origin: http://localhost:4321"` ou você recebe um **403**, não um erro de
+  validação.
+- O `<form>` envia por `fetch()` e desenha a resposta na página; se o JS falhar, o POST
+  nativo continua funcionando.
+- **`/api/feedback` NÃO serve aqui:** pertence à documentação interna do projeto central,
+  exige `pageId` + `content` e devolve **400** com o payload de inscrição.
 
-**Persistencia del endpoint:** hoy escribe con `fs` en `uploads/`. En Vercel eso era
-un bloqueante duro —sistema de archivos de sólo lectura salvo `/tmp`, efímero y por
-instancia: `fs.mkdir` falla, responde **500**, y la deduplicación por tutor+pet no
-puede funcionar porque cada instancia ve su propio fichero—. **En un VPS con Docker
-y un volumen montado deja de serlo:** escribible, persistente y con una sola
-instancia. O sea que ya no impide desplegar; sigue siendo el camino equivocado a
-medio plazo. **Destino decidido: la ficha va a Supabase**; el storage de la foto
-(MinIO o Supabase Storage) está sin decidir y no bloquea, porque la base guarda la
-`key` y no la URL. Es el
-siguiente trabajo después del saneamiento. Al migrarlo, el formulario pasa a ser una
-**isla React** —por eso `@astrojs/react` sigue instalado aunque hoy no haya ninguna
-isla— y debe montarse con `client:visible`: vive muy por debajo del pliegue, así que
-los ~60 KB de React no tienen por qué entrar en la primera pantalla. Y la isla se
-renderiza en servidor: el `<form>` conserva `action` y `method` reales, de modo que
-sigue funcionando sin JavaScript. Si monta vacía en cliente, eso se pierde.
-Ver `docs/PLATAFORMA.md`.
+**Persistência do endpoint:** hoje grava com `fs` em `uploads/`. Na Vercel isso era um
+bloqueio duro —sistema de arquivos somente leitura fora de `/tmp`, efêmero e por
+instância: `fs.mkdir` falha, responde **500**, e a deduplicação por tutor+pet não tem como
+funcionar porque cada instância vê o seu próprio arquivo—. **Num VPS com Docker e um
+volume montado deixa de ser:** gravável, persistente e com uma instância só. Ou seja, já
+não impede o deploy; continua sendo o caminho errado a médio prazo. **Destino decidido: a
+ficha vai para o Supabase**; o storage da foto (MinIO ou Supabase Storage) segue sem
+decisão e não bloqueia, porque o banco guarda a `key` e não a URL. É o próximo trabalho
+depois do saneamento. Na migração, o formulário passa a ser uma **ilha React** —por isso
+o `@astrojs/react` continua instalado mesmo sem nenhuma ilha hoje— e deve ser montado com
+`client:visible`: ele vive bem abaixo da dobra, então os ~60 KB de React não têm por que
+entrar na primeira tela. E a ilha é renderizada no servidor: o `<form>` conserva `action`
+e `method` reais, de modo que continua funcionando sem JavaScript. Se montar vazia no
+cliente, isso se perde. Ver `docs/PLATAFORMA.md`.
 
-### Los 11 bloques de la página
+### Os 11 blocos da página
 
 ```
 1 Hero · 2 Adote um AuMigo · 3 Eventos · 4 Requisitos · 5 Protetoras ·
 6 Cãocurso · 7 «29 de agosto» · 8 Atrações · 9 Galeria ·
-10 Patrocínio/Apoio · 11 Footer          (+ el formulario, fuera del flujo)
+10 Patrocínio/Apoio · 11 Footer          (+ o formulário, fora do fluxo)
 ```
 
-Con **4 franjas separadoras** (`<Faixa />`): tras el Hero, tras Adote um AuMigo, antes
-de la banda Cãocurso y después de ella.
+Com **4 faixas separadoras** (`<Faixa />`): depois do Hero, depois de Adote um AuMigo,
+antes da faixa Cãocurso e depois dela.
 
-- **La LP no lleva nav.** `Nav.astro` existió, quedó huérfano —`index.astro` no lo
-  importaba— y se retiró junto con el array `navLinks`. `--nav-h` se conserva en
-  `global.css` valiendo **0**: si el nav vuelve, ese es el único sitio que tocar
-  (con barra en el flujo medía 72 px por debajo de md y 60 px entre md y lg).
-- **Nunca omitir Protetoras ni Patrocínio/Apoio.**
-- El **Hero mide exactamente una pantalla** en todo dispositivo: `--hero-h`
-  (= `100svh` − `--nav-h` − `--faixa-h`), definido en `global.css`. Se le resta
-  también la franja para que el cintillo de tiles **entre en la primera pantalla**:
-  hero + cintillo suman el alto justo del dispositivo.
-- El Hero es **una sola composición**, no tres bandas apiladas: a la izquierda el
-  bloque fijo del sello Mês Pet, a la derecha un **carrusel de dos ofertas**
-  (Cãocurso y Adote um AuMigo). Las dos comparten la misma retícula de filas
-  —`--h-logo`, `--h-msg`, `--h-dados`— justamente para que el CTA caiga a la misma
-  altura en ambas; si tocas una fila, tócala para las dos. El carrusel es
-  `scroll-snap` nativo y **funciona sin JavaScript**: el JS sólo añade la rotación
-  automática, que se detiene al primer gesto del usuario y respeta
-  `prefers-reduced-motion`. Los slides **no llevan fotos**, sólo logo, fechas y CTA.
-  Sus dos columnas dependen de la variante **`fila:`** (ancho **y** orientación), no
-  de `md:`: en tablet vertical el mockup deja media pantalla vacía y ahí manda el
-  bloque apilado.
-- `Requisitos` es **un panel único con 6 bullets en dos columnas**, no tres cards.
-- `Eventos` son **2 tarjetas arriba y 1 centrada debajo**, no una fila de tres.
-- El bloque 7 se llama `Evento30Agosto.astro` por herencia de 2025, pero en 2026 la
-  fecha es el **29 de agosto**. No renombrar el archivo, sí el contenido.
-- El formulario **no está en el flujo de la página**: se abre como modal desde el
-  botón del bloque 7. Ver la sección siguiente.
+- **A LP não tem nav.** O `Nav.astro` existiu, ficou órfão —o `index.astro` não o
+  importava— e foi retirado junto com o array `navLinks`. `--nav-h` é mantido em
+  `global.css` valendo **0**: se o nav voltar, esse é o único lugar a mexer (com barra no
+  fluxo media 72 px abaixo de md e 60 px entre md e lg).
+- **Nunca omitir Protetoras nem Patrocínio/Apoio.**
+- O **Hero mede exatamente uma tela** em qualquer dispositivo: `--hero-h`
+  (= `100svh` − `--nav-h` − `--faixa-h`), definido em `global.css`. Desconta-se também a
+  faixa para que a fileira de tiles **caiba na primeira tela**: hero + faixa somam a
+  altura exata do dispositivo.
+- O Hero é **uma composição só**, não três faixas empilhadas: à esquerda o bloco fixo do
+  selo Mês Pet, à direita um **carrossel de duas ofertas** (Cãocurso e Adote um AuMigo).
+  As duas compartilham a mesma grade de linhas —`--h-logo`, `--h-msg`, `--h-dados`—
+  justamente para que o CTA caia na mesma altura nas duas; se mexer numa linha, mexa nas
+  duas. O carrossel é `scroll-snap` nativo e **funciona sem JavaScript**: o JS só
+  acrescenta a rotação automática, que para no primeiro gesto do usuário e respeita
+  `prefers-reduced-motion`. Os slides **não levam fotos**, só logo, datas e CTA. As suas
+  duas colunas dependem da variante **`fila:`** (largura **e** orientação), não de `md:`:
+  em tablet na vertical o mockup deixa meia tela vazia e ali manda o bloco empilhado.
+  **As setas e o contador só aparecem de tablet na horizontal para cima**: no celular a
+  pista se passa com o dedo e aquela faixa inferior é o que dá corpo ao selo.
+- `Requisitos` é **um painel único com 6 bullets em duas colunas**, não três cards.
+- `Eventos` são **2 cartões em cima e 1 centralizado embaixo**, não uma fileira de três.
+- O bloco 7 se chama `Evento30Agosto.astro` por herança de 2025, mas em 2026 a data é o
+  **29 de agosto**. Não renomear o arquivo, sim o conteúdo.
+- O formulário **não está no fluxo da página**: abre como modal a partir do botão do
+  bloco 7. Ver a seção seguinte.
 
-### Assets — nunca sirvas los originales de imprenta
+### Assets — nunca sirva os originais de gráfica
 
-El KV 2026 llega en resolución de imprenta: hoy `assets-fonte/` va por **920 MB**, con
-PNG de 17717×7087 px (`Textura_Halftone.png` pesa 229 MB ella sola). Servido desde
-`public/` eso revienta el deploy. El flujo es:
+O KV 2026 chega em resolução de gráfica: hoje `assets-fonte/` está em **920 MB**, com PNG
+de 17717×7087 px (`Textura_Halftone.png` pesa 229 MB sozinho). Servido a partir de
+`public/` isso estoura o deploy. O fluxo é:
 
 ```
-assets-fonte/            originales tal como los entrega marketing. GITIGNORADO, no se sirve.
+assets-fonte/            originais tal como o marketing entrega. NO GITIGNORE, não é servido.
   ↓  node scripts/optimizar-assets.mjs
-public/assets/2026/      WebP al ancho real de uso ×2. → 3,7 MB.
+public/assets/2026/      WebP na largura real de uso ×2. → 3,7 MB.
 
-assets-fonte/galeria/    fotos del fotógrafo (8192×5464, 236 MB). GITIGNORADO.
-  ↓  node scripts/optimizar-assets.mjs   (mismo script, segundo paso)
+assets-fonte/galeria/    fotos do fotógrafo (8192×5464, 236 MB). NO GITIGNORE.
+  ↓  node scripts/optimizar-assets.mjs   (mesmo script, segundo passo)
 public/assets/galeria/   WebP a 960 px. 236 MB → 660 KB.
 ```
 
-⚠️ **`.gitignore` no impide que un fichero se publique.** Todo lo que esté bajo
-`public/` se copia tal cual a `.vercel/output/static/` y queda servido en una URL,
-esté o no en git. Son dos filtros distintos: git decide qué se versiona, `public/`
-decide qué se publica. Material de origen que no deba salir a internet tiene que
-estar **fuera de `public/`**, no sólo fuera de git.
+⚠️ **O `.gitignore` não impede que um arquivo seja publicado.** Tudo o que estiver sob
+`public/` é copiado tal e qual para `.vercel/output/static/` e fica servido numa URL,
+esteja ou não no git. São dois filtros distintos: o git decide o que é versionado,
+`public/` decide o que é publicado. Material de origem que não deva ir para a internet
+tem de estar **fora de `public/`**, não só fora do git.
 
-Cuando llegue KV nuevo: se deja en `assets-fonte/`, se añade su ancho de salida y su
-nombre web en `scripts/optimizar-assets.mjs` y se vuelve a ejecutar. Los nombres de
-salida van **sin espacios ni acentos**: viajan dentro de una URL.
+Quando chegar KV novo: deixa-se em `assets-fonte/`, acrescenta-se a sua largura de saída
+e o seu nome web em `scripts/optimizar-assets.mjs` e roda-se de novo. Os nomes de saída
+vão **sem espaços nem acentos**: viajam dentro de uma URL.
 
-Fotos de galería nuevas: se dejan en `assets-fonte/galeria/`, se ejecuta el script (no
-hace falta tocarlo, convierte lo que encuentre) y **se revisa el orden del array
-`galeria` en `src/data/site.ts`** — cada posición cae en un hueco del mosaico con su
-propia proporción. Los 960 px de ancho no son decorativos: los dos huecos verticales
-(0,667) recortan una foto apaisada hasta dejarla en 44 % de su ancho.
+Fotos de galeria novas: deixam-se em `assets-fonte/galeria/`, roda-se o script (não é
+preciso mexer nele, converte o que encontrar) e **revisa-se a ordem do array `galeria` em
+`src/data/site.ts`** — cada posição cai num buraco do mosaico com a sua própria
+proporção. Os 960 px de largura não são decorativos: os dois buracos verticais (0,667)
+recortam uma foto deitada até deixá-la em 44 % da sua largura.
 
-Otras carpetas servidas:
+Outras pastas servidas:
 
-- `public/assets/images/` — assets de 2025 que **siguen vigentes**, porque el briefing
-  dice *«Adote um aumigo: podemos utilizar o KV do ano passado»*: `Selo-Adote-um-Aumigo.png`
-  (el lockup) y `Dog.png` (el perro con patas que cruza la franja).
-- `public/assets/galeria/` — 12 fotos de la edición 2025, en WebP, **generadas**: no
-  se editan a mano, salen de `assets-fonte/galeria/`.
-- `public/assets/patrocinadores/` — los logos planos que **sí se sirven**: 5 ficheros
-  de 2025 que se reutilizan (Friskies, Dog Chow, Kelcat, Keldog, brf pet). Los otros
-  dos, Doogs y Procão, salen ya del KV 2026 en `public/assets/2026/`.
+- `public/assets/images/` — assets de 2025 que **continuam válidos**, porque o briefing
+  diz *«Adote um aumigo: podemos utilizar o KV do ano passado»*:
+  `Selo-Adote-um-Aumigo.png` (o lockup) e `Dog.png` (o cachorro com patas que atravessa a
+  faixa).
+- `public/assets/galeria/` — 12 fotos da edição 2025, em WebP, **geradas**: não se editam
+  à mão, saem de `assets-fonte/galeria/`.
+- `public/assets/patrocinadores/` — os logos chapados que **de fato são servidos**: 5
+  arquivos de 2025 reaproveitados (Friskies, Dog Chow, Kelcat, Keldog, brf pet). Os
+  outros dois, Doogs e Procão, já saem do KV 2026 em `public/assets/2026/`.
 
-  El material de origen que mandó marketing —180 ficheros, 78 MB de `.zip`, `.ai` y
-  manuales de marca en PDF de Nestlé, Mars y Kelco— vive en
-  **`assets-fonte/patrocinadores/`**, no aquí. Estuvo bajo `public/`, gitignorado, y
-  el build lo publicaba igual. De ahí sale un fichero plano por marca, y ese es el
-  único que entra en `public/`.
+  O material de origem que o marketing mandou —180 arquivos, 78 MB de `.zip`, `.ai` e
+  manuais de marca em PDF da Nestlé, Mars e Kelco— vive em
+  **`assets-fonte/patrocinadores/`**, não aqui. Esteve sob `public/`, no gitignore, e o
+  build o publicava mesmo assim. Dali sai um arquivo chapado por marca, e esse é o único
+  que entra em `public/`.
 
-⚠️ **Nunca crees `public/Assets/` con A mayúscula.** Existió y convivió con
-`public/assets/`: en Linux son dos carpetas, en macOS y en varios sistemas de deploy
-son la misma. Todo va en minúscula.
+⚠️ **Nunca crie `public/Assets/` com A maiúsculo.** Existiu e conviveu com
+`public/assets/`: no Linux são duas pastas, no macOS e em vários sistemas de deploy são a
+mesma. Tudo em minúsculo.
 
-**Prohibido** proponer placeholders de Unsplash o "Partner 1/2/3". Si falta el logo
-oficial de una marca, se pinta su nombre como texto y se deja un `// TODO` — poner el
-logo de otra empresa es un error de marca, no un apaño de maquetación.
+**Proibido** propor placeholders do Unsplash ou "Partner 1/2/3". Se faltar o logo oficial
+de uma marca, escreve-se o seu nome como texto e deixa-se um `// TODO` — pôr o logo de
+outra empresa é um erro de marca, não um jeitinho de diagramação.
 
-### El formulario: modal, 11 campos, NO es de adopción
+### O formulário: modal, 11 campos, NÃO é de adoção
 
-El formulario (`FormularioInscricao.astro`) se abre como **modal** desde el botón del
-bloque «29 de agosto». Estuvo embebido en la página —el arte lo dibuja así— y se sacó
-del flujo a petición del cliente. No lo devuelvas al flujo «para que cuadre con el
-mockup»: es una decisión tomada, no una desviación.
+O formulário (`FormularioInscricao.astro`) abre como **modal** a partir do botão do bloco
+«29 de agosto». Esteve embutido na página —a arte o desenha assim— e foi tirado do fluxo
+a pedido do cliente. Não o devolva ao fluxo «para bater com o mockup»: é uma decisão
+tomada, não um desvio.
 
-`InscricaoModal.jsx`, la pieza de 8 campos de 2025, sigue eliminada: este modal es
-otra cosa, en Astro y sin React.
+O `InscricaoModal.jsx`, a peça de 8 campos de 2025, segue removido: este modal é outra
+coisa, em Astro e sem React.
 
-#### El botón tiene tres estados, y los decide el servidor
+#### O botão tem três estados, e quem decide é o servidor
 
-`src/lib/inscricao.ts` compara la hora actual con la ventana de inscripción y devuelve
-`em-breve`, `aberta` o `finalizada`. De ahí salen los tres rótulos —«Em breve»,
-«Inscreva-se», «Finalizado»— y sólo el del medio es pulsable.
+`src/lib/inscricao.ts` compara a hora atual com a janela de inscrição e devolve
+`em-breve`, `aberta` ou `finalizada`. Daí saem os três rótulos —«Em breve»,
+«Inscreva-se», «Finalizado»— e só o do meio é clicável.
 
-Tres cosas que no se pueden tocar por separado:
+Três coisas que não dá para mexer separadamente:
 
-- **La misma función la usa `POST /api/inscricao`**, y ahí no es decorativa: un botón
-  que no aparece no impide un POST con `curl` el día después del cierre. Si quitas esa
-  comprobación, «Finalizado» deja de significar nada.
-- **Falla cerrado.** Si las fechas no se pueden leer devuelve `em-breve`, nunca
-  `aberta`. Vale también para cuando las fechas vengan de Supabase y Supabase no
-  responda: ver «Inscreva-se» y que el envío reviente tras rellenar once campos y subir
-  una foto es peor que ver «Em breve» de más.
-- **Las fechas llevan offset `-03:00` escrito a mano** en `site.ts`. `new Date('2026-08-21')`
-  se lee como UTC y el período habría cerrado a las 21:00 del día 20 — un día antes.
+- **A mesma função é usada pelo `POST /api/inscricao`**, e ali não é decorativa: um botão
+  que não aparece não impede um POST com `curl` no dia seguinte ao fechamento. Se você
+  tirar essa checagem, «Finalizado» deixa de significar alguma coisa.
+- **Falha fechado.** Se as datas não puderem ser lidas, devolve `em-breve`, nunca
+  `aberta`. Vale também para quando as datas vierem do Supabase e o Supabase não
+  responder: ver «Inscreva-se» e o envio estourar depois de preencher onze campos e subir
+  uma foto é pior do que ver «Em breve» a mais.
+- **As datas levam offset `-03:00` escrito à mão** em `site.ts`. `new Date('2026-08-21')`
+  é lido como UTC e o período teria fechado às 21:00 do dia 20 — um dia antes.
 
-#### Sin JavaScript el formulario sigue funcionando
+#### Sem JavaScript o formulário continua funcionando
 
-El bloque vive en el documento como una sección normal y el modal es una capa encima.
-El interruptor es la clase `.js` que `Layout.astro` pone en `<html>` antes de pintar:
-sin ella, `.modal` es una tarjeta lavanda al final de la página y el botón —un
-`<a href="#modal-inscricao">`— salta hasta ella.
+O bloco vive no documento como uma seção normal e o modal é uma camada por cima. O
+interruptor é a classe `.js` que o `Layout.astro` coloca em `<html>` antes de pintar: sem
+ela, `.modal` é um cartão lavanda no fim da página e o botão —um
+`<a href="#modal-inscricao">`— salta até ele.
 
-Por eso **no es un `<dialog>`**: sin JS un `<dialog>` es `display:none` y no hay forma
-de abrirlo, así que el formulario dejaría de existir para quien no ejecute scripts.
+Por isso **não é um `<dialog>`**: sem JS um `<dialog>` é `display:none` e não há como
+abri-lo, então o formulário deixaria de existir para quem não executa scripts.
 
-Y por eso **el componente se renderiza siempre**, en los tres estados: quitarlo del HTML
-cuando el período está cerrado dejaría el ancla apuntando a la nada.
+E por isso **o componente é sempre renderizado**, nos três estados: tirá-lo do HTML
+quando o período está fechado deixaria a âncora apontando para o nada.
 
-`role="dialog"` y `aria-modal` los pone el script al abrir, no el HTML: mientras es una
-sección normal no hay diálogo que anunciar.
-Su propósito es **registrar UNA mascota con su foto para el concurso Cãocurso**.
+`role="dialog"` e `aria-modal` são colocados pelo script ao abrir, não pelo HTML:
+enquanto é uma seção normal não há diálogo a anunciar.
 
-Campos, según el briefing (`docs/LP Cão Curso.docx`):
+O seu propósito é **cadastrar UM pet com a sua foto para o concurso Cãocurso**.
 
-- **Tutor:** `tutorNome`*, `tutorNascimento`, `tutorCpf` (el del Clube Condor),
+Campos, conforme o briefing (`docs/LP Cão Curso.docx`):
+
+- **Tutor:** `tutorNome`*, `tutorNascimento`, `tutorCpf` (o do Clube Condor),
   `tutorEmail`*, `tutorTelefone`*
 - **Pet:** `petNome`*, `petRaca`, `petSexo`, `petDescricao`, **`petFoto`*** (máx. 2 MB)
-- `aceiteRegulamento`* — regulamento + autorización de uso de imagen. **No está en el
-  arte**; se añadió a petición del cliente porque un concurso con foto lo necesita (LGPD).
+- `aceiteRegulamento`* — regulamento + autorização de uso de imagem. **Não está na
+  arte**; foi acrescentado a pedido do cliente porque um concurso com foto precisa disso
+  (LGPD).
 
-(*) obligatorio. `petEspecie` quedó **opcional**: el formulario de 2026 no lo pide.
+(*) obrigatório. `petEspecie` ficou **opcional**: o formulário de 2026 não o pede.
 
-- **Prohibido** pedir dirección, patio, "¿tienes mascotas?" o documento de identidad:
-  eran del formulario de adopción que imaginó la documentación de 2025.
-- Se valida contra `docs/Desktop - CãoCurso.png` y el briefing, no contra
-  la especificación de 2025, que describía una versión de 8 campos ya retirada.
+- **Proibido** pedir endereço, quintal, "você tem pets?" ou documento de identidade: eram
+  do formulário de adoção que a documentação de 2025 imaginou.
+- Valida-se contra `docs/Desktop - CãoCurso.png` e o briefing, não contra a especificação
+  de 2025, que descrevia uma versão de 8 campos já retirada.
 
 ---
 
 ## 🚀 Quick Start
 
-**El proyecto ya está montado y funcionando.** No hay que crearlo de cero.
+**O projeto já está montado e funcionando.** Não é preciso criá-lo do zero.
 
 ```bash
-npm install          # sólo la primera vez
+npm install          # só na primeira vez
 npm run dev          # http://localhost:4321
-npm run build        # build de producción → .vercel/output
-vercel dev           # preview del build (astro preview NO sirve .vercel/output)
-npx astro check      # 0 errores esperados
+npm run build        # build de produção → .vercel/output
+vercel dev           # preview do build (astro preview NÃO serve .vercel/output)
+npx astro check      # 0 erros esperados
 ```
 
 ---
 
-## ✅ Estado de implementación
+## ✅ Estado de implementação
 
-| Fase | Alcance | Estado |
-|------|---------|--------|
-| 1 | Config, tokens, Torus self-hosted (6 pesos woff2), `animations.css`, Layout | ✅ hecho |
-| 2 | Los 11 bloques + Footer | ✅ hecho |
-| 3 | Formulario inline (11 campos) + `POST /api/inscricao` multipart | ✅ hecho |
-| 4 | Transiciones, scroll reveal con fallback sin JS, `prefers-reduced-motion` | ✅ hecho |
-| 5 | **Realineado al KV 2026**: paleta, assets optimizados, copy del briefing | ✅ hecho |
-| 6 | **Saneamiento**: punto base en git (`v2026-base`), nav retirado, rutas rotas cerradas | ✅ hecho |
+| Fase | Escopo | Estado |
+|------|--------|--------|
+| 1 | Config, tokens, Torus self-hosted (6 pesos woff2), `animations.css`, Layout | ✅ feito |
+| 2 | Os 11 blocos + Footer | ✅ feito |
+| 3 | Formulário inline (11 campos) + `POST /api/inscricao` multipart | ✅ feito |
+| 4 | Transições, scroll reveal com fallback sem JS, `prefers-reduced-motion` | ✅ feito |
+| 5 | **Realinhado ao KV 2026**: paleta, assets otimizados, copy do briefing | ✅ feito |
+| 6 | **Saneamento**: ponto base no git (`v2026-base`), nav retirado, caminhos quebrados fechados | ✅ feito |
 
-**Verificado (2026-08-04):** `astro check` 0/0/0 · `npm run build` limpio ·
-las 34 rutas de `/assets/` referenciadas desde `src/` existen en `public/` ·
-árbol de git limpio, rebuild 2026 commiteado y etiquetado `v2026-base` ·
-endpoint probado en 5 casos (201 válido, 400 sin aceite, 409 duplicado,
-400 CPF inválido, 400 menor de edad).
+**Verificado (2026-08-04):** `astro check` 0/0/0 · `npm run build` limpo · os 34 caminhos
+de `/assets/` referenciados a partir de `src/` existem em `public/` · árvore do git
+limpa, rebuild 2026 commitado e marcado com `v2026-base` · endpoint testado em 5 casos
+(201 válido, 400 sem aceite, 409 duplicado, 400 CPF inválido, 400 menor de idade).
 
-`.vercel/output/static` = **7,8 MB** (eran 86 antes de sacar los kits de marca de
-`public/`). Ningún `.zip`, `.ai` ni `Thumbs.db` queda publicado.
+`.vercel/output/static` = **7,8 MB** (eram 86 antes de tirar os kits de marca de
+`public/`). Nenhum `.zip`, `.ai` nem `Thumbs.db` fica publicado.
 
-⚠️ La función serverless sí pesa **41 MB, de los que 36 son los binarios nativos de
-sharp** (`node_modules/@img`). `imageService: false` desactiva el servicio de
-imágenes de Vercel, pero deja el propio de Astro, que es sharp. Como aquí todas las
-imágenes son `<img>` con rutas de `/assets/` ya optimizadas y no se usa `astro:assets`,
-sharp no llega a ejecutarse nunca: son 36 MB muertos que sólo alargan el arranque en
-frío. Se quitan poniendo `image: { service: passthroughImageService() }`.
+⚠️ A função serverless pesa **41 MB, dos quais 36 são os binários nativos do sharp**
+(`node_modules/@img`). `imageService: false` desativa o serviço de imagens da Vercel, mas
+deixa o próprio do Astro, que é o sharp. Como aqui todas as imagens são `<img>` com
+caminhos de `/assets/` já otimizados e não se usa `astro:assets`, o sharp nunca chega a
+ser executado: são 36 MB mortos que só alongam o cold start. Saem colocando
+`image: { service: passthroughImageService() }`.
 
-**Pendiente de que el cliente aporte material** (no es trabajo de código):
+**Pendente de o cliente fornecer material** (não é trabalho de código):
 
-1. **1 logo que no existe:** Fancy Feast — la carpeta que mandó marketing está vacía.
-   Se pinta como texto azul. Ojo: `WHISKAS-LOGO.png` **no** es Fancy Feast.
-   MARS Petcare, Caats y Doguitos **ya tienen material** en
-   `public/assets/patrocinadores/Apoio/`; falta sacar de cada carpeta el fichero web
-   y repuntar `site.ts`. `Logo-Purina-One-Caes.png` **no** es Doguitos.
-2. **Regulamento 2026:** no hay PDF. El botón está visible y deshabilitado. Al llegar el
-   archivo: `regulamentoDisponivel: true` en `src/data/site.ts` y la rama `<a href>` ya
-   está escrita.
-3. **Protetoras / ONGs:** *«em definição»* según el briefing. Las 3 tarjetas están
-   vacías, con el enlace de Instagram listo para activarse cuando lleguen los datos.
-4. **Fotos de la galería:** el arte muestra 13 fotos y en el repo hay 12, que además no
-   son la misma selección que usó el diseñador.
+1. **1 logo que não existe:** Fancy Feast — a pasta que o marketing mandou está vazia. É
+   escrito como texto azul. Atenção: `WHISKAS-LOGO.png` **não** é Fancy Feast. MARS
+   Petcare, Caats e Doguitos **já têm material** em
+   `public/assets/patrocinadores/Apoio/`; falta tirar de cada pasta o arquivo web e
+   repontar o `site.ts`. `Logo-Purina-One-Caes.png` **não** é Doguitos.
+2. **Regulamento 2026:** não há PDF. O botão está visível e desabilitado. Quando o
+   arquivo chegar: `regulamentoDisponivel: true` em `src/data/site.ts` e o ramo `<a href>`
+   já está escrito.
+3. **Protetoras / ONGs:** *«em definição»* segundo o briefing. Os 3 cartões estão vazios,
+   com o link do Instagram pronto para ser ativado quando os dados chegarem.
+4. **Fotos da galeria:** a arte mostra 13 fotos e no repositório há 12, que além disso não
+   são a mesma seleção que o designer usou.
 
-Lo que viene después está en `docs/PLATAFORMA.md` §6.
-
----
-
-## 🎯 Archivo de Imagen Referencia
-
-**Ubicación:** `docs/Desktop - CãoCurso.png` (1366×8000)
-**Propósito:** Comparación pixel-perfect durante desarrollo
-**Uso:** tenerla visible en otra ventana, o partirla en tiras de 1000 px y comparar
-banda por banda contra una captura de página completa del render.
-
-**Ojo — dos trampas al comparar:**
-
-- Lo que parece texto suele ser **lettering, y va como imagen**: «ADOTE UM AuMigo»,
-  «SEU PET É A ESTRELA / da nossa passarela!» y «e pra gatos também!» son PNG. Imitarlos
-  con `font-serif italic` fue exactamente lo que hizo que la página no se pareciera.
-  Lo que sí es texto real: «PREÇO BAIXO PRA CACHORRO».
-- La **Galeria sale vacía en cualquier captura de página completa**: las fotos son
-  `loading="lazy"` y con una ventana gigante el navegador nunca dispara la carga. Hay
-  que hacer scroll de verdad antes de capturar. No es un fallo de maquetación.
+O que vem depois está em `docs/PLATAFORMA.md` §6.
 
 ---
 
-## 🔄 Relación con Central
+## 🎯 Arquivo de Imagem Referência
 
-Esta carpeta es **aislada y autosuficiente**:
-- Documentación completa aquí
-- Proyecto separado
-- Puede divergir de central cuando se mejore
+**Local:** `docs/Desktop - CãoCurso.png` (1366×8000)
+**Propósito:** comparação pixel-perfect durante o desenvolvimento
+**Uso:** mantê-la visível em outra janela, ou cortá-la em tiras de 1000 px e comparar
+faixa a faixa contra uma captura de página inteira do render.
 
-**Central** (`/home/diego/armando/Migraciones/petCondor/site`) es:
-- Hub de decisiones
-- Fuente de los assets de **2025** y de las fuentes Torus
-- Punto de sincronización si es necesario
+**Atenção — duas armadilhas ao comparar:**
 
-**Fuentes originales para verificar dudas de 2025:**
+- O que parece texto costuma ser **lettering, e vai como imagem**: «ADOTE UM AuMigo»,
+  «SEU PET É A ESTRELA / da nossa passarela!» e «e pra gatos também!» são PNG. Imitá-los
+  com `font-serif italic` foi exatamente o que fez a página não se parecer com a arte. O
+  que é texto de verdade: «PREÇO BAIXO PRA CACHORRO».
+- A **Galeria sai vazia em qualquer captura de página inteira**: as fotos são
+  `loading="lazy"` e com uma janela gigante o navegador nunca dispara o carregamento. É
+  preciso rolar de verdade antes de capturar. Não é falha de diagramação.
+
+---
+
+## 🔄 Relação com o Central
+
+Esta pasta é **isolada e autossuficiente**:
+- Documentação completa aqui
+- Projeto separado
+- Pode divergir do central quando for melhorada
+
+**Central** (`/home/diego/armando/Migraciones/petCondor/site`) é:
+- Hub de decisões
+- Fonte dos assets de **2025** e das fontes Torus
+- Ponto de sincronização se necessário
+
+**Fontes originais para tirar dúvidas de 2025:**
 - `/home/diego/armando/Migraciones/petCondor/content/html/index.html`
 - `/home/diego/armando/Migraciones/petCondor/assets/css/post-683.css`
 - `/home/diego/armando/Migraciones/petCondor/assets/fonts/` (Torus TTF ×6)
 
-**Para 2026 la fuente es marketing**, no central: el KV y los logos viven en
-`Z:\Comunicação e Web\2026\Condor\Campanhas\Pet\` (subcarpetas `KV`, `Cão Curso\KV`,
-`LOGOS` y `Cão Curso\LP\Referência`).
+**Para 2026 a fonte é o marketing**, não o central: o KV e os logos vivem em
+`Z:\Comunicação e Web\2026\Condor\Campanhas\Pet\` (subpastas `KV`, `Cão Curso\KV`,
+`LOGOS` e `Cão Curso\LP\Referência`).
 
 ---
 
-## 📁 Estructura Real
+## 📁 Estrutura Real
 
 ```
 /home/diego/armando/Sites/petcondor/
 ├── astro.config.mjs           (output: 'server' + @astrojs/vercel, imageService: false)
-├── vercel.json                (framework astro, región gru1 São Paulo)
+├── vercel.json                (framework astro, região gru1 São Paulo)
 ├── scripts/
 │   └── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
-├── assets-fonte/              ⚠️ 920 MB de imprenta + fotos. GITIGNORADO.
+├── assets-fonte/              ⚠️ 920 MB de gráfica + fotos. NO GITIGNORE.
 ├── src/
 │   ├── pages/
-│   │   ├── index.astro        (MAIN — Nav + los 11 bloques + 4 Faixa)
+│   │   ├── index.astro        (MAIN — os 11 blocos + 4 Faixa)
 │   │   └── api/
 │   │       └── inscricao.ts   (POST multipart/form-data)
 │   ├── components/
-│   │   ├── Hero.astro                (bloque 1)
-│   │   ├── AdoteAumigo.astro         (bloque 2)
-│   │   ├── Eventos.astro             (bloque 3 — 2 cards + 1 centrada)
-│   │   ├── Requisitos.astro          (bloque 4 — panel + 6 bullets, NO cards)
-│   │   ├── Protetoras.astro          (bloque 5 — 3 tarjetas vacías, ONGs sin definir)
-│   │   ├── Caocurso.astro            (bloque 6 — banda a sangre)
-│   │   ├── Evento30Agosto.astro      (bloque 7 — es el 29 de agosto; nombre heredado)
-│   │   ├── Atracoes.astro            (bloque 8 — 4 cards, iconos SVG inline)
-│   │   ├── FormularioInscricao.astro (formulario en modal, 11 campos)
-│   │   ├── Galeria.astro             (bloque 9 — mosaico 2025)
-│   │   ├── Patrocinadores.astro      (bloque 10)
-│   │   ├── Footer.astro              (bloque 11)
-│   │   ├── Faixa.astro               (franja separadora = pattern-horizontal.svg)
-│   │   └── icons/IconeSocial.astro   (insignias de redes, a color de marca)
+│   │   ├── Hero.astro                (bloco 1)
+│   │   ├── AdoteAumigo.astro         (bloco 2)
+│   │   ├── Eventos.astro             (bloco 3 — 2 cards + 1 centralizado)
+│   │   ├── Requisitos.astro          (bloco 4 — painel + 6 bullets, NÃO cards)
+│   │   ├── Protetoras.astro          (bloco 5 — 3 cartões vazios, ONGs sem definir)
+│   │   ├── Caocurso.astro            (bloco 6 — faixa sangrada)
+│   │   ├── Evento30Agosto.astro      (bloco 7 — é o 29 de agosto; nome herdado)
+│   │   ├── Atracoes.astro            (bloco 8 — 4 cards, ícones SVG inline)
+│   │   ├── FormularioInscricao.astro (formulário em modal, 11 campos)
+│   │   ├── Galeria.astro             (bloco 9 — mosaico 2025)
+│   │   ├── Patrocinadores.astro      (bloco 10)
+│   │   ├── Footer.astro              (bloco 11)
+│   │   ├── Faixa.astro               (faixa separadora = pattern-horizontal.svg)
+│   │   └── icons/IconeSocial.astro   (selos de redes, em cor de marca)
 │   ├── lib/
-│   │   └── inscricao.ts       (estado del período: em-breve / aberta / finalizada.
-│   │                           Lo consumen el botón Y el endpoint)
+│   │   └── inscricao.ts       (estado do período: em-breve / aberta / finalizada.
+│   │                           Consumido pelo botão E pelo endpoint)
 │   ├── data/
-│   │   └── site.ts            (TODOS los datos: nav, eventos, requisitos, protetoras,
-│   │                           caocurso, atrações, galeria, patrocinio, apoio, redes)
+│   │   ├── site.json          (TODO o conteúdo visível: 179 strings, 15 blocos)
+│   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)
 │   ├── layouts/
 │   │   └── Layout.astro       (lang="pt-BR")
 │   └── styles/
 │       ├── global.css         (tokens 2026 + @font-face Torus ×6 + .faixa + .emerge
-│       │                       + --hero-h/--nav-h y la variante fila:)
+│       │                       + --hero-h/--nav-h e a variante fila:)
 │       └── animations.css
 ├── public/
 │   ├── fonts/                 (Torus .woff2 ×6, self-hosted)
 │   └── assets/
-│       ├── 2026/              (KV 2026 optimizado — 3,5 MB)
-│       ├── images/            (assets 2025 aún vigentes: AuMigo, Dog.png)
-│       ├── galeria/           (12 fotos de la edición 2025, WebP generados)
-│       ├── patrocinadores/    (logos reutilizados de 2025)
+│       ├── 2026/              (KV 2026 otimizado — 3,5 MB)
+│       ├── images/            (assets 2025 ainda válidos: AuMigo, Dog.png)
+│       ├── galeria/           (12 fotos da edição 2025, WebP gerados)
+│       ├── patrocinadores/    (logos reaproveitados de 2025)
 │       └── docs/2025_Regulamento_Caocurso.pdf
 │
 └── docs/
-    ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre todo
-    ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda en contenido
-    └── PLATAFORMA.md           (Supabase + Google Sheet, modelo de datos, LGPD)
+    ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre tudo (não versionado)
+    ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda em conteúdo (não versionado)
+    └── PLATAFORMA.md           (Supabase + planilha do Google, modelo de dados, LGPD)
 ```
 
 ---
 
-## ✅ Antes de Empezar
+## ✅ Antes de Começar
 
-- [ ] Abrir `docs/Desktop - CãoCurso.png` — el arte 2026, manda sobre todo
-- [ ] Leer `docs/LP Cão Curso.docx` — el briefing de contenido 2026
-- [ ] Leer la sección «Reglas Duras» de este archivo (paleta, assets, formulario)
+- [ ] Abrir `docs/Desktop - CãoCurso.png` — a arte 2026, manda sobre tudo
+- [ ] Ler `docs/LP Cão Curso.docx` — o briefing de conteúdo 2026
+- [ ] Ler a seção «Regras Duras» deste arquivo (paleta, assets, formulário)
 - [ ] `npm install && npm run dev`
-- [ ] Si vas a tocar la persistencia o el formulario: `docs/PLATAFORMA.md`
+- [ ] Se for mexer na persistência ou no formulário: `docs/PLATAFORMA.md`
 
 ---
 
-## 🎨 Recursos Disponibles
+## 🎨 Recursos Disponíveis
 
-| Recurso | Ubicación | Propósito |
-|---------|-----------|-----------|
-| **Arte 2026** | `docs/Desktop - CãoCurso.png` | **Manda sobre todo** |
-| **Briefing 2026** | `docs/LP Cão Curso.docx` | Manda en datos de contenido |
-| Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, listos para servir |
-| Assets 2026 (origen) | `assets-fonte/` | 920 MB de imprenta, gitignorado |
-| Conversor de assets | `scripts/optimizar-assets.mjs` | origen → WebP web |
-| Plataforma y persistencia | `docs/PLATAFORMA.md` | Supabase + Google Sheet, modelo de datos, LGPD |
-| Animaciones | `src/styles/animations.css` | 8 keyframes, comentados en el propio archivo |
-| Fuentes Torus | `public/fonts/` (origen en `…/petCondor/assets/fonts/`) | 6 pesos woff2 |
-| 📕 Docs de **2025** | historia de git, hasta `1796aa1` | Eliminados del repo: su paleta, assets y campos ya no aplican |
+| Recurso | Local | Propósito |
+|---------|-------|-----------|
+| **Arte 2026** | `docs/Desktop - CãoCurso.png` | **Manda sobre tudo** |
+| **Briefing 2026** | `docs/LP Cão Curso.docx` | Manda em dados de conteúdo |
+| Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, prontos para servir |
+| Assets 2026 (origem) | `assets-fonte/` | 920 MB de gráfica, no gitignore |
+| Conversor de assets | `scripts/optimizar-assets.mjs` | origem → WebP web |
+| Plataforma e persistência | `docs/PLATAFORMA.md` | Supabase + planilha do Google, modelo de dados, LGPD |
+| Animações | `src/styles/animations.css` | 8 keyframes, comentados no próprio arquivo |
+| Fontes Torus | `public/fonts/` (origem em `…/petCondor/assets/fonts/`) | 6 pesos woff2 |
+| 📕 Docs de **2025** | histórico do git, até `1796aa1` | Removidos do repositório: a sua paleta, assets e campos já não se aplicam |
 
 ---
 
 ## 💡 Notas Importantes
 
-1. **Manda el arte 2026** (`docs/Desktop - CãoCurso.png`); en datos de contenido, manda
-   el briefing (`docs/LP Cão Curso.docx`).
-2. **No cambiar diseño.** Replicar exactamente, no mejorar.
-3. **El lettering va como imagen, nunca imitado con fuentes.** Es el error que hubo que
-   deshacer: `font-serif italic` no es el logotipo de AuMigo.
-4. **Contenido en pt-BR, literal.** Nada de lorem ipsum, nada de español en el sitio.
-5. **Formulario crítico.** Inscripción al Cãocurso: 11 campos validados, a
-   `POST /api/inscricao` (multipart). No se compara con el sitio de 2025.
-6. **Nunca sirvas los originales de imprenta.** Pasan por `scripts/optimizar-assets.mjs`.
-7. **Antes de dar por buena una imagen, comprueba que carga.** Media docena de rutas
-   apuntaban a `public/Assets/`, una carpeta que ya no existe: `astro check` y el build
-   pasan igual, porque un `src` roto no es un error de tipos.
-8. **Mobile-first.** Aunque se replica desktop, asegurar mobile desde inicio.
+1. **Manda a arte 2026** (`docs/Desktop - CãoCurso.png`); em dados de conteúdo, manda o
+   briefing (`docs/LP Cão Curso.docx`).
+2. **Não mudar o design.** Replicar exatamente, não melhorar.
+3. **O lettering vai como imagem, nunca imitado com fontes.** É o erro que foi preciso
+   desfazer: `font-serif italic` não é o logotipo do AuMigo.
+4. **Conteúdo em pt-BR, literal.** Nada de lorem ipsum, nada de outro idioma no site.
+5. **Formulário crítico.** Inscrição no Cãocurso: 11 campos validados, para
+   `POST /api/inscricao` (multipart). Não se compara com o site de 2025.
+6. **Nunca sirva os originais de gráfica.** Passam por `scripts/optimizar-assets.mjs`.
+7. **Antes de dar uma imagem por boa, confira que ela carrega.** Meia dúzia de caminhos
+   apontava para `public/Assets/`, uma pasta que já não existe: o `astro check` e o build
+   passam do mesmo jeito, porque um `src` quebrado não é um erro de tipos.
+8. **Mobile-first.** Mesmo replicando o desktop, garantir o celular desde o início.
 
 ---
 
-## 🔗 Comandos Útiles
+## 🔗 Comandos Úteis
 
 ```bash
-# Desarrollo
+# Desenvolvimento
 npm run dev           # Start server (localhost:4321)
 
-# Verificación
+# Verificação
 npm run astro check   # TypeScript check
 
 # Build
-npm run build         # Production build → .vercel/output (adapter Vercel)
-vercel dev            # Preview del build (astro preview NO sirve .vercel/output)
+npm run build         # Build de produção → .vercel/output (adapter Vercel)
+vercel dev            # Preview do build (astro preview NÃO serve .vercel/output)
 
-# Reconvertir el KV cuando marketing entregue arte nuevo
+# Reconverter o KV quando o marketing entregar arte nova
 node scripts/optimizar-assets.mjs   # assets-fonte/ → public/assets/2026/
 
-# Probar el endpoint de inscripción.
-# El -H "Origin: …" es OBLIGATORIO: sin él Astro 7 corta el POST con un 403 (CSRF).
+# Testar o endpoint de inscrição.
+# O -H "Origin: …" é OBRIGATÓRIO: sem ele o Astro 7 corta o POST com um 403 (CSRF).
 curl -H "Origin: http://localhost:4321" \
      -F "tutorNome=Teste Silva" -F "tutorEmail=a@b.com" -F "tutorTelefone=41999999999" \
      -F "petNome=Rex" -F "aceiteRegulamento=on" -F "petFoto=@pet.jpg" \
   http://localhost:4321/api/inscricao
 
-# Limpieza
-rm -rf .astro dist .vercel   # Clean cache/build
-rm -rf uploads               # Fichas de prueba del formulario
-npm install                  # Reinstall deps
+# Limpeza
+rm -rf .astro dist .vercel   # Limpar cache/build
+rm -rf uploads               # Fichas de teste do formulário
+npm install                  # Reinstalar deps
 ```
 
 ---
 
-## 📞 Cuando Necesites Ayuda
+## 📞 Quando Precisar de Ajuda
 
-1. **¿Cómo se ve?** → `docs/Desktop - CãoCurso.png`
-2. **¿Qué dice el copy / las fechas?** → `docs/LP Cão Curso.docx`
-3. **¿Qué color / qué asset uso?** → «Reglas Duras» de este archivo
-4. **¿Cómo convierto arte nuevo?** → `scripts/optimizar-assets.mjs`
-5. **¿Campos del formulario?** → `src/components/FormularioInscricao.astro` + `src/pages/api/inscricao.ts`
-5b. **¿Por qué el botón dice lo que dice?** → `src/lib/inscricao.ts`
-6. **¿Dónde va a vivir esto de verdad?** → `docs/PLATAFORMA.md`
-7. **¿Animaciones?** → `src/styles/animations.css`, comentado en el propio archivo
-8. **¿Cómo era en 2025?** → historia de git, hasta `1796aa1`
-
----
-
-## 🎯 Próximo Paso
-
-👉 **Mira** `docs/Desktop - CãoCurso.png` y lee «Reglas Duras» arriba.
-
-👉 **Luego:** `npm run dev` — la LP está construida y alineada al KV 2026.
-
-👉 **Lo que queda no es código:** el logo de Fancy Feast, el PDF del regulamento, las
-ONGs y la 13ª foto de la galería. Y, antes de abrir el formulario al público, mover la
-persistencia fuera del sistema de archivos (ver el aviso del endpoint).
+1. **Como é que fica?** → `docs/Desktop - CãoCurso.png`
+2. **O que diz o copy / as datas?** → `docs/LP Cão Curso.docx`
+3. **Que cor / que asset eu uso?** → «Regras Duras» deste arquivo
+4. **Como converto arte nova?** → `scripts/optimizar-assets.mjs`
+5. **Campos do formulário?** → `src/components/FormularioInscricao.astro` + `src/pages/api/inscricao.ts`
+5b. **Por que o botão diz o que diz?** → `src/lib/inscricao.ts`
+6. **Onde isto vai viver de verdade?** → `docs/PLATAFORMA.md`
+7. **Animações?** → `src/styles/animations.css`, comentado no próprio arquivo
+8. **Como era em 2025?** → histórico do git, até `1796aa1`
 
 ---
 
-**Estado:** ✅ LP alineada al KV 2026, build limpio, render verificado contra el arte.
+## 🎯 Próximo Passo
 
-**Versión:** 4.0 (saneada — punto base `v2026-base`)
+👉 **Olhe** `docs/Desktop - CãoCurso.png` e leia «Regras Duras» acima.
 
-**Última actualización:** 2026-08-04
+👉 **Depois:** `npm run dev` — a LP está construída e alinhada ao KV 2026.
+
+👉 **O que falta não é código:** o logo da Fancy Feast, o PDF do regulamento, as ONGs e a
+13ª foto da galeria. E, antes de abrir o formulário ao público, mover a persistência para
+fora do sistema de arquivos (ver o aviso do endpoint).
+
+---
+
+**Estado:** ✅ LP alinhada ao KV 2026, build limpo, render verificado contra a arte.
+
+**Versão:** 4.1 (saneada — ponto base `v2026-base`)
+
+**Última atualização:** 2026-08-04
