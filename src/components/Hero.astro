@@ -812,12 +812,53 @@ const [slideCao, slideAdote] = hero.slides;
     document.getElementById('hero-ant')?.addEventListener('click', () => mover(-1));
     document.getElementById('hero-seg')?.addEventListener('click', () => mover(1));
 
-    /* Deslizar con el dedo también es elegir. */
-    pista.addEventListener('pointerdown', parar, { passive: true });
+    /* Deslizar con el dedo también es elegir — pero SÓLO deslizar.
+       Antes esto era `pointerdown → parar`, y en móvil mataba la rotación al
+       primer roce: la tarjeta ocupa casi todo el hero, así que el gesto normal
+       de bajar por la página empieza encima de ella. `pointerdown` no distingue
+       un swipe horizontal de un scroll vertical ni de un toque suelto.
+       Ahora se mide el gesto al soltar: sólo cuenta si el recorrido horizontal
+       supera el umbral Y es mayor que el vertical. */
+    const UMBRAL_SWIPE = 24;
+    let inicio: { x: number; y: number } | null = null;
 
-    raiz.addEventListener('pointerenter', congelar);
-    raiz.addEventListener('pointerleave', arrancar);
-    raiz.addEventListener('focusin', congelar);
+    pista.addEventListener(
+      'pointerdown',
+      (e) => {
+        inicio = { x: e.clientX, y: e.clientY };
+      },
+      { passive: true }
+    );
+
+    const fimDoGesto = (e: PointerEvent) => {
+      if (!inicio) return;
+      const dx = Math.abs(e.clientX - inicio.x);
+      const dy = Math.abs(e.clientY - inicio.y);
+      inicio = null;
+      if (dx > UMBRAL_SWIPE && dx > dy) parar();
+    };
+
+    pista.addEventListener('pointerup', fimDoGesto, { passive: true });
+    pista.addEventListener('pointercancel', () => (inicio = null), { passive: true });
+
+    /* La pausa por puntero encima sólo tiene sentido donde hay puntero: en una
+       pantalla táctil `pointerenter` se dispara al tocar, no al pasar por
+       encima, así que aquí congelaba con cada toque. */
+    if (window.matchMedia('(hover: hover)').matches) {
+      raiz.addEventListener('pointerenter', congelar);
+      raiz.addEventListener('pointerleave', arrancar);
+    }
+
+    /* Congelar mientras alguien navega con el teclado por dentro del hero es
+       WCAG 2.2.2, y se queda. Pero SÓLO con teclado: la pista lleva
+       `tabindex="0"`, así que tocarla con el dedo también le daba el foco, y
+       como el foco se quedaba ahí `focusout` no llegaba nunca y la rotación se
+       congelaba para siempre. `:focus-visible` es justamente la distinción que
+       hace el navegador entre «llegué aquí con el teclado» y «me han tocado». */
+    raiz.addEventListener('focusin', (e) => {
+      const alvo = e.target;
+      if (alvo instanceof Element && alvo.matches(':focus-visible')) congelar();
+    });
     raiz.addEventListener('focusout', arrancar);
 
     document.addEventListener('visibilitychange', () =>
