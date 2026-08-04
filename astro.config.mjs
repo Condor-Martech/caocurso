@@ -20,5 +20,13 @@ export default defineConfig({
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
+
+    server: {
+      // Sin esto, `astro dev` detrás de un túnel responde "Blocked request. This
+      // host is not allowed": Vite sólo acepta peticiones cuyo Host conoce, y el
+      // de ngrok cambia en cada arranque. El punto inicial cubre cualquier
+      // subdominio. Sólo afecta al servidor de desarrollo — el build no lo usa.
+      allowedHosts: ['.ngrok-free.app', '.ngrok.app', '.ngrok-free.dev', '.ngrok.io'],
+    },
   },
 });

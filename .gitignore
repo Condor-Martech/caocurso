@@ -21,4 +21,17 @@ uploads/
 # macOS / editores
 .DS_Store
 *.local
+Thumbs.db
 .vercel
+
+# Material de origen. Igual que assets-fonte/, son los ficheros tal como los
+# entrega marketing: resolución de imprenta, vectoriales y manuales de marca.
+# NUNCA entran en git — 77 MB que, una vez en la historia, ya no se sacan sin
+# reescribirla. Lo que se sirve es un fichero plano por marca en
+# public/assets/patrocinadores/, generado a partir de estas carpetas.
+assets-fonte/
+public/assets/patrocinadores/Patrocínio/
+public/assets/patrocinadores/Apoio/
+
+# Configuración local del agente (skills, no código del proyecto)
+.claude/
