@@ -155,8 +155,8 @@ Ver `docs/PLATAFORMA.md`.
 
 ```
 1 Hero · 2 Adote um AuMigo · 3 Eventos · 4 Requisitos · 5 Protetoras ·
-6 Cãocurso · 7 «29 de agosto» · 8 Atrações · [Formulário] · 9 Galeria ·
-10 Patrocínio/Apoio · 11 Footer
+6 Cãocurso · 7 «29 de agosto» · 8 Atrações · 9 Galeria ·
+10 Patrocínio/Apoio · 11 Footer          (+ el formulario, fuera del flujo)
 ```
 
 Con **4 franjas separadoras** (`<Faixa />`): tras el Hero, tras Adote um AuMigo, antes
@@ -186,7 +186,8 @@ de la banda Cãocurso y después de ella.
 - `Eventos` son **2 tarjetas arriba y 1 centrada debajo**, no una fila de tres.
 - El bloque 7 se llama `Evento30Agosto.astro` por herencia de 2025, pero en 2026 la
   fecha es el **29 de agosto**. No renombrar el archivo, sí el contenido.
-- El formulario va **embebido entre Atrações y Galeria**, no en un modal.
+- El formulario **no está en el flujo de la página**: se abre como modal desde el
+  botón del bloque 7. Ver la sección siguiente.
 
 ### Assets — nunca sirvas los originales de imprenta
 
@@ -245,10 +246,49 @@ son la misma. Todo va en minúscula.
 oficial de una marca, se pinta su nombre como texto y se deja un `// TODO` — poner el
 logo de otra empresa es un error de marca, no un apaño de maquetación.
 
-### El formulario: inline, 11 campos, NO es de adopción
+### El formulario: modal, 11 campos, NO es de adopción
 
-El formulario de 2026 va **embebido en la página** (`FormularioInscricao.astro`), no en
-un modal. `InscricaoModal.jsx`, la pieza de 8 campos de 2025, fue eliminado.
+El formulario (`FormularioInscricao.astro`) se abre como **modal** desde el botón del
+bloque «29 de agosto». Estuvo embebido en la página —el arte lo dibuja así— y se sacó
+del flujo a petición del cliente. No lo devuelvas al flujo «para que cuadre con el
+mockup»: es una decisión tomada, no una desviación.
+
+`InscricaoModal.jsx`, la pieza de 8 campos de 2025, sigue eliminada: este modal es
+otra cosa, en Astro y sin React.
+
+#### El botón tiene tres estados, y los decide el servidor
+
+`src/lib/inscricao.ts` compara la hora actual con la ventana de inscripción y devuelve
+`em-breve`, `aberta` o `finalizada`. De ahí salen los tres rótulos —«Em breve»,
+«Inscreva-se», «Finalizado»— y sólo el del medio es pulsable.
+
+Tres cosas que no se pueden tocar por separado:
+
+- **La misma función la usa `POST /api/inscricao`**, y ahí no es decorativa: un botón
+  que no aparece no impide un POST con `curl` el día después del cierre. Si quitas esa
+  comprobación, «Finalizado» deja de significar nada.
+- **Falla cerrado.** Si las fechas no se pueden leer devuelve `em-breve`, nunca
+  `aberta`. Vale también para cuando las fechas vengan de Supabase y Supabase no
+  responda: ver «Inscreva-se» y que el envío reviente tras rellenar once campos y subir
+  una foto es peor que ver «Em breve» de más.
+- **Las fechas llevan offset `-03:00` escrito a mano** en `site.ts`. `new Date('2026-08-21')`
+  se lee como UTC y el período habría cerrado a las 21:00 del día 20 — un día antes.
+
+#### Sin JavaScript el formulario sigue funcionando
+
+El bloque vive en el documento como una sección normal y el modal es una capa encima.
+El interruptor es la clase `.js` que `Layout.astro` pone en `<html>` antes de pintar:
+sin ella, `.modal` es una tarjeta lavanda al final de la página y el botón —un
+`<a href="#modal-inscricao">`— salta hasta ella.
+
+Por eso **no es un `<dialog>`**: sin JS un `<dialog>` es `display:none` y no hay forma
+de abrirlo, así que el formulario dejaría de existir para quien no ejecute scripts.
+
+Y por eso **el componente se renderiza siempre**, en los tres estados: quitarlo del HTML
+cuando el período está cerrado dejaría el ancla apuntando a la nada.
+
+`role="dialog"` y `aria-modal` los pone el script al abrir, no el HTML: mientras es una
+sección normal no hay diálogo que anunciar.
 Su propósito es **registrar UNA mascota con su foto para el concurso Cãocurso**.
 
 Campos, según el briefing (`docs/LP Cão Curso.docx`):
@@ -393,12 +433,15 @@ Esta carpeta es **aislada y autosuficiente**:
 │   │   ├── Caocurso.astro            (bloque 6 — banda a sangre)
 │   │   ├── Evento30Agosto.astro      (bloque 7 — es el 29 de agosto; nombre heredado)
 │   │   ├── Atracoes.astro            (bloque 8 — 4 cards, iconos SVG inline)
-│   │   ├── FormularioInscricao.astro (formulario embebido, 11 campos)
+│   │   ├── FormularioInscricao.astro (formulario en modal, 11 campos)
 │   │   ├── Galeria.astro             (bloque 9 — mosaico 2025)
 │   │   ├── Patrocinadores.astro      (bloque 10)
 │   │   ├── Footer.astro              (bloque 11)
 │   │   ├── Faixa.astro               (franja separadora = pattern-horizontal.svg)
 │   │   └── icons/IconeSocial.astro   (insignias de redes, a color de marca)
+│   ├── lib/
+│   │   └── inscricao.ts       (estado del período: em-breve / aberta / finalizada.
+│   │                           Lo consumen el botón Y el endpoint)
 │   ├── data/
 │   │   └── site.ts            (TODOS los datos: nav, eventos, requisitos, protetoras,
 │   │                           caocurso, atrações, galeria, patrocinio, apoio, redes)
@@ -507,6 +550,7 @@ npm install                  # Reinstall deps
 3. **¿Qué color / qué asset uso?** → «Reglas Duras» de este archivo
 4. **¿Cómo convierto arte nuevo?** → `scripts/optimizar-assets.mjs`
 5. **¿Campos del formulario?** → `src/components/FormularioInscricao.astro` + `src/pages/api/inscricao.ts`
+5b. **¿Por qué el botón dice lo que dice?** → `src/lib/inscricao.ts`
 6. **¿Dónde va a vivir esto de verdad?** → `docs/PLATAFORMA.md`
 7. **¿Animaciones?** → `src/styles/animations.css`, comentado en el propio archivo
 8. **¿Cómo era en 2025?** → historia de git, hasta `1796aa1`

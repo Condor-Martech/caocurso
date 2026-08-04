@@ -2,8 +2,32 @@
 /**
  * FORMULÁRIO DE INSCRIÇÃO — Cãocurso 2026.
  *
- * Tarjeta blanca redondeada sobre el lavanda, embebida en la página (en 2026 ya
- * no hay modal). Maquetado contra `docs/Desktop - CãoCurso.png`, medido a 1366 px:
+ * Se abre como MODAL desde el botón «Inscreva-se» de `Evento30Agosto.astro`, que
+ * sólo aparece cuando el período está abierto (ver `src/lib/inscricao.ts`).
+ *
+ * ── Por qué no es un modal «de verdad» ───────────────────────────────────────
+ *
+ * El bloque vive en el documento como una sección normal, y el modal es una capa
+ * de presentación encima. Sin JavaScript no hay velo ni botón de cerrar: el
+ * formulario se pinta como una tarjeta al final de la página y el enlace del
+ * botón —un `<a href="#modal-inscricao">`— salta hasta él. Se rellena y se envía
+ * igual, porque el `<form>` conserva `action`, `method` y `enctype` reales.
+ *
+ * Con JavaScript, la clase `.js` que `Layout.astro` pone en `<html>` antes de
+ * pintar lo oculta, y el clic en el botón lo muestra centrado sobre un velo.
+ *
+ * Un `<dialog>` habría sido más corto, pero sin JS es `display:none` y no hay
+ * forma de abrirlo: el formulario dejaría de existir para quien no ejecute
+ * scripts. Aquí la degradación es que se ve peor, no que desaparece.
+ *
+ * `role="dialog"` y `aria-modal` los pone el script AL ABRIR, no el HTML: sin JS
+ * no hay comportamiento modal que anunciar, y prometérselo a un lector de
+ * pantalla sería mentirle.
+ *
+ * ── Maqueta ──────────────────────────────────────────────────────────────────
+ *
+ * Tarjeta blanca redondeada. Medida contra `docs/Desktop - CãoCurso.png` a 1366 px
+ * (donde el formulario iba embebido; el contenido de la tarjeta no cambió):
  *
  *   tarjeta      x 220…1145 (926 px, centrada) · y 5213…6321 · radio ≈28 px
  *   contenido    x 286…1085 (800 px) → padding lateral ≈64 px, vertical ≈48 px
@@ -27,223 +51,236 @@
  */
 ---
 
-<!-- Sin padding superior a propósito: el hueco con Atrações lo pone el pb de
-     aquella sección, y las dos comparten el mismo fondo lavanda. -->
-<section id="inscricao" class="bg-brand-purple pb-16 md:pb-20">
-  <div class="container-lp">
-    <div
-      class="mx-auto w-full max-w-232 rounded-[28px] bg-white px-6 py-10 text-brand-blue shadow-xl md:px-16 md:py-12"
+<div id="modal-inscricao" class="modal" data-modal>
+  <!-- Velo. Sólo existe en modo modal; sin JS no se pinta (ver el CSS). -->
+  <div class="modal__fundo" data-fechar></div>
+
+  <div class="modal__caixa">
+    <button class="modal__fechar" type="button" data-fechar aria-label="Fechar formulário">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M6 6l12 12M18 6L6 18"></path>
+      </svg>
+    </button>
+
+    <h2
+      id="modal-inscricao-titulo"
+      class="mb-8 text-center text-3xl font-black tracking-tight sm:text-4xl md:mb-10 md:text-[2.5rem]"
     >
-      <h2
-        class="mb-8 text-center text-3xl font-black tracking-tight sm:text-4xl md:mb-10 md:text-[2.5rem]"
-      >
-        Formulário de inscrição:
-      </h2>
+      Formulário de inscrição:
+    </h2>
 
-      <form
-        id="form-inscricao"
-        action="/api/inscricao"
-        method="POST"
-        enctype="multipart/form-data"
-      >
-        {/* ------------------------------------------------ Dados do Tutor */}
-        <h3 class="mb-5 text-2xl font-bold md:text-[1.75rem]">Dados do Tutor</h3>
+    <form
+      id="form-inscricao"
+      action="/api/inscricao"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      {/* ------------------------------------------------ Dados do Tutor */}
+      <h3 class="mb-5 text-2xl font-bold md:text-[1.75rem]">Dados do Tutor</h3>
 
-        <div class="grid grid-cols-1 gap-y-6 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-9">
-          <div class="md:col-span-2">
-            <label class="sr-only" for="tutorNome">Nome completo</label>
-            <input
-              class="campo"
-              type="text"
-              id="tutorNome"
-              name="tutorNome"
-              placeholder="Nome completo"
-              autocomplete="name"
-              minlength="3"
-              maxlength="120"
-              required
-            />
-          </div>
-
-          <div>
-            <!-- type="text" y no type="date" a propósito: ver el <script>. -->
-            <label class="sr-only" for="tutorNascimento">
-              Data de nascimento, no formato dia/mês/ano
-            </label>
-            <input
-              class="campo"
-              type="text"
-              id="tutorNascimento"
-              name="tutorNascimento"
-              placeholder="Data de nascimento"
-              inputmode="numeric"
-              pattern="\d{2}/\d{2}/\d{4}"
-              title="Use o formato dd/mm/aaaa."
-              maxlength="10"
-              autocomplete="bday"
-            />
-          </div>
-
-          <div>
-            <label class="sr-only" for="tutorCpf">CPF cadastrado no Clube Condor</label>
-            <input
-              class="campo"
-              type="text"
-              id="tutorCpf"
-              name="tutorCpf"
-              placeholder="CPF cadastrado no Clube Condor"
-              inputmode="numeric"
-              maxlength="14"
-            />
-          </div>
-
-          <div>
-            <label class="sr-only" for="tutorEmail">E-mail</label>
-            <input
-              class="campo"
-              type="email"
-              id="tutorEmail"
-              name="tutorEmail"
-              placeholder="E-mail"
-              autocomplete="email"
-              maxlength="150"
-              required
-            />
-          </div>
-
-          <div>
-            <label class="sr-only" for="tutorTelefone">Telefone com DDD</label>
-            <input
-              class="campo"
-              type="tel"
-              id="tutorTelefone"
-              name="tutorTelefone"
-              placeholder="Telefone"
-              inputmode="tel"
-              autocomplete="tel"
-              maxlength="16"
-              required
-            />
-          </div>
-        </div>
-
-        {/* -------------------------------------------------- Dados do Pet */}
-        <h3 class="mt-10 mb-5 text-2xl font-bold md:mt-11 md:text-[1.75rem]">Dados do Pet</h3>
-
-        <div class="grid grid-cols-1 gap-y-6 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-9">
-          <div class="md:col-span-2">
-            <label class="sr-only" for="petNome">Nome do pet</label>
-            <input
-              class="campo"
-              type="text"
-              id="petNome"
-              name="petNome"
-              placeholder="Nome do pet"
-              maxlength="60"
-              required
-            />
-          </div>
-
-          <div>
-            <label class="sr-only" for="petRaca">Raça</label>
-            <input
-              class="campo"
-              type="text"
-              id="petRaca"
-              name="petRaca"
-              placeholder="Raça"
-              maxlength="60"
-            />
-          </div>
-
-          <div>
-            <label class="sr-only" for="petSexo">Sexo</label>
-            <input
-              class="campo"
-              type="text"
-              id="petSexo"
-              name="petSexo"
-              placeholder="Sexo"
-              maxlength="20"
-            />
-          </div>
-
-          <div class="md:col-span-2">
-            <label class="sr-only" for="petDescricao">
-              Descreva seu pet: personalidade, curiosidades, etc.
-            </label>
-            <textarea
-              class="campo campo--area"
-              id="petDescricao"
-              name="petDescricao"
-              rows="6"
-              maxlength="1000"
-              placeholder="Descreva seu pet (personalidade, curiosidades, etc)"></textarea>
-          </div>
-        </div>
-
-        {/* ------------------------------------- Aceite (LGPD) — no mockup */}
-        <div class="aceite mt-7">
+      <div class="grid grid-cols-1 gap-y-6 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-9">
+        <div class="md:col-span-2">
+          <label class="sr-only" for="tutorNome">Nome completo</label>
           <input
-            class="aceite__box"
-            type="checkbox"
-            id="aceiteRegulamento"
-            name="aceiteRegulamento"
+            class="campo"
+            type="text"
+            id="tutorNome"
+            name="tutorNome"
+            placeholder="Nome completo"
+            autocomplete="name"
+            minlength="3"
+            maxlength="120"
             required
           />
-          <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
-               palabra «regulamento» debe pasar a ser un enlace al documento. -->
-          <label class="aceite__texto" for="aceiteRegulamento">
-            Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a
-            imagem do meu pet e os dados enviados na divulgação da campanha.
-          </label>
         </div>
 
-        {/* ------------------------------------------- Retorno para o usuário */}
-        <div class="status mt-6" data-status role="status" aria-live="polite" hidden></div>
+        <div>
+          <!-- type="text" y no type="date" a propósito: ver el <script>. -->
+          <label class="sr-only" for="tutorNascimento">
+            Data de nascimento, no formato dia/mês/ano
+          </label>
+          <input
+            class="campo"
+            type="text"
+            id="tutorNascimento"
+            name="tutorNascimento"
+            placeholder="Data de nascimento"
+            inputmode="numeric"
+            pattern="\d{2}/\d{2}/\d{4}"
+            title="Use o formato dd/mm/aaaa."
+            maxlength="10"
+            autocomplete="bday"
+          />
+        </div>
 
-        {/* ------------------------------------------- Foto + envio */}
-        <div class="mt-7 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div class="w-full md:w-auto">
-            <div class="arquivo">
-              <input
-                class="arquivo__input"
-                type="file"
-                id="petFoto"
-                name="petFoto"
-                accept="image/jpeg,image/png,image/webp"
-                aria-describedby="petFoto-ajuda"
-                required
-              />
-              <label class="arquivo__pill" for="petFoto">
-                <svg
-                  class="arquivo__clipe"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
-                  ></path>
-                </svg>
-                <span>Anexar foto do pet</span>
-              </label>
-            </div>
+        <div>
+          <label class="sr-only" for="tutorCpf">CPF cadastrado no Clube Condor</label>
+          <input
+            class="campo"
+            type="text"
+            id="tutorCpf"
+            name="tutorCpf"
+            placeholder="CPF cadastrado no Clube Condor"
+            inputmode="numeric"
+            maxlength="14"
+          />
+        </div>
 
-            <p class="arquivo__nome" data-arquivo aria-live="polite" hidden></p>
-            <p class="arquivo__ajuda" id="petFoto-ajuda">O arquivo deve ter no máximo, 2mb.</p>
+        <div>
+          <label class="sr-only" for="tutorEmail">E-mail</label>
+          <input
+            class="campo"
+            type="email"
+            id="tutorEmail"
+            name="tutorEmail"
+            placeholder="E-mail"
+            autocomplete="email"
+            maxlength="150"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="tutorTelefone">Telefone com DDD</label>
+          <input
+            class="campo"
+            type="tel"
+            id="tutorTelefone"
+            name="tutorTelefone"
+            placeholder="Telefone"
+            inputmode="tel"
+            autocomplete="tel"
+            maxlength="16"
+            required
+          />
+        </div>
+      </div>
+
+      {/* -------------------------------------------------- Dados do Pet */}
+      <h3 class="mt-10 mb-5 text-2xl font-bold md:mt-11 md:text-[1.75rem]">Dados do Pet</h3>
+
+      <div class="grid grid-cols-1 gap-y-6 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-9">
+        <div class="md:col-span-2">
+          <label class="sr-only" for="petNome">Nome do pet</label>
+          <input
+            class="campo"
+            type="text"
+            id="petNome"
+            name="petNome"
+            placeholder="Nome do pet"
+            maxlength="60"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="petRaca">Raça</label>
+          <input
+            class="campo"
+            type="text"
+            id="petRaca"
+            name="petRaca"
+            placeholder="Raça"
+            maxlength="60"
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="petSexo">Sexo</label>
+          <input
+            class="campo"
+            type="text"
+            id="petSexo"
+            name="petSexo"
+            placeholder="Sexo"
+            maxlength="20"
+          />
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="sr-only" for="petDescricao">
+            Descreva seu pet: personalidade, curiosidades, etc.
+          </label>
+          <textarea
+            class="campo campo--area"
+            id="petDescricao"
+            name="petDescricao"
+            rows="6"
+            maxlength="1000"
+            placeholder="Descreva seu pet (personalidade, curiosidades, etc)"></textarea>
+        </div>
+      </div>
+
+      {/* ------------------------------------- Aceite (LGPD) — no mockup */}
+      <div class="aceite mt-7">
+        <input
+          class="aceite__box"
+          type="checkbox"
+          id="aceiteRegulamento"
+          name="aceiteRegulamento"
+          required
+        />
+        <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
+             palabra «regulamento» debe pasar a ser un enlace al documento. -->
+        <label class="aceite__texto" for="aceiteRegulamento">
+          Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a
+          imagem do meu pet e os dados enviados na divulgação da campanha.
+        </label>
+      </div>
+
+      {/* ------------------------------------------- Retorno para o usuário */}
+      <div class="status mt-6" data-status role="status" aria-live="polite" hidden></div>
+
+      {/* ------------------------------------------- Foto + envio */}
+      <div class="mt-7 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div class="w-full md:w-auto">
+          <div class="arquivo">
+            <input
+              class="arquivo__input"
+              type="file"
+              id="petFoto"
+              name="petFoto"
+              accept="image/jpeg,image/png,image/webp"
+              aria-describedby="petFoto-ajuda"
+              required
+            />
+            <label class="arquivo__pill" for="petFoto">
+              <svg
+                class="arquivo__clipe"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                ></path>
+              </svg>
+              <span>Anexar foto do pet</span>
+            </label>
           </div>
 
-          <button class="btn-enviar" type="submit" data-enviar>Enviar inscrição</button>
+          <p class="arquivo__nome" data-arquivo aria-live="polite" hidden></p>
+          <p class="arquivo__ajuda" id="petFoto-ajuda">O arquivo deve ter no máximo, 2mb.</p>
         </div>
-      </form>
-    </div>
+
+        <button class="btn-enviar" type="submit" data-enviar>Enviar inscrição</button>
+      </div>
+    </form>
   </div>
-</section>
+</div>
 
 <style>
   /* `hidden` tiene que ganar a los display de más abajo: van en el mismo nivel
@@ -252,7 +289,7 @@
     display: none !important;
   }
 
-  #inscricao {
+  #modal-inscricao {
     /* Neutros de interfaz, no colores de marca. Negro con alfa sobre el blanco
        de la tarjeta = exactamente los valores muestreados en la referencia:
        9 % → #E9E9E9 (contorno) · 34 % → #A8A8A8 (placeholder y texto de ayuda). */
@@ -262,10 +299,124 @@
 
   /* El foco global de la LP es un contorno BLANCO, pensado para los fondos de
      color; dentro de la tarjeta blanca sería invisible. Aquí manda el azul. */
-  #inscricao :focus-visible {
+  #modal-inscricao :focus-visible {
     outline: 3px solid var(--c-blue);
     outline-offset: 2px;
     border-radius: 9999px;
+  }
+
+  /* ================================================================== modal
+
+     Dos modos, y el interruptor es la clase `.js` que Layout.astro pone en
+     <html> antes de pintar.
+
+     SIN JS — lo de abajo no se aplica: `.modal` es una sección lavanda normal
+     al final de la página, con su tarjeta blanca. El velo y el botón de cerrar
+     no se pintan porque no harían nada.
+
+     CON JS — oculto hasta que se abra; abierto, ocupa la ventana entera.
+     -------------------------------------------------------------------- */
+
+  .modal {
+    background: var(--c-purple);
+    padding-bottom: 4rem;
+  }
+
+  .modal__fundo,
+  .modal__fechar {
+    display: none;
+  }
+
+  .modal__caixa {
+    margin-inline: auto;
+    width: min(100% - 3rem, 58rem);
+    border-radius: 28px;
+    background: var(--c-white);
+    padding: 2.5rem 1.5rem;
+    color: var(--c-blue);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  @media (min-width: 768px) {
+    .modal {
+      padding-bottom: 5rem;
+    }
+
+    .modal__caixa {
+      padding: 3rem 4rem;
+    }
+  }
+
+  :global(html.js) .modal {
+    display: none;
+    background: none;
+    padding-bottom: 0;
+  }
+
+  :global(html.js) .modal.aberto {
+    /* `flex` + `align-items: flex-start` + `margin-block: auto` en la caja, y no
+       `place-items: center`: cuando el formulario es más alto que la ventana
+       —que en móvil es siempre, son once campos— centrar recorta la tarjeta por
+       ARRIBA y deja el primer campo fuera de alcance, sin scroll que lo
+       recupere. Con margen automático se centra mientras cabe y se ancla arriba
+       cuando no. */
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    inset: 0;
+    overflow-y: auto;
+    padding: clamp(1rem, 4vh, 3rem) 1rem;
+    overscroll-behavior: contain;
+  }
+
+  :global(html.js) .modal.aberto .modal__fundo {
+    position: fixed;
+    display: block;
+    /* Un velo no es un color de marca: es una capa de contraste, y la paleta
+       2026 no tiene ningún neutro oscuro. Con brand-blue se confundiría con la
+       propia página, que ya es azul. */
+    background: rgb(0 0 0 / 0.6);
+    inset: 0;
+  }
+
+  :global(html.js) .modal.aberto .modal__caixa {
+    position: relative;
+    z-index: 1;
+    margin-block: auto;
+    width: min(100%, 58rem);
+  }
+
+  :global(html.js) .modal.aberto .modal__fechar {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: var(--c-blue);
+    cursor: pointer;
+  }
+
+  :global(html.js) .modal.aberto .modal__fechar:hover {
+    background: rgb(0 0 0 / 0.06);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.js) .modal.aberto .modal__caixa {
+      animation: modal-entra 0.22s ease-out both;
+    }
+  }
+
+  @keyframes modal-entra {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
   }
 
   /* ------------------------------------------------------------- campos */
@@ -544,6 +695,130 @@
 
   const form = document.querySelector<HTMLFormElement>('#form-inscricao');
   if (form) iniciar(form);
+
+  iniciarModal();
+
+  /**
+   * Abrir y cerrar el formulario como modal.
+   *
+   * El HTML no declara `role="dialog"` ni `aria-modal`: se ponen al abrir y se
+   * quitan al cerrar. Mientras el bloque está oculto o funcionando como sección
+   * normal no hay ningún diálogo, y anunciarlo como tal sería describir algo
+   * que no existe.
+   */
+  function iniciarModal() {
+    const modal = document.querySelector<HTMLElement>('[data-modal]');
+    if (!modal) return;
+
+    const caixa = modal.querySelector<HTMLElement>('.modal__caixa');
+    if (!caixa) return;
+
+    /* Quién tenía el foco antes de abrir, para devolvérselo al cerrar. Sin
+       esto, cerrar el modal manda el foco al <body> y quien navega con teclado
+       vuelve a empezar desde el principio de la página. */
+    let focoPrevio: HTMLElement | null = null;
+
+    const FOCABLES =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function abrir() {
+      if (modal!.classList.contains('aberto')) return;
+
+      focoPrevio = document.activeElement as HTMLElement | null;
+
+      modal!.classList.add('aberto');
+      modal!.setAttribute('role', 'dialog');
+      modal!.setAttribute('aria-modal', 'true');
+      modal!.setAttribute('aria-labelledby', 'modal-inscricao-titulo');
+
+      /* Bloquear el scroll del fondo compensando el ancho de la barra: sin la
+         compensación, al desaparecer la barra la página entera se desplaza unos
+         píxeles y todo pega un salto lateral al abrir el modal. */
+      const barra = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (barra > 0) document.body.style.paddingRight = `${barra}px`;
+
+      document.addEventListener('keydown', aoTeclado);
+
+      /* Al primer campo, no al botón de cerrar: quien abre el formulario quiere
+         escribir. `preventScroll` evita que el navegador salte por su cuenta
+         antes de que el modal termine de colocarse. */
+      const primeiro = modal!.querySelector<HTMLElement>('#tutorNome');
+      (primeiro ?? caixa!).focus({ preventScroll: true });
+    }
+
+    function fechar() {
+      if (!modal!.classList.contains('aberto')) return;
+
+      modal!.classList.remove('aberto');
+      modal!.removeAttribute('role');
+      modal!.removeAttribute('aria-modal');
+      modal!.removeAttribute('aria-labelledby');
+
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+
+      document.removeEventListener('keydown', aoTeclado);
+
+      /* Devolver el foco a quien lo tenía. Si no lo tenía nadie —el caso real es
+         llegar por un enlace con la ancla puesta, donde el modal abre solo al
+         cargar— `document.activeElement` era el <body>, y enfocar el <body> deja
+         el foco en la nada: quien navega con teclado tendría que tabular la
+         página entera otra vez. En ese caso se cae al disparador, que es donde
+         habría estado si hubiera llegado por su propio pie. */
+      const destino =
+        focoPrevio && focoPrevio !== document.body
+          ? focoPrevio
+          : document.querySelector<HTMLElement>('[data-abrir-inscricao]');
+      destino?.focus();
+      focoPrevio = null;
+    }
+
+    function aoTeclado(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        fechar();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      /* Trampa de foco. Sin esto el tabulador se escapa al contenido de detrás
+         —que está oculto pero sigue siendo focalizable— y el usuario se queda
+         tecleando en una página que no ve. */
+      const focables = Array.from(modal!.querySelectorAll<HTMLElement>(FOCABLES)).filter(
+        (el) => el.offsetParent !== null || el === document.activeElement
+      );
+      if (!focables.length) return;
+
+      const primeiro = focables[0]!;
+      const ultimo = focables[focables.length - 1]!;
+
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    }
+
+    /* El disparador es un <a href="#modal-inscricao">, así que sin JS ya
+       funciona como ancla. Aquí se intercepta para abrirlo como modal. */
+    document.querySelectorAll<HTMLElement>('[data-abrir-inscricao]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        abrir();
+      });
+    });
+
+    modal.querySelectorAll<HTMLElement>('[data-fechar]').forEach((el) => {
+      el.addEventListener('click', fechar);
+    });
+
+    /* Un enlace compartido con la ancla puesta abre el formulario directamente,
+       en vez de dejar al visitante mirando una página donde no pasa nada. */
+    if (window.location.hash === '#modal-inscricao') abrir();
+  }
 
   function iniciar(form: HTMLFormElement) {
     const botao = form.querySelector<HTMLButtonElement>('[data-enviar]');

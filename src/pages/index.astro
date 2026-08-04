@@ -23,9 +23,15 @@ import Footer from '../components/Footer.astro';
  *   y≈3885  franja después de la banda Cãocurso
  * Entre Eventos, Requisitos y Protetoras NO hay franja: comparten fondo azul.
  *
- * En 2026 el formulario va EMBEBIDO en la página (FormularioInscricao.astro).
- * El modal de 2025 (InscricaoModal.jsx) queda eliminado: se estaban cargando
- * los dos a la vez.
+ * El formulario NO va en el flujo de la página: se abre como modal desde el
+ * botón «Inscreva-se» del bloque Cãocurso, que sólo aparece dentro del período
+ * de inscripción (src/lib/inscricao.ts).
+ *
+ * Va montado al final a propósito. Con JavaScript da igual dónde esté, porque
+ * está oculto hasta que se abre; sin JavaScript se pinta como una sección normal
+ * ahí abajo, y el botón —que es un <a href="#modal-inscricao">— salta hasta él.
+ * Por eso el componente se renderiza siempre, en los tres estados del período:
+ * quitarlo del HTML cuando está cerrado dejaría el ancla apuntando a la nada.
  */
 ---
 
@@ -47,14 +53,15 @@ import Footer from '../components/Footer.astro';
   <Evento30Agosto />
   <Atracoes />
 
-  <!-- Formulario de inscripción embebido en la página -->
-  <FormularioInscricao />
-
   <!-- Galería de la edición 2025 -->
   <Galeria />
 
   <!-- Patrocinadores y Apoyo -->
   <Patrocinadores />
+
+  <!-- Formulario de inscripción. Oculto y abierto como modal cuando hay JS;
+       sección visible al final de la página cuando no lo hay. -->
+  <FormularioInscricao />
 
   <Footer />
 </Layout>

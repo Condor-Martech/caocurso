@@ -107,7 +107,23 @@ export const caocurso = {
   /* La misma frase en una línea, para donde no quepa el salto (meta, alt…). */
   inscricao: 'Período de inscrição: de 03/08 a 21/08/2026.',
 
-  encerrado: false,
+  /* Las mismas dos fechas, pero en máquina: son las que deciden si el botón dice
+     «Em breve», «Inscreva-se» o «Finalizado» (ver src/lib/inscricao.ts).
+
+     El offset -03:00 va escrito a mano y es deliberado. `new Date('2026-08-21')`
+     se interpreta como UTC, así que en Brasil el período habría cerrado a las
+     21:00 del día 20 — un día antes, y sin que nadie se entere hasta que lleguen
+     las quejas. Brasil no aplica horario de verano desde 2019, así que -03:00 es
+     constante todo el año.
+
+     Y el cierre es a las 23:59:59 del 21, no a las 00:00: «de 03/08 a 21/08»
+     incluye el día 21 entero.
+
+     Estas dos fechas se mudan a la tabla `cao_campanha` de Supabase (ver
+     docs/PLATAFORMA.md); mientras tanto viven aquí. */
+  inscricaoAbreEm: '2026-08-03T00:00:00-03:00',
+  inscricaoFechaEm: '2026-08-21T23:59:59-03:00',
+
   tagline: 'SEU PET É A ESTRELA da nossa passarela!',
 } as const;
 

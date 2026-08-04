@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { estadoInscricao } from '../../lib/inscricao';
 
 export const prerender = false;
 
@@ -157,6 +158,21 @@ function idadeEmAnos(nascimento: Date, hoje = new Date()): number {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  /* El período de inscripción se comprueba AQUÍ, y no sólo al pintar el botón.
+     Un botón que no aparece es cosmética: la ruta sigue existiendo y acepta un
+     POST de `curl` el día después del cierre. Sin esta comprobación
+     «Finalizado» no significa nada.
+
+     Va lo primero, antes incluso de leer el cuerpo: si el plazo está cerrado no
+     hay motivo para bufferizar una foto de 2 MB. */
+  const estado = estadoInscricao();
+  if (estado === 'em-breve') {
+    return erro('As inscrições ainda não estão abertas.', 403);
+  }
+  if (estado === 'finalizada') {
+    return erro('O período de inscrição está encerrado.', 403);
+  }
+
   const contentType = request.headers.get('content-type') ?? '';
   if (!contentType.includes('multipart/form-data')) {
     return erro('Envie o formulário como multipart/form-data.', 415);

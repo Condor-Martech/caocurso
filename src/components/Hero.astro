@@ -122,7 +122,11 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
             </p>
 
             <div class="acao">
-              <a href="#formulario-inscricao" class="btn-lp btn-primario">
+              {/* Ancla al bloque del Cãocurso, que es donde vive el botón de
+                  inscripción con sus tres estados. Este CTA no abre el modal:
+                  lleva hasta él. Antes apuntaba a #formulario-inscricao, un id
+                  que no existe en ninguna página — el enlace no hacía nada. */}
+              <a href="#inscricao" class="btn-lp btn-primario">
                 Quero inscrever meu pet
                 <svg
                   width="20"

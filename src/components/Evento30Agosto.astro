@@ -1,5 +1,6 @@
 ---
 import { caocurso, SITE } from '../data/site';
+import { estadoInscricao, ROTULO_INSCRICAO } from '../lib/inscricao';
 
 /**
  * Bloque «29 de agosto» — cabecera del evento Cãocurso 2026.
@@ -40,9 +41,23 @@ const temRegulamento: boolean = SITE.regulamentoDisponivel && regulamentoUrl !==
 /* Mismo aspecto en las dos ramas: píldora de contorno fino azul sobre lavanda. */
 const pilulaRegulamento =
   'mt-4 inline-block rounded-full border-2 border-brand-blue bg-transparent px-6 py-2.5 text-base leading-none text-brand-blue sm:text-lg';
+
+/* Estado del período de inscripción. Se calcula en el servidor, así que el HTML
+   ya sale con el rótulo correcto: sin parpadeo y sin depender de JavaScript.
+   El endpoint comprueba lo mismo por su cuenta — ver src/lib/inscricao.ts. */
+const estado = estadoInscricao();
+const rotulo = ROTULO_INSCRICAO[estado];
+
+/* Un solo aspecto para los tres estados: el rectángulo redondeado 352×88 de la
+   referencia. Sólo cambia el elemento, y eso sí importa: con la inscripción
+   cerrada no hay nada que pulsar, así que va como <p> y no como control. Un
+   <button disabled> anunciaría a un lector de pantalla un botón que nunca hará
+   nada, y un <p> comunica exactamente lo que es: una insignia de estado. */
+const caixaEstado =
+  'w-full rounded-2xl bg-brand-blue px-6 py-5 text-[2rem] leading-none font-black tracking-wide text-brand-white uppercase sm:text-[2.5rem] lg:text-[3rem]';
 ---
 
-<section class="bg-brand-purple pt-14 md:pt-20 lg:pt-26">
+<section id="inscricao" class="bg-brand-purple pt-14 md:pt-20 lg:pt-26">
   <div class="container-lp">
     <div class="mx-auto max-w-201">
       <div class="grid grid-cols-1 items-start gap-10 md:grid-cols-2 md:gap-x-25">
@@ -74,16 +89,33 @@ const pilulaRegulamento =
         <!-- Columna derecha: estado, período de inscripción y regulamento -->
         <div class="flex flex-col items-center text-center">
           {/*
-            Insignia de estado, no un control: hasta que se abran las
-            inscripciones no hay nada que pulsar, así que va como <p> y no como
-            <button>. El texto se escribe en caja mixta y se pone en versales por
-            CSS para que los lectores de pantalla no deletreen «E-M B-R-E-V-E».
+            Tres estados, decididos en el servidor por las fechas del período.
+
+            Con la inscripción abierta es un <a> al formulario, no un <button>:
+            sin JavaScript el enlace salta al formulario —que en ese caso se
+            pinta como una sección normal al final de la página— y se puede
+            rellenar y enviar igual. El JS intercepta el clic y lo abre como
+            modal. Así el modal es una capa de presentación sobre contenido que
+            ya está en el documento, y no el único camino para llegar a él.
+
+            En los otros dos estados no hay nada que pulsar, así que es un <p>.
+
+            El texto se escribe en caja mixta y se pone en versales por CSS para
+            que los lectores de pantalla no deletreen «E-M B-R-E-V-E».
           */}
-          <p
-            class="w-full rounded-2xl bg-brand-blue px-6 py-5 text-[2rem] leading-none font-black tracking-wide text-brand-white uppercase sm:text-[2.5rem] lg:text-[3rem]"
-          >
-            Em breve
-          </p>
+          {
+            estado === 'aberta' ? (
+              <a
+                href="#modal-inscricao"
+                data-abrir-inscricao
+                class={`${caixaEstado} block transition-opacity hover:opacity-90`}
+              >
+                {rotulo}
+              </a>
+            ) : (
+              <p class={caixaEstado}>{rotulo}</p>
+            )
+          }
 
           <p class="mt-7 text-lg leading-tight text-brand-blue lg:text-xl">
             {caocurso.inscricaoRotulo}<br />{caocurso.inscricaoPeriodo}
