@@ -226,11 +226,11 @@ Otras carpetas servidas:
   de 2025 que se reutilizan (Friskies, Dog Chow, Kelcat, Keldog, brf pet). Los otros
   dos, Doogs y Procão, salen ya del KV 2026 en `public/assets/2026/`.
 
-  ⚠️ Dentro cuelgan además `Patrocínio/` y `Apoio/`: **78 MB del material de origen
-  que mandó marketing** (`.zip`, `.ai`, manuales de marca en PDF de Nestlé, Mars y
-  Kelco). Están gitignorados, pero **siguen bajo `public/`, así que el build los
-  publica**. Su sitio es `assets-fonte/patrocinadores/`; de ahí se saca un fichero
-  plano por marca y ese es el único que entra en `public/`.
+  El material de origen que mandó marketing —180 ficheros, 78 MB de `.zip`, `.ai` y
+  manuales de marca en PDF de Nestlé, Mars y Kelco— vive en
+  **`assets-fonte/patrocinadores/`**, no aquí. Estuvo bajo `public/`, gitignorado, y
+  el build lo publicaba igual. De ahí sale un fichero plano por marca, y ese es el
+  único que entra en `public/`.
 
 ⚠️ **Nunca crees `public/Assets/` con A mayúscula.** Existió y convivió con
 `public/assets/`: en Linux son dos carpetas, en macOS y en varios sistemas de deploy
@@ -294,9 +294,15 @@ las 34 rutas de `/assets/` referenciadas desde `src/` existen en `public/` ·
 endpoint probado en 5 casos (201 válido, 400 sin aceite, 409 duplicado,
 400 CPF inválido, 400 menor de edad).
 
-⚠️ `.vercel/output/static` mide **86 MB**, de los que **77 MB son los kits de marca
-de `patrocinadores/Patrocínio/`**. Sacándolos de `public/` el build baja a ~9 MB.
-Sigue pendiente.
+`.vercel/output/static` = **7,8 MB** (eran 86 antes de sacar los kits de marca de
+`public/`). Ningún `.zip`, `.ai` ni `Thumbs.db` queda publicado.
+
+⚠️ La función serverless sí pesa **41 MB, de los que 36 son los binarios nativos de
+sharp** (`node_modules/@img`). `imageService: false` desactiva el servicio de
+imágenes de Vercel, pero deja el propio de Astro, que es sharp. Como aquí todas las
+imágenes son `<img>` con rutas de `/assets/` ya optimizadas y no se usa `astro:assets`,
+sharp no llega a ejecutarse nunca: son 36 MB muertos que sólo alargan el arranque en
+frío. Se quitan poniendo `image: { service: passthroughImageService() }`.
 
 **Pendiente de que el cliente aporte material** (no es trabajo de código):
 

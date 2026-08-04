@@ -24,14 +24,16 @@ uploads/
 Thumbs.db
 .vercel
 
-# Material de origen. Igual que assets-fonte/, son los ficheros tal como los
-# entrega marketing: resolución de imprenta, vectoriales y manuales de marca.
-# NUNCA entran en git — 77 MB que, una vez en la historia, ya no se sacan sin
-# reescribirla. Lo que se sirve es un fichero plano por marca en
-# public/assets/patrocinadores/, generado a partir de estas carpetas.
+# Material de origen: los ficheros tal como los entrega marketing —resolución de
+# imprenta, vectoriales y manuales de marca de terceros—. Vive AQUÍ y no bajo
+# public/ por dos motivos distintos que conviene no confundir:
+#   · fuera de git, porque son ~1 GB que, una vez en la historia, no se sacan
+#     sin reescribirla;
+#   · fuera de public/, porque .gitignore no impide publicar: todo lo que cuelga
+#     de public/ se copia al build y queda servido en una URL.
+# Lo que se sirve es un fichero plano por marca en public/assets/patrocinadores/,
+# generado a partir de assets-fonte/patrocinadores/.
 assets-fonte/
-public/assets/patrocinadores/Patrocínio/
-public/assets/patrocinadores/Apoio/
 
 # Configuración local del agente (skills, no código del proyecto)
 .claude/
