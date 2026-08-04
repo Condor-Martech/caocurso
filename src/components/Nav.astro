@@ -2,44 +2,86 @@
 import { navLinks } from '../data/site';
 
 /**
- * Navegación.
+ * NAVEGACIÓN 2026.
  *
- * Desktop (md+): los 5 enlaces alineados a la derecha sobre el naranja, como
- * en el original.
+ * Medida sobre la referencia `docs/Desktop - CãoCurso.png` (recorte y=0..1000, a
+ * 1366 px de ancho):
  *
- * Móvil: barra fija con el logo Condor siempre visible + botón hamburguesa que
- * abre un sidebar lateral con el sello Mês Pet arriba. El original de WordPress
- * usaba el menú desplegable de Elementor; aquí es un drawer accesible.
+ *   · Los 4 enlaces van en blanco, en Torus SemiBold ≈20 px, alineados a la
+ *     derecha y SIN barra de fondo propia: se leen directamente sobre el
+ *     degradado del hero, que arranca en y=0. El peso se verificó midiendo el
+ *     grosor de trazo en la referencia (2 px, no los 3 px de Torus Bold).
+ *   · "Home" —el activo— lleva un subrayado de 4 px en #00419A (brand-blue),
+ *     en y=89..92, que sobresale ~24 px por cada lado del texto: de ahí el
+ *     px-6 del enlace.
+ *   · Línea de base del texto en y≈76 → la caja del enlace empieza en y≈60,
+ *     que es el pt de abajo (4,1 vw = 56 px a 1366).
+ *   · El texto de "Galeria" muere en el borde del contenedor, no 24 px antes:
+ *     por eso el <ul> lleva un -me-* que cancela el padding del último enlace.
+ *
+ * ── Tres regímenes, y el porqué ──────────────────────────────────────────────
+ *
+ *   < md   barra fija con el logo + drawer lateral. No hay mockup de móvil; se
+ *          conserva lo que ya había, repintado con los tokens 2026.
+ *   md–lg  misma barra fija, pero ya con los cuatro enlaces a la derecha y el
+ *          logo a la izquierda: una nav de tablet normal.
+ *   ≥ lg   el <header> se saca del flujo (absolute) y flota sobre el hero, que
+ *          es lo que pide la referencia. Si ocupara sitio empujaría la sección
+ *          y sobre esos ~92 px asomaría el azul plano del <body> en vez del
+ *          degradado `bg-mespet.webp`, con un escalón de color donde la
+ *          referencia no tiene ninguno.
+ *
+ * El corte en lg —y no en md— no es estético: el hero es proporcional al vw, y
+ * por debajo de 1024 px el sello "MÊS PET" sube hasta y≈20, así que un nav
+ * flotante se le echa encima y "Home" queda en blanco sobre blanco. Con barra
+ * propia eso no puede pasar. Por lo mismo el pt del régimen flotante es fluido
+ * —clamp(2.5rem, 4.1vw, 3.5rem)— y no fijo: acompaña al hero al escalar y se
+ * detiene en los 56 px del mockup a partir de 1366.
+ *
+ * La barra lleva fondo brand-blue-deep (#005BAA, el arranque del degradado del
+ * hero) porque al hacer scroll se queda sobre contenido claro.
  */
+
+/* El activo es "Home". Va por índice y no comparando `href`, porque el href de
+   Home es "#" y contra eso no se puede comparar nada. No hace falta scroll-spy:
+   en el régimen flotante el nav no es sticky, o sea que sólo se ve mientras el
+   hero está en pantalla, y ahí el activo siempre es Home. */
+const ATIVO = 0;
 ---
 
 <header
-  class="sticky top-0 z-40 w-full bg-[var(--c-orange)] md:static md:bg-transparent"
+  class="sticky top-0 z-40 w-full bg-brand-blue-deep lg:absolute lg:inset-x-0 lg:z-30 lg:bg-transparent"
 >
-  <div class="container-lp flex items-center justify-between py-4 md:justify-end md:py-6">
-    <!-- Logo: sólo en móvil; en desktop ya está el sello grande del hero -->
-    <a href="#conteudo" class="md:hidden" aria-label="Início — Mês Pet Condor">
+  <div
+    class="container-lp flex items-center justify-between py-3 lg:justify-end lg:py-0 lg:pt-[clamp(2.5rem,4.1vw,3.5rem)]"
+  >
+    <!-- Logo: hasta lg. A partir de ahí ya está el sello grande del hero -->
+    <a href="#conteudo" class="lg:hidden" aria-label="Início — Mês Pet Condor 2026">
       <img
-        src="/assets/images/Logo-Grande.png"
+        src="/assets/2026/logo-condor.webp"
         alt="Condor"
-        class="h-9 w-auto"
-        width="200"
-        height="60"
+        class="h-8 w-auto"
+        width="480"
+        height="130"
       />
     </a>
 
-    <!-- Enlaces en desktop -->
+    <!-- Enlaces: desde md -->
     <nav class="hidden md:block" aria-label="Principal">
-      <ul class="flex flex-wrap items-center justify-end gap-x-7 gap-y-2 md:gap-x-10">
+      <!-- El -me-* cancela el padding derecho del último enlace: en la
+           referencia el texto de "Galeria" muere en el borde del contenedor
+           (x=1227 a 1366 px), no 24 px antes. -->
+      <ul class="-me-4 flex flex-wrap items-center justify-end lg:-me-6">
         {
-          navLinks.map((link) => (
+          navLinks.map((link, i) => (
             <li>
               <a
                 href={link.href}
-                class="nav-link border-b-2 border-transparent pb-1 text-base font-semibold text-white hover:border-white md:text-lg"
-                {...('external' in link && link.external
-                  ? { target: '_blank', rel: 'noopener noreferrer' }
-                  : {})}
+                aria-current={i === ATIVO ? 'page' : undefined}
+                class:list={[
+                  'block border-b-4 px-4 pb-1 text-lg font-semibold text-brand-white lg:px-6 lg:text-xl',
+                  i === ATIVO ? 'border-brand-blue' : 'border-transparent hover:border-brand-white',
+                ]}
               >
                 {link.label}
               </a>
@@ -53,7 +95,7 @@ import { navLinks } from '../data/site';
     <button
       type="button"
       id="menu-abrir"
-      class="flex h-12 w-12 items-center justify-center rounded-lg text-white md:hidden"
+      class="flex h-12 w-12 items-center justify-center rounded-lg text-brand-white md:hidden"
       aria-label="Abrir menu"
       aria-expanded="false"
       aria-controls="menu-lateral"
@@ -74,16 +116,21 @@ import { navLinks } from '../data/site';
   </div>
 </header>
 
-<!-- Backdrop -->
+<!-- Backdrop del drawer.
+     bg-black/60 es la única utilidad de color ajena a la paleta que queda aquí,
+     y es deliberado: un velo no es un color de marca, es una capa de contraste,
+     y la paleta 2026 no tiene ningún neutro oscuro que sirva. Con brand-blue el
+     velo se confundiría con el propio panel, que va en ese mismo azul. -->
 <div
   id="menu-fondo"
   class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-[2px] md:hidden"
-></div>
+>
+</div>
 
 <!-- Sidebar -->
 <aside
   id="menu-lateral"
-  class="fixed top-0 right-0 z-50 flex h-full w-[82%] max-w-[320px] translate-x-full flex-col bg-[var(--c-blue)] shadow-2xl transition-transform duration-300 ease-out md:hidden"
+  class="fixed top-0 right-0 z-50 flex h-full w-[82%] max-w-[320px] translate-x-full flex-col bg-brand-blue shadow-2xl transition-transform duration-300 ease-out md:hidden"
   role="dialog"
   aria-modal="true"
   aria-label="Menu"
@@ -91,16 +138,16 @@ import { navLinks } from '../data/site';
 >
   <div class="flex items-start justify-between gap-4 px-5 pt-5">
     <img
-      src="/assets/images/Selo.png"
-      alt="Mês Pet Condor"
+      src="/assets/2026/selo-mespet-2026.webp"
+      alt="Mês Pet Condor 2026"
       class="w-28"
-      width="685"
-      height="863"
+      width="760"
+      height="799"
     />
     <button
       type="button"
       id="menu-cerrar"
-      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white"
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand-white"
       aria-label="Fechar menu"
     >
       <svg
@@ -121,15 +168,13 @@ import { navLinks } from '../data/site';
   <nav class="mt-4 flex-1 overflow-y-auto px-5 pb-8" aria-label="Principal">
     <ul class="flex flex-col">
       {
-        navLinks.map((link) => (
-          <li class="border-b border-white/15">
+        navLinks.map((link, i) => (
+          <li class="border-b border-brand-white/15">
             <a
               href={link.href}
               data-menu-link
-              class="block py-4 text-lg font-semibold text-white"
-              {...('external' in link && link.external
-                ? { target: '_blank', rel: 'noopener noreferrer' }
-                : {})}
+              aria-current={i === ATIVO ? 'page' : undefined}
+              class="block py-4 text-lg font-semibold text-brand-white hover:text-brand-orange-lite"
             >
               {link.label}
             </a>
@@ -137,14 +182,6 @@ import { navLinks } from '../data/site';
         ))
       }
     </ul>
-
-    <button
-      type="button"
-      data-abrir-inscricao
-      class="btn-lp mt-8 w-full rounded-xl bg-white px-6 py-4 text-base font-bold text-[var(--c-blue)]"
-    >
-      Inscreva-se
-    </button>
   </nav>
 </aside>
 
@@ -179,7 +216,6 @@ import { navLinks } from '../data/site';
     cerrar.addEventListener('click', ocultar);
     fondo.addEventListener('click', ocultar);
 
-    // Al navegar a una ancla el menú debe cerrarse solo
     panel.querySelectorAll('[data-menu-link]').forEach((a) => {
       a.addEventListener('click', ocultar);
     });
@@ -190,7 +226,6 @@ import { navLinks } from '../data/site';
       }
     });
 
-    // Si se pasa a desktop con el menú abierto, restaurar el scroll
     window.matchMedia('(min-width: 768px)').addEventListener('change', (e) => {
       if (e.matches && abrir.getAttribute('aria-expanded') === 'true') ocultar();
     });

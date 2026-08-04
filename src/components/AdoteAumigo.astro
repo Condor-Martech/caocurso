@@ -1,54 +1,101 @@
 ---
 /**
- * ADOTE UM AUMIGO — perro a la izquierda, logo y tagline a la derecha.
+ * ADOTE UM AUMIGO — bloque 2 de la LP (campaña Mês Pet 2026).
+ *
+ * Geometría medida sobre la referencia `docs/Desktop - CãoCurso.png` (1366 px):
+ *   · sección          y 820 → 1380 (560 px de alto, entre las dos faixas)
+ *   · Dog.png          x  51 → 617,  y  905 → 1628 (566×723 → escala 1,134)
+ *   · Selo-Adote…png   x 583 → 1230, y  838 → 1313 (647×475 → TAMAÑO NATURAL)
+ *   · tagline          x 725 → 1098, y 1294 → 1346, centrada en x≈911
+ *                      (el centro del selo está en x≈906: va centrada bajo él)
+ *
+ * De ahí salen las tres decisiones de layout:
+ *
+ * 1. El selo está alineado al borde derecho del contenedor (1230 vs 1235) pero
+ *    mide 647 px, más que su columna. Por eso la columna derecha va con
+ *    `justify-self-end`: el elemento se encoge a su contenido, pega su borde
+ *    derecho al del área y desborda hacia la izquierda, que es justo lo que
+ *    hace el mockup (los 44 px transparentes del PNG se solapan con el perro).
+ *
+ * 2. El perro sangra 80 px a la izquierda del contenedor (51 vs 131), de ahí
+ *    los `-ml-*` progresivos. El escalón grande no puede caer en `xl` (1280 px):
+ *    ahí el contenedor todavía está casi pegado al borde y −80 px dejarían al
+ *    perro a 8 px del canto. Por eso el último salto va en `min-[1360px]`, que
+ *    es justo el ancho del mockup, y da los −80 px exactos.
+ *
+ * 3. La sección NO lleva padding inferior ni `overflow-hidden`: el perro tiene
+ *    que cruzar la faixa siguiente y dejar las patas colgando por debajo.
+ *
+ * El titular es una IMAGEN de lettering (`Selo-Adote-um-Aumigo.png`, asset 2025
+ * que el briefing autoriza a reutilizar: "Adote um aumigo: podemos utilizar o KV
+ * do ano passado"). No se imita con tipografía: el trazado de "AuMigo" es
+ * caligráfico y ninguna variante de Torus lo reproduce.
+ *
+ * Sin `drop-shadow`: comprobado en la referencia que el azul pegado al perro es
+ * idéntico al del resto del degradado, no hay sombra proyectada.
  */
 ---
 
-<section id="adote" class="bg-patron relative bg-[var(--c-orange)]">
+<section
+  id="adote"
+  class="bg-patron bg-brand-blue-sec pt-8 pb-0 text-brand-white md:pt-5"
+>
   <div
-    class="container-lp grid grid-cols-1 items-center justify-items-center gap-8 pt-10 pb-0 md:grid-cols-[auto_auto] md:items-end md:justify-between md:pt-14"
+    class="container-lp grid grid-cols-1 items-end gap-8 md:grid-cols-[minmax(0,45fr)_minmax(0,55fr)] md:gap-0"
   >
-    <!--
-      El perro desborda hacia abajo: sus patas cuelgan por delante de la franja
-      siguiente, igual que en el original. `w-fit` es necesario: el -45,9% de
-      .emerge--patas (que va en el <img>) se resuelve contra el ancho de ESTE
-      contenedor, que así coincide con el de la imagen. Ver global.css.
-
-      El ancho del perro es fluido, no escalonado: es la referencia de la que
-      cuelga --faixa-h (17,6 % de este ancho), así que si saltara por breakpoint
-      la franja quedaría descompensada en las franjas intermedias.
-
-      En móvil va el ÚLTIMO de la columna (order-2): si fuera el primero, la
-      franja que tendría encima sería la de la sección anterior y las patas
-      colgarían sobre el vacío. El cintillo va debajo del perro, siempre.
-    -->
+    <!-- Perro: emerge de la faixa y saca las patas por debajo.
+         `w-fit` es obligatorio — el −45,9 % de `.emerge--patas` se resuelve
+         contra el ancho del bloque contenedor, así que ese ancho tiene que
+         coincidir con el de la imagen. Ver el comentario de la clase en
+         src/styles/global.css. -->
     <div
-      class="emerge order-2 flex w-fit self-end justify-center md:order-1 md:justify-start"
+      class="order-2 flex w-fit justify-self-center md:order-1 md:-ml-4 md:justify-self-start lg:-ml-8 xl:-ml-12 min-[1360px]:-ml-20"
     >
       <img
         src="/assets/images/Dog.png"
-        alt="Cachorro preto e branco sorrindo"
-        class="emerge--patas w-[min(78vw,360px)] max-w-full md:w-[min(40vw,472px)]"
+        alt="Cachorro preto e branco com a língua para fora, apoiado na faixa colorida"
+        class="emerge emerge--patas w-[clamp(220px,44vw,566px)] max-w-full"
         width="499"
         height="638"
         loading="lazy"
+        decoding="async"
       />
     </div>
 
+    <!-- Lettering "ADOTE UM AuMigo · Condor" + tagline.
+         El ancho va en el CONTENEDOR, no en la imagen: un ítem de rejilla con
+         `justify-self` se dimensiona a `fit-content`, que está acotado por el
+         ancho de la pista (607 px aquí), y el selo se quedaba a 607 en vez de
+         647. Con un `width` explícito el ítem conserva su tamaño y desborda su
+         área hacia la izquierda, que es lo que hace el mockup. -->
     <div
-      class="order-1 flex flex-col items-center gap-6 text-center md:order-2 md:items-end md:pb-14 md:text-right"
+      class="order-1 flex flex-col items-center md:order-2 md:w-[clamp(260px,47.4vw,647px)] md:justify-self-end md:pb-8"
     >
-      <img
-        src="/assets/images/Selo-Adote-um-Aumigo.png"
-        alt="Adote um AuMigo — Condor"
-        class="w-[min(78vw,384px)] max-w-full md:w-[min(42vw,500px)]"
-        width="647"
-        height="475"
-        loading="lazy"
-      />
-      <h2 class="max-w-[614px] text-xl font-bold text-white sm:text-2xl lg:text-3xl">
-        Dê uma chance para aquele que nunca te abandona.
+      <h2>
+        <img
+          src="/assets/images/Selo-Adote-um-Aumigo.png"
+          alt="Adote um AuMigo — Condor"
+          class="w-full max-w-[647px]"
+          width="647"
+          height="475"
+          loading="lazy"
+          decoding="async"
+        />
       </h2>
+
+      <!-- Texto suelto sobre el azul, sin caja de cristal: en la referencia es
+           blanco directamente sobre el degradado.
+           El margen negativo recupera los 39 px transparentes que el PNG del
+           selo arrastra por debajo de la placa Condor. Va en % (≈6 % de esos
+           647 px) para que escale solo con la imagen en vez de necesitar un
+           valor por breakpoint.
+           Interlineado muy corto, como el mockup: 28 px de baseline a baseline
+           con un cuerpo de ~29 px. -->
+      <p
+        class="mt-[-3.9%] text-center text-[clamp(17px,2.12vw,29px)] leading-[1.05] font-bold"
+      >
+        Dê uma chance para aquele<br />que nunca te abandona.
+      </p>
     </div>
   </div>
 </section>

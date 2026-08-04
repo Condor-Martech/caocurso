@@ -1,45 +1,797 @@
 ---
 /**
- * HERO — "Mês Pet".
- * El titular es una IMAGEN (Titulo.png), no texto: incluye la tipografía
- * dibujada y la script manuscrita "e pra gatos também!".
+ * HERO — dos bloques. El de la campaña, fijo; el de las mascotas, carrusel.
+ *
+ *   ┌────────────────────────────┬──────────────────────────────┐
+ *   │  [ MÊS PET ]               │  [selo oferta] [mote]        │
+ *   │                            │  datos                       │
+ *   │  PREÇO BAIXO               │  ( CTA )                     │
+ *   │  PRA CACHORRO              │            ,-.               │
+ *   │  e pra gatos também!       │          (mascota)           │
+ *   │                            │  ● Cãocurso  ○ Adote AuMigo  │
+ *   │  ── FIJO ──────────────────│  ── DESLIZA ─────────────────│
+ *   └────────────────────────────┴──────────────────────────────┘
+ *
+ * DECISIONES
+ *
+ * · La columna izquierda NO se toca nunca. Es la campaña: el sello Mês Pet y su
+ *   claim de precios. Si parpadeara cada 7 s la marca dejaría de ser el ancla
+ *   del hero, y además es el elemento LCP: cada cambio de slide obligaría a
+ *   recomponer la zona más pesada de la página.
+ *
+ * · Todo lo que cambia entre oferta y oferta vive en la columna derecha, dentro
+ *   de la pista: identidad, datos, CTA y mascota. Si algo de eso se quedara en
+ *   la izquierda, la parte fija dejaría de ser fija.
+ *
+ * · Dos slides, los dos con CTA. El carrusel es un escaparate, no la única
+ *   puerta a nada: la adopción tiene el bloque 2 entero y el Cãocurso la banda
+ *   del bloque 6 más el formulario. Orden fijo, Cãocurso delante: su ventana de
+ *   inscripción es la que caduca (03/08–21/08).
+ *
+ * · Pestañas CON NOMBRE, no puntos. Un punto anónimo no se pulsa porque nadie
+ *   sabe qué hay detrás; una pestaña etiquetada convierte el carrusel en un
+ *   selector. Van bajo la columna derecha, que es lo que gobiernan.
+ *
+ * · Funciona SIN JavaScript: la pista es `scroll-snap` nativo y se pasa con el
+ *   dedo o con la rueda aunque el script no cargue. El JS sólo añade la
+ *   rotación automática, las pestañas y la barra de progreso.
+ *
+ * · Reparto de fotos sin repetir: `dogs.webp` y `dog-caramelo.webp` no se
+ *   servían hasta ahora. `caocurso-dogs.webp` se queda en exclusiva para el
+ *   bloque 6 y `Dog.png` para el bloque 2, donde cruza la faixa.
+ *
+ * ALTURA: el hero mide EXACTAMENTE una pantalla (`--hero-h`) y las dos
+ * diapositivas comparten esa altura, así que cambiar de slide no mueve ni un
+ * píxel del resto de la página.
  */
+import { caocurso as caocursoSite, eventos } from '../data/site';
+
+const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.replace(/\.$/, '')}`;
 ---
 
-<section class="bg-patron relative bg-[var(--c-orange)]" id="conteudo">
-  <div
-    class="container-lp grid grid-cols-1 items-center justify-items-center gap-6 pt-8 pb-0 md:grid-cols-[auto_auto] md:items-end md:justify-between md:gap-4 md:pt-10"
-  >
-    <!-- Columna izquierda: logo Mês Pet + titular -->
-    <div class="flex flex-col items-center gap-4 pb-8 md:items-start md:pb-10">
+<section
+  id="conteudo"
+  class="hero bg-patron relative overflow-hidden bg-brand-blue-sec text-brand-white"
+>
+  <div class="container-lp hero-grade">
+    <!-- ══ Bloque 1 · Campaña — FIJO ═════════════════════════════════════ -->
+    <div class="bloco-fixo">
       <img
-        src="/assets/images/Selo.png"
-        alt="Mês Pet Condor"
-        class="w-[min(60vw,224px)] max-w-full md:w-[min(28vw,358px)]"
-        width="685"
-        height="863"
+        src="/assets/2026/selo-mespet-2026.webp"
+        alt="Mês Pet Condor 2026 — Agosto é o Mês Pet na Condor"
+        class="selo-mespet"
+        width="760"
+        height="799"
         fetchpriority="high"
       />
+
+      <!-- Lettering, no tipografía: el "e pra gatos também!" es caligráfico y
+           ninguna variante de Torus lo reproduce. -->
       <img
-        src="/assets/images/Titulo-1024x477.png"
-        alt="No mês do pet, tem preço baixo pra cachorro. E pra gatos também!"
-        class="w-full max-w-[338px]"
-        width="1024"
-        height="477"
+        src="/assets/2026/mote-mespet.webp"
+        alt="Preço baixo pra cachorro, e pra gatos também!"
+        class="mote-mespet"
+        width="760"
+        height="325"
         fetchpriority="high"
       />
     </div>
 
-    <!-- Columna derecha: el chihuahua de gafas. Emerge de la franja siguiente. -->
-    <div class="emerge flex self-end justify-center md:justify-end">
-      <img
-        src="/assets/images/Pet-2.png"
-        alt="Cachorro de óculos escuros e jaqueta de couro"
-        class="w-[min(78vw,384px)] max-w-full md:w-[min(42vw,618px)]"
-        width="956"
-        height="966"
-        fetchpriority="high"
-      />
+    <!-- ══ Bloque 2 · Ofertas — CARRUSEL ═════════════════════════════════ -->
+    <div
+      class="bloco-slider"
+      aria-roledescription="carrossel"
+      aria-label="Destaques do Mês Pet"
+    >
+      <div class="pista" id="hero-pista" tabindex="0" aria-label="Diapositivas">
+        <!-- ── Slide 1 · Cãocurso ─────────────────────────────────────── -->
+        <article
+          class="slide"
+          role="group"
+          aria-roledescription="slide"
+          aria-label="1 de 2 — Cãocurso"
+        >
+          <div class="oferta">
+            <h1 class="linha-logo">
+              <img
+                src="/assets/2026/selo-caocurso.webp"
+                alt="Cãocurso Condor 2026"
+                class="selo-oferta"
+                width="800"
+                height="721"
+                fetchpriority="high"
+              />
+            </h1>
+
+            <div class="linha-msg">
+              <img
+                src="/assets/2026/mote-passarela.webp"
+                alt="Seu pet é a estrela da nossa passarela!"
+                class="mote-oferta"
+                width="700"
+                height="438"
+                fetchpriority="high"
+              />
+            </div>
+
+            <!-- Datos, nunca botones: el amarillo es de un único elemento. -->
+            <p class="dados">
+              <strong>{caocursoSite.data}</strong>
+              <strong>{caocursoSite.horario}</strong>
+              <strong>{caocursoSite.local}</strong>
+            </p>
+
+            <div class="acao">
+              <a href="#formulario-inscricao" class="btn-lp btn-primario">
+                Quero inscrever meu pet
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6"></path>
+                </svg>
+              </a>
+              <p class="nota">{prazo}</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── Slide 2 · Adote um AuMigo ──────────────────────────────── -->
+        <article
+          class="slide"
+          role="group"
+          aria-roledescription="slide"
+          aria-label="2 de 2 — Adote um AuMigo"
+        >
+          <div class="oferta">
+            <h2 class="linha-logo">
+              <img
+                src="/assets/images/Selo-Adote-um-Aumigo.png"
+                alt="Adote um AuMigo"
+                class="selo-aumigo"
+                width="647"
+                height="475"
+                loading="lazy"
+                decoding="async"
+              />
+            </h2>
+
+            <div class="linha-msg">
+              <p class="claim">Dê uma chance para aquele que nunca te abandona.</p>
+            </div>
+
+            <p class="dados">
+              {
+                eventos.map((e) => (
+                  <strong>
+                    {e.dia}/08 {e.local.replace('Condor ', '')}
+                  </strong>
+                ))
+              }
+            </p>
+
+            <div class="acao">
+              <a href="#adote" class="btn-lp btn-claro">Conhecer os AuMigos</a>
+              <p class="nota">Três feiras de adoção, com as protetoras parceiras.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Flechas. Van FLANQUEANDO la oferta y centradas en vertical: el
+           bloque queda entre ellas y deja de leerse disperso.
+           WCAG 2.2.2 — la rotación se congela con el ratón encima y con el foco
+           dentro, y se para del todo en cuanto alguien pulsa una flecha o el
+           botón de pausa, que es el único control que queda suelto. -->
+      <button type="button" class="seta seta--ant" id="hero-ant" aria-label="Destaque anterior">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M15 5l-7 7 7 7"></path>
+        </svg>
+      </button>
+
+      <button type="button" class="seta seta--seg" id="hero-seg" aria-label="Próximo destaque">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+
+      <div class="estado" id="hero-controles">
+        <span class="conta"><span id="hero-atual">1</span>/2</span>
+      </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* ══ Caja ════════════════════════════════════════════════════════════════
+     Alto EXACTO de una pantalla. Es `height` y no `min-height` porque la pista
+     y las diapositivas necesitan una altura definida para ocuparla entera; el
+     suelo de 32rem evita que en una ventana bajísima se aplaste. */
+  .hero {
+    height: var(--hero-h);
+    min-height: 32rem;
+
+    /* Alturas de las filas de la diapositiva. Móvil primero. */
+    --h-logo: min(30vw, 130px, calc(var(--hero-h) * 0.18));
+    --h-msg: min(50vw, 110px, calc(var(--hero-h) * 0.13));
+    --h-dados: 3.2rem;
+  }
+
+  .hero-grade {
+    display: grid;
+    height: 100%;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    padding-top: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  /* ── Bloque fijo ──────────────────────────────────────────────────────── */
+  .bloco-fixo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .selo-mespet {
+    width: min(36vw, 132px, calc(var(--hero-h) * 0.15));
+    filter: drop-shadow(0 14px 28px rgb(0 0 0 / 0.32));
+  }
+
+  .mote-mespet {
+    width: min(48vw, 194px, calc(var(--hero-h) * 0.23));
+  }
+
+  /* ── Bloque carrusel ──────────────────────────────────────────────────── */
+  .bloco-slider {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    padding-top: 1.25rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .pista {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+  }
+
+  .pista::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* El foco del teclado cae en la pista, que es un contenedor desplazable. */
+  .pista:focus-visible {
+    outline: 3px solid var(--c-white);
+    outline-offset: -3px;
+  }
+
+  .slide {
+    display: flex;
+    height: 100%;
+    flex: 0 0 100%;
+    flex-direction: column;
+    justify-content: center;
+    scroll-snap-align: start;
+  }
+
+  /* Panel del KV, no una card de sistema. El cristal se retiró: en esta página
+     no hay ni un elemento más hecho de material —todo es vectorial plano, canto
+     duro y color liso—, así que un panel translúcido con desenfoque obedecía a
+     otra física y se leía pegado de otro sitio. Y al ser transparente enseñaba
+     LA MISMA trama a la MISMA escala, sólo que borrosa: no había cambio de
+     plano, era una mancha sobre el fondo.
+     Ahora es una plancha opaca en --c-blue con el line-art de la campaña en
+     blanco por encima. Mismo motivo que el fondo pero en negativo, así que se
+     lee inequívocamente como una pieza por delante. La profundidad la da la
+     sombra, que es como el arte original resuelve la profundidad. */
+  .oferta {
+    display: flex;
+    position: relative;
+    width: 100%;
+    max-width: 30rem;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    isolation: isolate;
+    margin-inline: auto;
+    gap: 0.55rem;
+    border-radius: 1.75rem;
+    background: var(--c-blue);
+    padding: 0.9rem 1rem 1rem;
+    text-align: center;
+    box-shadow:
+      0 20px 38px -18px rgb(0 0 0 / 0.55),
+      inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+
+  /* La trama va en una capa aparte para poder graduarla desde aquí: como capa
+     de `background` no hay forma de bajarle la opacidad sin regenerar el WebP.
+     `trama-linhas.webp` se extrajo del propio `bg-mespet.webp` —un paso alto
+     sobre el degradado azul— así que es literalmente el mismo dibujo. */
+  .oferta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: url('/assets/2026/trama-linhas.webp') center / cover no-repeat;
+    opacity: 0.1;
+  }
+
+  /* Tablet en vertical: la columna del carrusel es altísima y el panel, a alto
+     completo, se estiraba a casi 600 px con el contenido flotando en medio. El
+     tope lo deja en una caja proporcionada; en móvil no llega a activarse y en
+     escritorio la columna nunca da para tanto. */
+  @media (orientation: portrait) and (min-width: 600px) {
+    .oferta {
+      max-height: 28rem;
+    }
+  }
+
+  /* Las dos diapositivas comparten RETÍCULA, no sólo caja: el logo, el mensaje,
+     los datos y el botón caen a la misma altura en las dos. Por eso las filas
+     llevan alto fijo en vez de ajustarse a su contenido — el sello del Cãocurso
+     es casi cuadrado (0,90) y el de AuMigo apaisado (0,73), así que a igual
+     ancho tendrían alturas distintas y el CTA bailaría al rotar. Se igualan por
+     ALTO y cada uno toma el ancho que le pida su proporción. */
+  .linha-logo,
+  .linha-msg {
+    display: grid;
+    width: 100%;
+    place-items: center;
+  }
+
+  .linha-logo {
+    height: var(--h-logo);
+  }
+
+  .linha-msg {
+    height: var(--h-msg);
+  }
+
+  .selo-oferta,
+  .selo-aumigo {
+    max-height: var(--h-logo);
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgb(0 0 0 / 0.22));
+  }
+
+  .mote-oferta {
+    max-height: var(--h-msg);
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .claim {
+    max-width: 22rem;
+    font-size: clamp(1rem, 1.4vw, 1.3125rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* Los datos en una línea: en el hero son una referencia rápida, no una
+     ficha. Sin fondo ni radio — nada de esto puede leerse como pulsable. */
+  .dados {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    align-content: center;
+    height: var(--h-dados);
+    gap: 0.35rem 1.35rem;
+    font-size: clamp(0.9375rem, 1.15vw, 1.0625rem);
+    font-weight: 800;
+  }
+
+  .dados strong {
+    white-space: nowrap;
+  }
+
+  .acao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .nota {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+
+  /* ══ Flechas ═════════════════════════════════════════════════════════════
+     Flanquean la oferta en vez de acumularse en una barra al pie. Puestas a los
+     lados hacen de paréntesis: el bloque queda centrado ENTRE ellas, que es lo
+     que le quita la sensación de disperso. */
+  .seta {
+    position: absolute;
+    bottom: 0;
+    z-index: 3;
+    display: inline-flex;
+    height: 2.1rem;
+    width: 2.1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+    color: var(--c-white);
+    cursor: pointer;
+    transition:
+      background 200ms ease,
+      scale 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .seta:hover {
+    background: rgb(255 255 255 / 0.3);
+    scale: 1.08;
+  }
+
+  .seta--ant {
+    inset-inline-start: calc(50% - 5rem);
+  }
+
+  .seta--seg {
+    inset-inline-end: calc(50% - 5rem);
+  }
+
+  /* Aro de progreso de la flecha "siguiente": avisa de que aquello se va a
+     mover ANTES de moverse, sin necesidad de una barra aparte. */
+  .seta--seg::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 999px;
+    background: conic-gradient(var(--c-orange-lite) var(--avance, 0turn), transparent 0);
+    -webkit-mask:
+      radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    animation: gira 7s linear infinite;
+  }
+
+  .estado[data-parado='true'] ~ .seta--seg::before,
+  .estado[data-pausado='true'] ~ .seta--seg::before {
+    animation-play-state: paused;
+  }
+
+  .estado[data-parado='true'] ~ .seta--seg::before {
+    opacity: 0;
+  }
+
+  @property --avance {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0turn;
+  }
+
+  @keyframes gira {
+    from {
+      --avance: 0turn;
+    }
+    to {
+      --avance: 1turn;
+    }
+  }
+
+  /* ══ Contador + pausa ════════════════════════════════════════════════════
+     Lo único que queda suelto: cuántas hay y cómo parar la rotación. Discreto,
+     en la esquina, no una barra de controles. */
+  .estado {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    inset-block-end: 0;
+    inset-inline-start: 50%;
+    translate: -50% 0;
+  }
+
+  .conta {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ══ Botones ═════════════════════════════════════════════════════════════
+     Un solo elemento amarillo en toda la pantalla: el CTA de inscripción. */
+  .btn-primario,
+  .btn-claro {
+    display: inline-flex;
+    /* Mismo alto los dos: el primario lleva más cuerpo y más relleno que el
+       secundario, y esa diferencia desplazaba 1,3 px toda la pila centrada,
+       así que el CTA no caía exactamente a la misma altura al cambiar de
+       diapositiva. */
+    min-height: 3.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    font-weight: 900;
+    text-align: center;
+    transition: all 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .btn-primario svg {
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .btn-primario:hover svg {
+    transform: translateX(5px);
+  }
+
+  .btn-primario {
+    background: var(--c-orange-lite);
+    color: var(--c-blue);
+    padding: 0.9rem 1.9rem;
+    font-size: clamp(1rem, 1.3vw, 1.1875rem);
+    box-shadow: 0 10px 24px -8px rgb(0 0 0 / 0.45);
+  }
+
+  .btn-primario:hover {
+    background: var(--c-orange-pan);
+  }
+
+  .btn-claro {
+    background: var(--c-white);
+    color: var(--c-blue);
+    padding: 0.85rem 1.8rem;
+    font-size: clamp(1rem, 1.25vw, 1.125rem);
+    box-shadow: 0 10px 24px -8px rgb(0 0 0 / 0.35);
+  }
+
+  .btn-claro:hover {
+    background: var(--c-orange-lite);
+  }
+
+  /* ══ Dos columnas ════════════════════════════════════════════════════════
+     La condición es la misma que la variante `fila:` de global.css —ancho Y
+     orientación—, porque en un iPad vertical las dos columnas dejarían media
+     pantalla de textura vacía. */
+  @media (min-width: 768px) and (orientation: landscape), (min-width: 1024px) {
+    .hero {
+      --h-logo: min(20vw, 250px, calc(var(--hero-h) * 0.32));
+      --h-msg: min(11vw, 140px, calc(var(--hero-h) * 0.18));
+      --h-dados: 3.4rem;
+    }
+
+    .hero-grade {
+      grid-template-rows: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 2rem;
+      padding-top: 2vh;
+      padding-bottom: 1vh;
+    }
+
+    .bloco-fixo {
+      align-items: flex-start;
+      justify-content: center;
+      gap: 1rem;
+      /* Arrimado al borde. El tirón se come la sangría del contenedor —48 px en
+         escritorio— para que el arte llegue al canto, pero MENGUA con el ancho:
+         a 1024 el contenedor ya está pegado a la ventana y un tirón fijo dejaba
+         el rótulo a 12 px del borde. El `-1rem` del término central reserva ese
+         margen mínimo. */
+      margin-inline-start: calc(-1 * clamp(1rem, 3.5vw - 1rem, 3rem));
+      text-align: start;
+    }
+
+    .selo-mespet {
+      width: min(27vw, 356px, calc(var(--hero-h) * 0.45));
+    }
+
+    .mote-mespet {
+      width: min(26vw, 346px, calc(var(--hero-h) * 0.43));
+    }
+
+    .oferta {
+      align-items: center;
+      padding: 1.4rem 1.9rem 1.6rem;
+      text-align: center;
+    }
+
+    .oferta {
+      gap: 0.9rem;
+    }
+
+    /* Carril para las flechas: sin él pisarían el lettering. */
+    .bloco-slider {
+      padding-inline: 2.75rem;
+    }
+
+    .seta {
+      top: 50%;
+      bottom: auto;
+      height: 2.75rem;
+      width: 2.75rem;
+      translate: 0 -50%;
+    }
+
+    .seta--ant {
+      inset-inline-start: -0.25rem;
+    }
+
+    .seta--seg {
+      inset-inline-end: -0.25rem;
+    }
+  }
+
+  /* ══ Movimiento reducido ═════════════════════════════════════════════════
+     Ni rotación automática (la apaga el script) ni desplazamiento suave ni
+     barra corriendo. El carrusel se queda en pestañas. */
+  @media (prefers-reduced-motion: reduce) {
+    .pista {
+      scroll-behavior: auto;
+    }
+
+    .seta--seg::before {
+      animation: none;
+      opacity: 0;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Realce progresivo: sin este script el carrusel sigue siendo usable —la
+   * pista es `scroll-snap` nativo— y sólo se pierden la rotación automática,
+   * las pestañas y la barra de progreso.
+   */
+  const raiz = document.getElementById('conteudo');
+  const pista = document.getElementById('hero-pista');
+  const controles = document.getElementById('hero-controles');
+
+  if (raiz && pista && controles) {
+    const slides = Array.from(pista.querySelectorAll('.slide'));
+    const conta = document.getElementById('hero-atual');
+    const INTERVALO = 7000;
+
+    const reduz = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    let atual = 0;
+    let voltas = 0;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    /* `parado` es la decisión del usuario: al pulsar una flecha o el botón de
+       pausa, la rotación no vuelve sola. Retomarla después de que alguien haya
+       elegido es la forma más rápida de que cierre la pestaña. */
+    let parado = reduz.matches;
+
+    const marcar = (i: number) => {
+      atual = i;
+      if (conta) conta.textContent = String(i + 1);
+    };
+
+    const irA = (i: number) => {
+      pista.scrollTo({
+        left: pista.clientWidth * i,
+        behavior: reduz.matches ? 'auto' : 'smooth',
+      });
+    };
+
+    /* Sin botón de pausa visible, la rotación NO puede ser indefinida: da una
+       vuelta completa —enseña las dos ofertas— y se queda quieta en la primera.
+       Así el movimiento automático tiene final, en vez de un carrusel girando
+       para siempre en la esquina del ojo. A partir de ahí manda el usuario con
+       las flechas. */
+    const arrancar = () => {
+      if (parado || timer) return;
+      timer = setInterval(() => {
+        if (voltas >= slides.length) {
+          parar();
+          return;
+        }
+        voltas += 1;
+        irA((atual + 1) % slides.length);
+      }, INTERVALO);
+      controles.removeAttribute('data-pausado');
+    };
+
+    /* Pausa temporal —ratón encima, foco dentro, pestaña del navegador oculta—:
+       el aro de progreso se congela donde esté y se reanuda al salir. */
+    const congelar = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      if (!parado) controles.setAttribute('data-pausado', 'true');
+    };
+
+    /* Parada definitiva, la que decide el usuario. */
+    const parar = () => {
+      parado = true;
+      congelar();
+      controles.removeAttribute('data-pausado');
+      controles.setAttribute('data-parado', 'true');
+    };
+
+    const retomar = () => {
+      parado = false;
+      controles.removeAttribute('data-parado');
+      arrancar();
+    };
+
+    /* Quién está a la vista manda — también cuando se pasa con el dedo. */
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        entradas.forEach((e) => {
+          if (e.isIntersecting) marcar(slides.indexOf(e.target));
+        });
+      },
+      { root: pista, threshold: 0.6 }
+    );
+    slides.forEach((s) => observador.observe(s));
+
+    /* Las flechas dan la vuelta: con dos diapositivas, una flecha desactivada
+       la mitad del tiempo es un control que engaña. */
+    const mover = (paso: number) => {
+      const destino = (atual + paso + slides.length) % slides.length;
+      irA(destino);
+      marcar(destino);
+      parar();
+    };
+
+    document.getElementById('hero-ant')?.addEventListener('click', () => mover(-1));
+    document.getElementById('hero-seg')?.addEventListener('click', () => mover(1));
+
+    /* Deslizar con el dedo también es elegir. */
+    pista.addEventListener('pointerdown', parar, { passive: true });
+
+    raiz.addEventListener('pointerenter', congelar);
+    raiz.addEventListener('pointerleave', arrancar);
+    raiz.addEventListener('focusin', congelar);
+    raiz.addEventListener('focusout', arrancar);
+
+    document.addEventListener('visibilitychange', () =>
+      document.hidden ? congelar() : arrancar()
+    );
+
+    /* Si el usuario activa "reducir movimiento" con la página ya abierta. */
+    reduz.addEventListener('change', () => (reduz.matches ? parar() : retomar()));
+
+    if (parado) controles.setAttribute('data-parado', 'true');
+    arrancar();
+  }
+</script>

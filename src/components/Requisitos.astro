@@ -2,26 +2,60 @@
 import { requisitos } from '../data/site';
 
 /**
- * REQUISITOS — UN SOLO panel naranja claro con una lista de 6 bullets en dos
- * columnas. NO son tres cards con iconos ni bordes de color (eso era un error
- * de la documentación previa). Ver docs/GROUND_TRUTH.md §3.
+ * REQUISITOS PARA ADOÇÃO — panel único naranja sobre el mismo fondo azul.
+ *
+ * Referencia: `docs/Desktop - CãoCurso.png`, y≈2408–2748 (recorte ref_2).
+ * Medidas tomadas sobre la referencia (1366 px de ancho):
+ *
+ *   · Panel de 806×341 px centrado, #FFAF1C (token `brand-orange-pan`),
+ *     esquinas ~28 px y SIN borde: en el mockup no hay contorno blanco.
+ *   · Título «Requisitos para adoção:» centrado, extrabold, #00419A. Ancho
+ *     medido 621 px ⇒ 54 px de cuerpo (11,489 em de avance en Torus).
+ *   · Los 6 requisitos en DOS COLUMNAS separadas por una línea vertical fina
+ *     #00419A: los 3 primeros a la izquierda, los 3 últimos a la derecha.
+ *     Cada ítem empieza por «- » (guion, NO viñeta) y va en peso NORMAL, a
+ *     22 px. El guion se genera con `before:content` para que sea decorativo:
+ *     no ensucia los datos de `site.ts` y las líneas que desbordan siguen sin
+ *     sangría, exactamente como en la referencia.
+ *   · La columna mide 320 px y no los 312 px del mockup a propósito: el mockup
+ *     se compuso con una tipografía de sistema, más estrecha que Torus. Con
+ *     312 px, «- Ter local seguro e adequado.» (14,4 em = 317 px a 22 px) se
+ *     partía en dos y la columna derecha crecía a 6 líneas. 320 px es la única
+ *     ventana que deja las dos columnas en 5 líneas como la referencia: entra
+ *     ese ítem (317) y sigue sin entrar «- Portar RG, CPF e comprovante»
+ *     (325), que es justo donde el mockup corta. Se gana bajando el padding
+ *     lateral del panel de 62 a 48 px, invisible a simple vista.
+ *   · Interlineado 32/22 = 1,45 y CERO separación entre ítems: en el mockup
+ *     cada columna se lee como un bloque de texto corrido.
+ *   · En móvil: una sola columna y sin la línea vertical (`md:border-l-2`).
+ *
+ * El aire de 57 px que hay entre la regla que cierra Eventos y este panel lo
+ * pone el `pt` de esta sección — `Eventos.astro` termina con `pb-0`.
  */
 ---
 
-<section class="bg-[var(--c-orange)] pb-12 md:pb-16">
+<section aria-labelledby="requisitos-titulo" class="bg-brand-blue-sec pb-12 pt-14">
   <div class="container-lp">
     <div
-      class="mx-auto max-w-4xl rounded-3xl bg-[var(--c-orange-lite)] px-6 py-8 md:px-12 md:py-10"
+      class="mx-auto max-w-200 rounded-3xl bg-brand-orange-pan px-6 py-8 text-brand-blue sm:px-10 sm:py-10 md:px-12"
     >
-      <h2 class="text-center text-2xl font-bold text-[var(--c-blue)] sm:text-3xl">
+      <h2
+        id="requisitos-titulo"
+        class="text-center text-2xl font-extrabold leading-tight sm:text-[2.25rem] md:text-[2.75rem] lg:text-[3.375rem]"
+      >
         Requisitos para adoção:
       </h2>
 
-      <ul
-        class="mt-6 grid grid-cols-1 gap-x-10 gap-y-2 text-sm text-[var(--c-blue)] sm:text-base md:grid-cols-2"
+      <div
+        class="mt-8 grid grid-cols-1 text-base leading-[1.45] sm:text-lg md:grid-cols-2 lg:text-[1.375rem]"
       >
-        {requisitos.map((item) => <li>&ndash; {item}</li>)}
-      </ul>
+        <ul role="list" class="md:pr-8">
+          {requisitos.slice(0, 3).map((item) => <li class="before:content-['-_']">{item}</li>)}
+        </ul>
+        <ul role="list" class="md:border-l-2 md:border-brand-blue md:py-1 md:pl-8">
+          {requisitos.slice(3).map((item) => <li class="before:content-['-_']">{item}</li>)}
+        </ul>
+      </div>
     </div>
   </div>
 </section>

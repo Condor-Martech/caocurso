@@ -1,43 +1,117 @@
 ---
 /**
- * CÃOCURSO — logo y tagline a la izquierda, el chihuahua a la derecha.
- * El tagline "Seu pet é a estrela da nossa passarela." es una IMAGEN
- * (magenta con contorno blanco), no texto.
+ * CÃOCURSO — banda KV del concurso, entre dos <Faixa /> (las pinta index.astro).
+ *
+ * Medido sobre la referencia `docs/Desktop - CãoCurso.png` a 1366 px de ancho
+ * (recorte y=3000..4000). La banda ciana va de y=3198 a y=3884: 686 px de alto,
+ * o sea 50,2 % del ancho. Todas las medidas van en vw para que el bloque escale
+ * igual a cualquier tamaño, exactamente como el Hero.
+ *
+ *   · fondo        /assets/2026/bg-caocurso.webp (1920×768) A SANGRE, con el
+ *                  blob morado a la derecha y el line-art tenue. El color de
+ *                  respaldo es brand-cyan por si la webp aún no ha cargado.
+ *   · sello        caja x 203..589 (28,2 % del ancho, borde izq. al 14,9 %).
+ *                  Es `selo-caocurso.webp`, que YA trae la placa Condor debajo:
+ *                  no hay que componerlo con logo-condor.webp.
+ *   · mote         caja x 214..559 (25,3 %), 19 px por debajo del sello. Es
+ *                  UNA IMAGEN (`mote-caocurso.webp`, script MORADO + swoosh
+ *                  blanco + estrella), no texto: en la referencia el script es
+ *                  morado, así que NO se usa `mote-caocurso-amarelo.webp`.
+ *   · 3 cães       caja x 645..1283 (46,7 %), alto = alto de la banda: se
+ *                  apoyan en el borde inferior y NO cruzan la franja, así que
+ *                  aquí NO hace falta la clase .emerge del Hero.
+ *                  Sangran fuera del contenedor: su borde derecho queda a
+ *                  6,1 % del borde de la ventana, igual que en el mockup.
+ *
+ * Los dos <img> de la izquierda arrancan en 15,5vw, el mismo margen que usa el
+ * Hero: así los dos KV de la página comparten línea de arranque por la izquierda.
+ * El desfase de ~10 px contra el mockup viene del aire transparente de las
+ * propias webp (el sello lo trae al 9 % de su ancho, el mote no) y es el mismo
+ * desfase que tiene el mockup entre sello y mote.
+ *
+ * Nada de cajas de color ni de lettering escrito con la fuente: la versión
+ * anterior imitaba el mote con un <h3> amarillo + un <p> font-serif italic
+ * dentro de un rectángulo #003882. Se ha eliminado por completo.
  */
 ---
 
-<section id="caocurso" class="bg-patron relative bg-[var(--c-orange)]">
-  <div
-    class="container-lp grid grid-cols-1 items-center justify-items-center gap-8 pt-10 pb-0 md:grid-cols-[auto_auto] md:items-end md:justify-between md:pt-14"
-  >
-    <div class="flex flex-col items-center gap-6 pb-10 md:pb-14">
+<section id="caocurso" class="banda-caocurso relative overflow-hidden bg-brand-cyan">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between">
+    <!-- Columna izquierda: sello Cãocurso + mote.
+         En desktop mide 46 % del viewport (15,5 % de sangría + 28,2 % de sello
+         + aire), así que los <img> sólo necesitan su ancho en vw. -->
+    <div
+      class="flex w-full flex-col items-center gap-4 px-6 pt-8 pb-6 md:w-[46%] md:items-start md:gap-[1.4vw] md:px-0 md:ps-[15.5vw] md:pt-[2.3vw] md:pb-[4.7vw]"
+    >
+      <h2 class="w-full">
+        <img
+          src="/assets/2026/selo-caocurso.webp"
+          alt="Cãocurso Condor 2026"
+          class="mx-auto w-[70%] max-w-[320px] md:mx-0 md:w-[28.2vw] md:max-w-[800px]"
+          width="800"
+          height="721"
+          loading="lazy"
+          decoding="async"
+        />
+      </h2>
+
+      <!-- Mismo texto que `caocurso.tagline` en src/data/site.ts, pero en caja
+           baja: el dato está en mayúsculas y hay lectores de pantalla que las
+           deletrean. -->
       <img
-        src="/assets/images/Selo@2x-1024x791.png"
-        alt="Cãocurso Condor"
-        class="w-[min(70vw,320px)] max-w-full md:w-[min(35vw,420px)]"
-        width="1024"
-        height="791"
+        src="/assets/2026/mote-caocurso.webp"
+        alt="Seu pet é a estrela da nossa passarela!"
+        class="w-[63%] max-w-[286px] md:w-[25.3vw] md:max-w-[900px]"
+        width="900"
+        height="584"
         loading="lazy"
-      />
-      <img
-        src="/assets/images/Txt@2x-1.png"
-        alt="Seu pet é a estrela da nossa passarela."
-        class="w-full max-w-[546px]"
-        width="934"
-        height="198"
-        loading="lazy"
+        decoding="async"
       />
     </div>
 
-    <div class="emerge flex self-end justify-center md:justify-end">
+    <!-- Columna derecha: los 3 cães fantasiados. Sale del contenedor y se apoya
+         en el borde inferior de la banda; el `pe` de 6,1vw reproduce el aire
+         que el mockup deja hasta el borde derecho de la ventana. -->
+    <div class="w-full md:w-[54%] md:pe-[6.1vw]">
       <img
-        src="/assets/images/Pet-2.png"
-        alt="Cachorro de óculos escuros e jaqueta de couro"
-        class="w-[min(78vw,384px)] max-w-full md:w-[min(40vw,588px)]"
-        width="956"
-        height="966"
+        src="/assets/2026/caocurso-dogs.webp"
+        alt="Três cães fantasiados para o Cãocurso: um de cartola, um dachshund de óculos escuros e bandana xadrez e um caramelo de camisa estampada"
+        class="mx-auto block w-full max-w-[600px] md:mx-0 md:ms-auto md:w-[46.7vw] md:max-w-[1300px]"
+        width="1300"
+        height="1406"
         loading="lazy"
+        decoding="async"
       />
     </div>
   </div>
 </section>
+
+<style>
+  /* Fondo a sangre de la banda. El color base lo pone `bg-brand-cyan`; aquí sólo
+     va la imagen, así no compiten dos reglas por `background-color`. */
+  .banda-caocurso {
+    background-image: url('/assets/2026/bg-caocurso.webp');
+    background-repeat: no-repeat;
+    background-size: cover;
+
+    /* Móvil: la banda se apila y queda alta y estrecha (≈0,43:1 frente a los
+       2,5:1 de la webp), así que `cover` recorta casi todo el ancho. Anclada al
+       centro o a la derecha sólo se vería el blob morado y la banda dejaría de
+       leerse como ciana. Se ancla a la izquierda, que es la zona de ciano +
+       line-art; el blob es un elemento de la composición de escritorio. */
+    background-position: 8% center;
+  }
+
+  /* Desktop: `85% center` no es arbitrario. La banda tiene razón 1,98:1 y la
+     webp 2,5:1, así que con `cover` la imagen se escala por altura y sobra un
+     26,25 % de ancho que hay que recortar. Con el centro por defecto el blob
+     morado empezaba en x=0,89·W y en el mockup empieza en 0,80·W; al 85 % del
+     recorte cae exacto (comprobado a y=3202 y a y=3373 de la referencia).
+     Como toda la banda está medida en vw, la razón 1,98:1 se mantiene a
+     cualquier ancho y el ajuste vale igual en todos. */
+  @media (min-width: 768px) {
+    .banda-caocurso {
+      background-position: 85% center;
+    }
+  }
+</style>
