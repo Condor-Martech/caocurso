@@ -34,38 +34,33 @@ Manda, en este orden:
 2. **`docs/LP Cão Curso.docx`** — el briefing de contenido de 2026 (fechas, textos,
    lista de patrocinadores). **Si el .docx y el PNG discrepan en un dato de contenido,
    gana el .docx** (así se resolvió el período de inscripción: 03/08, no 10/08).
-3. **`docs/GROUND_TRUTH.md`** — describe la LP de **2025**. Sigue siendo útil para
-   entender de dónde viene el proyecto, pero **su paleta, sus assets y su
-   especificación de formulario ya no aplican**. No lo tomes como fuente de verdad
-   para el rebuild 2026.
+3. **El código.** Cuando el arte y el código discrepen en un detalle de
+   implementación, gana lo que está construido y verificado — pero cualquier cambio
+   de contenido vuelve a 1 y 2.
 
-`docs/petCondor.png` (el screenshot de 2025) fue eliminado del repo.
+La documentación de 2025 (13 archivos, 8.619 líneas: `GROUND_TRUTH.md`,
+`DESIGN_SYSTEM.md`, `WIREFRAMES_DETALLADAS.md`, `FORM_ESPECIFICACION.md`,
+`CONTENIDO_DATOS.md`…) **se eliminó del repo**. Describía la campaña naranja, un modal
+de 8 campos que ya no existe y un nav que ya no se renderiza; a estas alturas confundía
+más de lo que ayudaba. Sigue recuperable de la historia de git hasta `1796aa1`.
 
 ---
 
 ## 📚 Documentación Disponible en Esta Carpeta
 
-**Comienza con:** `docs/Desktop - CãoCurso.png` + `docs/LP Cão Curso.docx` 🎯
+Son **tres archivos**, y ninguno sobra:
 
-### Vigente para 2026
-1. **Desktop - CãoCurso.png** 🎯 — el arte aprobado. Manda sobre todo
-2. **LP Cão Curso.docx** 🎯 — briefing de contenido. Manda en fechas, copy y marcas
-3. **CLAUDE.md** — este archivo: paleta, assets, formulario, reglas duras
-4. **ARQUITECTURA_PLATAFORMA.md** / **FORMS_PLATAFORMA.md** / **FORMULARIOS_ARQUITECTURA.md**
-   — a dónde tiene que ir la persistencia del formulario antes de producción
-5. **ANIMACIONES_TRANSICIONES.md** — keyframes y movimiento
-6. **RESUMEN_EJECUTIVO.md** / **INDICE_DOCUMENTACION.md** — fases y búsqueda rápida
+1. **`docs/Desktop - CãoCurso.png`** 🎯 — el arte aprobado 2026. Manda sobre todo
+2. **`docs/LP Cão Curso.docx`** 🎯 — el briefing. Manda en fechas, copy y marcas
+3. **`docs/PLATAFORMA.md`** — a dónde va la persistencia: Supabase + MinIO, modelo de
+   datos, anti-fraude de la votación, LGPD y el orden de trabajo
 
-### 📕 Histórico de 2025 — útil como contexto, **no vinculante**
-Describen la campaña naranja anterior. Su paleta, sus 105 assets y su formulario de
-8 campos **ya no aplican**; si contradicen al arte 2026, se ignoran.
+Más este archivo, que es el que describe la LP tal como está construida.
 
-7. **GROUND_TRUTH.md** — cómo era la LP de 2025 (era la fuente de verdad… de 2025)
-8. **DESIGN_SYSTEM.md** — colores y tipografía de 2025
-9. **WIREFRAMES_DETALLADAS.md** — estructura de los 11 bloques (sigue siendo válida)
-10. **FORM_ESPECIFICACION.md** — el modal de 8 campos, ya retirado
-11. **CONTENIDO_DATOS.md** — arrays y textos de 2025
-12. **REBUILD_LP_PROMPT.md** / **README_DOCUMENTACION_GENERADA.md** — orientación de 2025
+> Antes había trece documentos, 8.619 líneas. Describían la campaña de 2025 y
+> arrastraban decisiones ya tomadas presentadas como abiertas —Vercel, InsForge,
+> campos del formulario que hoy existen—. Se consolidaron en `PLATAFORMA.md` (646
+> líneas) y el resto se eliminó. Está todo en la historia de git hasta `1796aa1`.
 
 ---
 
@@ -153,7 +148,7 @@ isla— y debe montarse con `client:visible`: vive muy por debajo del pliegue, a
 los ~60 KB de React no tienen por qué entrar en la primera pantalla. Y la isla se
 renderiza en servidor: el `<form>` conserva `action` y `method` reales, de modo que
 sigue funcionando sin JavaScript. Si monta vacía en cliente, eso se pierde.
-Ver `docs/ARQUITECTURA_PLATAFORMA.md` y `docs/FORMS_PLATAFORMA.md`.
+Ver `docs/PLATAFORMA.md`.
 
 ### Los 11 bloques de la página
 
@@ -268,7 +263,7 @@ Campos, según el briefing (`docs/LP Cão Curso.docx`):
 - **Prohibido** pedir dirección, patio, "¿tienes mascotas?" o documento de identidad:
   eran del formulario de adopción que imaginó la documentación de 2025.
 - Se valida contra `docs/Desktop - CãoCurso.png` y el briefing, no contra
-  `docs/FORM_ESPECIFICACION.md`, que describe la versión de 8 campos ya retirada.
+  la especificación de 2025, que describía una versión de 8 campos ya retirada.
 
 ---
 
@@ -328,7 +323,7 @@ frío. Se quitan poniendo `image: { service: passthroughImageService() }`.
 4. **Fotos de la galería:** el arte muestra 13 fotos y en el repo hay 12, que además no
    son la misma selección que usó el diseñador.
 
-Ver `docs/RESUMEN_EJECUTIVO.md` para el detalle de cada fase.
+Lo que viene después está en `docs/PLATAFORMA.md` §12.
 
 ---
 
@@ -424,11 +419,7 @@ Esta carpeta es **aislada y autosuficiente**:
 └── docs/
     ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre todo
     ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda en contenido
-    ├── ARQUITECTURA_PLATAFORMA.md · FORMS_PLATAFORMA.md · FORMULARIOS_ARQUITECTURA.md
-    ├── ANIMACIONES_TRANSICIONES.md · INDICE_DOCUMENTACION.md · RESUMEN_EJECUTIVO.md
-    └── 📕 de 2025 (histórico): GROUND_TRUTH.md · DESIGN_SYSTEM.md ·
-        WIREFRAMES_DETALLADAS.md · FORM_ESPECIFICACION.md · CONTENIDO_DATOS.md ·
-        REBUILD_LP_PROMPT.md · README_DOCUMENTACION_GENERADA.md
+    └── PLATAFORMA.md           (Supabase + MinIO, modelo de datos, LGPD, orden de trabajo)
 ```
 
 ---
@@ -439,7 +430,7 @@ Esta carpeta es **aislada y autosuficiente**:
 - [ ] Leer `docs/LP Cão Curso.docx` — el briefing de contenido 2026
 - [ ] Leer la sección «Reglas Duras» de este archivo (paleta, assets, formulario)
 - [ ] `npm install && npm run dev`
-- [ ] Sólo si necesitas contexto histórico: `docs/GROUND_TRUTH.md` describe la LP de 2025
+- [ ] Si vas a tocar la persistencia o el formulario: `docs/PLATAFORMA.md`
 
 ---
 
@@ -452,18 +443,17 @@ Esta carpeta es **aislada y autosuficiente**:
 | Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, listos para servir |
 | Assets 2026 (origen) | `assets-fonte/` | 920 MB de imprenta, gitignorado |
 | Conversor de assets | `scripts/optimizar-assets.mjs` | origen → WebP web |
-| Arquitectura de forms | `docs/ARQUITECTURA_PLATAFORMA.md`, `docs/FORMS_PLATAFORMA.md` | Persistencia real |
-| Animaciones | `docs/ANIMACIONES_TRANSICIONES.md` | Transiciones |
-| Búsqueda rápida | `docs/INDICE_DOCUMENTACION.md` | Índice |
+| Plataforma y persistencia | `docs/PLATAFORMA.md` | Supabase + MinIO, modelo de datos, LGPD |
+| Animaciones | `src/styles/animations.css` | 8 keyframes, comentados en el propio archivo |
 | Fuentes Torus | `public/fonts/` (origen en `…/petCondor/assets/fonts/`) | 6 pesos woff2 |
-| 📕 Docs de **2025** | `GROUND_TRUTH`, `DESIGN_SYSTEM`, `WIREFRAMES_DETALLADAS`, `FORM_ESPECIFICACION`, `CONTENIDO_DATOS` | Contexto histórico. **Su paleta, assets y campos ya no aplican** |
+| 📕 Docs de **2025** | historia de git, hasta `1796aa1` | Eliminados del repo: su paleta, assets y campos ya no aplican |
 
 ---
 
 ## 💡 Notas Importantes
 
 1. **Manda el arte 2026** (`docs/Desktop - CãoCurso.png`); en datos de contenido, manda
-   el briefing (`docs/LP Cão Curso.docx`). `GROUND_TRUTH.md` describe 2025.
+   el briefing (`docs/LP Cão Curso.docx`).
 2. **No cambiar diseño.** Replicar exactamente, no mejorar.
 3. **El lettering va como imagen, nunca imitado con fuentes.** Es el error que hubo que
    deshacer: `font-serif italic` no es el logotipo de AuMigo.
@@ -516,9 +506,9 @@ npm install                  # Reinstall deps
 3. **¿Qué color / qué asset uso?** → «Reglas Duras» de este archivo
 4. **¿Cómo convierto arte nuevo?** → `scripts/optimizar-assets.mjs`
 5. **¿Campos del formulario?** → `src/components/FormularioInscricao.astro` + `src/pages/api/inscricao.ts`
-6. **¿Dónde va a vivir esto de verdad?** → `docs/ARQUITECTURA_PLATAFORMA.md`, `docs/FORMS_PLATAFORMA.md`
-7. **¿Animaciones?** → `docs/ANIMACIONES_TRANSICIONES.md`
-8. **¿Cómo era en 2025?** → `docs/GROUND_TRUTH.md` (histórico, no vinculante)
+6. **¿Dónde va a vivir esto de verdad?** → `docs/PLATAFORMA.md`
+7. **¿Animaciones?** → `src/styles/animations.css`, comentado en el propio archivo
+8. **¿Cómo era en 2025?** → historia de git, hasta `1796aa1`
 
 ---
 
