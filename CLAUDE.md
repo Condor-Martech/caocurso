@@ -12,8 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 **Idioma del sitio:** **portugués de Brasil (pt-BR), 100%.** La documentación está en
 español; los textos visibles del sitio, no.
 
-**Estado:** LP realineada al **KV 2026**. Build limpio, `astro check` 0 errores,
-render verificado contra la referencia visual.
+**Estado:** LP realineada al **KV 2026** y **saneada**. Build limpio, `astro check`
+0 errores, sin rutas de assets rotas. El rebuild está commiteado y etiquetado
+`v2026-base`: ese es el punto al que volver. Siguiente trabajo: persistencia del
+formulario en Supabase + MinIO.
 
 **Carpeta del Proyecto Central (Referencia):** `/home/diego/armando/Migraciones/petCondor/site`
 
@@ -99,9 +101,10 @@ repintado de azul corporativo deja de ser Facebook.
 Los verdes/rosas/morados de la franja separadora viven dentro de
 `pattern-horizontal.svg`, no son tokens del sistema.
 
-**Contraste heredado del KV:** cuatro combinaciones del arte original no llegan a
-WCAG AA (nav blanco sobre el azul del hero 3,40; «Em três datas,» azul sobre azul
-2,78; «14h às 18h» blanco sobre lavanda 2,63; texto pequeño azul sobre lavanda 3,59).
+**Contraste heredado del KV:** tres combinaciones del arte original no llegan a
+WCAG AA («Em três datas,» azul sobre azul 2,78; «14h às 18h» blanco sobre lavanda
+2,63; texto pequeño azul sobre lavanda 3,59). Una cuarta —el nav blanco sobre el
+azul del hero, 3,40— dejó de aplicar al retirarse el nav.
 Se replicaron tal cual porque manda el arte. Si Condor necesita cumplir AA, hay que
 retocar la paleta del KV — es decisión de diseño, no un defecto de implementación.
 
@@ -134,14 +137,18 @@ Regular, SemiBold, Bold, Heavy) convertidos a `.woff2`.
 En Vercel el sistema de archivos de una función es de sólo lectura salvo `/tmp`, y
 `/tmp` es efímero y por instancia: desplegado, `fs.mkdir` falla y responde **500**, y la
 deduplicación por tutor+pet tampoco puede funcionar porque cada instancia vería su
-propio fichero. Antes de abrir el formulario al público hay que mover la foto a un blob
-store y la ficha a una base de datos (ver `docs/ARQUITECTURA_PLATAFORMA.md` y
-`docs/FORMS_PLATAFORMA.md`).
+propio fichero. **Destino decidido: la ficha va a Supabase y la foto a MinIO.** Es el
+siguiente trabajo después del saneamiento. Al migrarlo, el formulario pasa a ser una
+**isla React** —por eso `@astrojs/react` sigue instalado aunque hoy no haya ninguna
+isla— y debe montarse con `client:visible`: vive muy por debajo del pliegue, así que
+los ~60 KB de React no tienen por qué entrar en la primera pantalla. Y la isla se
+renderiza en servidor: el `<form>` conserva `action` y `method` reales, de modo que
+sigue funcionando sin JavaScript. Si monta vacía en cliente, eso se pierde.
+Ver `docs/ARQUITECTURA_PLATAFORMA.md` y `docs/FORMS_PLATAFORMA.md`.
 
-### Nav + los 11 bloques de la página
+### Los 11 bloques de la página
 
 ```
-Nav (no numerado)
 1 Hero · 2 Adote um AuMigo · 3 Eventos · 4 Requisitos · 5 Protetoras ·
 6 Cãocurso · 7 «29 de agosto» · 8 Atrações · [Formulário] · 9 Galeria ·
 10 Patrocínio/Apoio · 11 Footer
@@ -150,16 +157,26 @@ Nav (no numerado)
 Con **4 franjas separadoras** (`<Faixa />`): tras el Hero, tras Adote um AuMigo, antes
 de la banda Cãocurso y después de ella.
 
-- **Nunca omitir Nav, Protetoras ni Patrocínio/Apoio.**
+- **La LP no lleva nav.** `Nav.astro` existió, quedó huérfano —`index.astro` no lo
+  importaba— y se retiró junto con el array `navLinks`. `--nav-h` se conserva en
+  `global.css` valiendo **0**: si el nav vuelve, ese es el único sitio que tocar
+  (con barra en el flujo medía 72 px por debajo de md y 60 px entre md y lg).
+- **Nunca omitir Protetoras ni Patrocínio/Apoio.**
 - El **Hero mide exactamente una pantalla** en todo dispositivo: `--hero-h`
   (= `100svh` − `--nav-h` − `--faixa-h`), definido en `global.css`. Se le resta
   también la franja para que el cintillo de tiles **entre en la primera pantalla**:
-  hero + cintillo suman el alto justo del dispositivo. Las tres imágenes llevan tope
-  de alto —`w-[min(<arte>,<px>,<factor de --hero-h>)]`— o en pantallas bajas se
-  saldrían. A 1366×768 y 1920×1080 esos topes no llegan a activarse y el bloque sale
-  con las medidas del mockup. Sus dos columnas dependen de la variante **`fila:`**
-  (ancho **y** orientación), no de `md:`: en tablet vertical el mockup deja media
-  pantalla vacía y ahí manda el bloque apilado.
+  hero + cintillo suman el alto justo del dispositivo.
+- El Hero es **una sola composición**, no tres bandas apiladas: a la izquierda el
+  bloque fijo del sello Mês Pet, a la derecha un **carrusel de dos ofertas**
+  (Cãocurso y Adote um AuMigo). Las dos comparten la misma retícula de filas
+  —`--h-logo`, `--h-msg`, `--h-dados`— justamente para que el CTA caiga a la misma
+  altura en ambas; si tocas una fila, tócala para las dos. El carrusel es
+  `scroll-snap` nativo y **funciona sin JavaScript**: el JS sólo añade la rotación
+  automática, que se detiene al primer gesto del usuario y respeta
+  `prefers-reduced-motion`. Los slides **no llevan fotos**, sólo logo, fechas y CTA.
+  Sus dos columnas dependen de la variante **`fila:`** (ancho **y** orientación), no
+  de `md:`: en tablet vertical el mockup deja media pantalla vacía y ahí manda el
+  bloque apilado.
 - `Requisitos` es **un panel único con 6 bullets en dos columnas**, no tres cards.
 - `Eventos` son **2 tarjetas arriba y 1 centrada debajo**, no una fila de tres.
 - El bloque 7 se llama `Evento30Agosto.astro` por herencia de 2025, pero en 2026 la
@@ -168,19 +185,25 @@ de la banda Cãocurso y después de ella.
 
 ### Assets — nunca sirvas los originales de imprenta
 
-El KV 2026 llega en resolución de imprenta: **684 MB**, con PNG de 17717×7087 px
-(`Textura_Halftone.png` pesaba 234 MB ella sola). Servido desde `public/` eso revienta
-el deploy. El flujo es:
+El KV 2026 llega en resolución de imprenta: hoy `assets-fonte/` va por **920 MB**, con
+PNG de 17717×7087 px (`Textura_Halftone.png` pesa 229 MB ella sola). Servido desde
+`public/` eso revienta el deploy. El flujo es:
 
 ```
 assets-fonte/            originales tal como los entrega marketing. GITIGNORADO, no se sirve.
   ↓  node scripts/optimizar-assets.mjs
-public/assets/2026/      WebP al ancho real de uso ×2. 684 MB → 3,5 MB.
+public/assets/2026/      WebP al ancho real de uso ×2. → 3,7 MB.
 
 assets-fonte/galeria/    fotos del fotógrafo (8192×5464, 236 MB). GITIGNORADO.
   ↓  node scripts/optimizar-assets.mjs   (mismo script, segundo paso)
-public/assets/galeria/   WebP a 960 px. 236 MB → 632 KB.
+public/assets/galeria/   WebP a 960 px. 236 MB → 660 KB.
 ```
+
+⚠️ **`.gitignore` no impide que un fichero se publique.** Todo lo que esté bajo
+`public/` se copia tal cual a `.vercel/output/static/` y queda servido en una URL,
+esté o no en git. Son dos filtros distintos: git decide qué se versiona, `public/`
+decide qué se publica. Material de origen que no deba salir a internet tiene que
+estar **fuera de `public/`**, no sólo fuera de git.
 
 Cuando llegue KV nuevo: se deja en `assets-fonte/`, se añade su ancho de salida y su
 nombre web en `scripts/optimizar-assets.mjs` y se vuelve a ejecutar. Los nombres de
@@ -199,7 +222,15 @@ Otras carpetas servidas:
   (el lockup) y `Dog.png` (el perro con patas que cruza la franja).
 - `public/assets/galeria/` — 12 fotos de la edición 2025, en WebP, **generadas**: no
   se editan a mano, salen de `assets-fonte/galeria/`.
-- `public/assets/patrocinadores/` — logos de patrocinio de 2025 que se reutilizan.
+- `public/assets/patrocinadores/` — los logos planos que **sí se sirven**: 5 ficheros
+  de 2025 que se reutilizan (Friskies, Dog Chow, Kelcat, Keldog, brf pet). Los otros
+  dos, Doogs y Procão, salen ya del KV 2026 en `public/assets/2026/`.
+
+  ⚠️ Dentro cuelgan además `Patrocínio/` y `Apoio/`: **78 MB del material de origen
+  que mandó marketing** (`.zip`, `.ai`, manuales de marca en PDF de Nestlé, Mars y
+  Kelco). Están gitignorados, pero **siguen bajo `public/`, así que el build los
+  publica**. Su sitio es `assets-fonte/patrocinadores/`; de ahí se saca un fichero
+  plano por marca y ese es el único que entra en `public/`.
 
 ⚠️ **Nunca crees `public/Assets/` con A mayúscula.** Existió y convivió con
 `public/assets/`: en Linux son dos carpetas, en macOS y en varios sistemas de deploy
@@ -251,23 +282,29 @@ npx astro check      # 0 errores esperados
 | Fase | Alcance | Estado |
 |------|---------|--------|
 | 1 | Config, tokens, Torus self-hosted (6 pesos woff2), `animations.css`, Layout | ✅ hecho |
-| 2 | Los 11 bloques + Nav + Footer | ✅ hecho |
+| 2 | Los 11 bloques + Footer | ✅ hecho |
 | 3 | Formulario inline (11 campos) + `POST /api/inscricao` multipart | ✅ hecho |
 | 4 | Transiciones, scroll reveal con fallback sin JS, `prefers-reduced-motion` | ✅ hecho |
 | 5 | **Realineado al KV 2026**: paleta, assets optimizados, copy del briefing | ✅ hecho |
+| 6 | **Saneamiento**: punto base en git (`v2026-base`), nav retirado, rutas rotas cerradas | ✅ hecho |
 
-**Verificado (2026-07-31):** `astro check` 0/0/0 · `npm run build` limpio ·
-`.vercel/output/static` = 14 MB · 31/31 imágenes cargan y ningún recurso da 404 ·
-sin scroll horizontal a 360/390/768/1024/1366 · endpoint probado en 5 casos
-(201 válido, 400 sin aceite, 409 duplicado, 400 CPF inválido, 400 menor de edad) ·
-render comparado píxel a píxel contra `docs/Desktop - CãoCurso.png`.
+**Verificado (2026-08-04):** `astro check` 0/0/0 · `npm run build` limpio ·
+las 34 rutas de `/assets/` referenciadas desde `src/` existen en `public/` ·
+árbol de git limpio, rebuild 2026 commiteado y etiquetado `v2026-base` ·
+endpoint probado en 5 casos (201 válido, 400 sin aceite, 409 duplicado,
+400 CPF inválido, 400 menor de edad).
+
+⚠️ `.vercel/output/static` mide **86 MB**, de los que **77 MB son los kits de marca
+de `patrocinadores/Patrocínio/`**. Sacándolos de `public/` el build baja a ~9 MB.
+Sigue pendiente.
 
 **Pendiente de que el cliente aporte material** (no es trabajo de código):
 
-1. **4 logos que no existen:** Fancy Feast, MARS Petcare, Caats y Doguitos. Ahora se
-   pintan como texto azul. Están en `Z:\Comunicação e Web\2026\Condor\Campanhas\Pet\LOGOS`.
-   Ojo: `WHISKAS-LOGO.png` **no** es Fancy Feast y `Logo-Purina-One-Caes.png` **no** es
-   Doguitos — así estaban mal asignados antes.
+1. **1 logo que no existe:** Fancy Feast — la carpeta que mandó marketing está vacía.
+   Se pinta como texto azul. Ojo: `WHISKAS-LOGO.png` **no** es Fancy Feast.
+   MARS Petcare, Caats y Doguitos **ya tienen material** en
+   `public/assets/patrocinadores/Apoio/`; falta sacar de cada carpeta el fichero web
+   y repuntar `site.ts`. `Logo-Purina-One-Caes.png` **no** es Doguitos.
 2. **Regulamento 2026:** no hay PDF. El botón está visible y deshabilitado. Al llegar el
    archivo: `regulamentoDisponivel: true` en `src/data/site.ts` y la rama `<a href>` ya
    está escrita.
@@ -330,14 +367,13 @@ Esta carpeta es **aislada y autosuficiente**:
 ├── vercel.json                (framework astro, región gru1 São Paulo)
 ├── scripts/
 │   └── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
-├── assets-fonte/              ⚠️ 684 MB de imprenta + 236 MB de fotos. GITIGNORADO.
+├── assets-fonte/              ⚠️ 920 MB de imprenta + fotos. GITIGNORADO.
 ├── src/
 │   ├── pages/
 │   │   ├── index.astro        (MAIN — Nav + los 11 bloques + 4 Faixa)
 │   │   └── api/
 │   │       └── inscricao.ts   (POST multipart/form-data)
 │   ├── components/
-│   │   ├── Nav.astro                 (enlaces desktop + drawer móvil)
 │   │   ├── Hero.astro                (bloque 1)
 │   │   ├── AdoteAumigo.astro         (bloque 2)
 │   │   ├── Eventos.astro             (bloque 3 — 2 cards + 1 centrada)
@@ -399,7 +435,7 @@ Esta carpeta es **aislada y autosuficiente**:
 | **Arte 2026** | `docs/Desktop - CãoCurso.png` | **Manda sobre todo** |
 | **Briefing 2026** | `docs/LP Cão Curso.docx` | Manda en datos de contenido |
 | Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, listos para servir |
-| Assets 2026 (origen) | `assets-fonte/` | 684 MB de imprenta, gitignorado |
+| Assets 2026 (origen) | `assets-fonte/` | 920 MB de imprenta, gitignorado |
 | Conversor de assets | `scripts/optimizar-assets.mjs` | origen → WebP web |
 | Arquitectura de forms | `docs/ARQUITECTURA_PLATAFORMA.md`, `docs/FORMS_PLATAFORMA.md` | Persistencia real |
 | Animaciones | `docs/ANIMACIONES_TRANSICIONES.md` | Transiciones |
@@ -477,7 +513,7 @@ npm install                  # Reinstall deps
 
 👉 **Luego:** `npm run dev` — la LP está construida y alineada al KV 2026.
 
-👉 **Lo que queda no es código:** los 4 logos que faltan, el PDF del regulamento, las
+👉 **Lo que queda no es código:** el logo de Fancy Feast, el PDF del regulamento, las
 ONGs y la 13ª foto de la galería. Y, antes de abrir el formulario al público, mover la
 persistencia fuera del sistema de archivos (ver el aviso del endpoint).
 
@@ -485,6 +521,6 @@ persistencia fuera del sistema de archivos (ver el aviso del endpoint).
 
 **Estado:** ✅ LP alineada al KV 2026, build limpio, render verificado contra el arte.
 
-**Versión:** 3.0 (realineada al KV 2026)
+**Versión:** 4.0 (saneada — punto base `v2026-base`)
 
-**Última actualización:** 2026-07-31
+**Última actualización:** 2026-08-04
