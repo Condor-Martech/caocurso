@@ -49,6 +49,9 @@
  * abajo y pinta la respuesta en la propia tarjeta; sin JS el POST nativo sigue
  * funcionando (el usuario acaba en la respuesta JSON, feo pero no roto).
  */
+import { formulario } from '../data/site';
+
+const { campos: c } = formulario;
 ---
 
 <div id="modal-inscricao" class="modal" data-modal>
@@ -56,7 +59,7 @@
   <div class="modal__fundo" data-fechar></div>
 
   <div class="modal__caixa">
-    <button class="modal__fechar" type="button" data-fechar aria-label="Fechar formulário">
+    <button class="modal__fechar" type="button" data-fechar aria-label={formulario.fecharAria}>
       <svg
         width="24"
         height="24"
@@ -75,7 +78,7 @@
       id="modal-inscricao-titulo"
       class="mb-3 text-center text-2xl font-black tracking-tight sm:text-3xl md:mb-4 md:text-[2rem]"
     >
-      Formulário de inscrição:
+      {formulario.titulo}
     </h2>
 
     <form
@@ -85,17 +88,17 @@
       enctype="multipart/form-data"
     >
       {/* ------------------------------------------------ Dados do Tutor */}
-      <h3 class="mb-2.5 text-xl font-bold md:text-2xl">Dados do Tutor</h3>
+      <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
 
       <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
         <div class="col-span-full">
-          <label class="sr-only" for="tutorNome">Nome completo</label>
+          <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
           <input
             class="campo"
             type="text"
             id="tutorNome"
             name="tutorNome"
-            placeholder="Nome completo"
+            placeholder={c.tutorNome.placeholder}
             autocomplete="name"
             minlength="3"
             maxlength="120"
@@ -105,44 +108,42 @@
 
         <div>
           <!-- type="text" y no type="date" a propósito: ver el <script>. -->
-          <label class="sr-only" for="tutorNascimento">
-            Data de nascimento, no formato dia/mês/ano
-          </label>
+          <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
           <input
             class="campo"
             type="text"
             id="tutorNascimento"
             name="tutorNascimento"
-            placeholder="Data de nascimento"
+            placeholder={c.tutorNascimento.placeholder}
             inputmode="numeric"
             pattern="\d{2}/\d{2}/\d{4}"
-            title="Use o formato dd/mm/aaaa."
+            title={c.tutorNascimento.title}
             maxlength="10"
             autocomplete="bday"
           />
         </div>
 
         <div>
-          <label class="sr-only" for="tutorCpf">CPF cadastrado no Clube Condor</label>
+          <label class="sr-only" for="tutorCpf">{c.tutorCpf.label}</label>
           <input
             class="campo"
             type="text"
             id="tutorCpf"
             name="tutorCpf"
-            placeholder="CPF cadastrado no Clube Condor"
+            placeholder={c.tutorCpf.placeholder}
             inputmode="numeric"
             maxlength="14"
           />
         </div>
 
         <div>
-          <label class="sr-only" for="tutorEmail">E-mail</label>
+          <label class="sr-only" for="tutorEmail">{c.tutorEmail.label}</label>
           <input
             class="campo"
             type="email"
             id="tutorEmail"
             name="tutorEmail"
-            placeholder="E-mail"
+            placeholder={c.tutorEmail.placeholder}
             autocomplete="email"
             maxlength="150"
             required
@@ -150,13 +151,13 @@
         </div>
 
         <div>
-          <label class="sr-only" for="tutorTelefone">Telefone com DDD</label>
+          <label class="sr-only" for="tutorTelefone">{c.tutorTelefone.label}</label>
           <input
             class="campo"
             type="tel"
             id="tutorTelefone"
             name="tutorTelefone"
-            placeholder="Telefone"
+            placeholder={c.tutorTelefone.placeholder}
             inputmode="tel"
             autocomplete="tel"
             maxlength="16"
@@ -166,57 +167,55 @@
       </div>
 
       {/* -------------------------------------------------- Dados do Pet */}
-      <h3 class="mt-3 mb-2.5 text-xl font-bold md:mt-4 md:text-2xl">Dados do Pet</h3>
+      <h3 class="mt-3 mb-2.5 text-xl font-bold md:mt-4 md:text-2xl">{formulario.secoes.pet}</h3>
 
       <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
         <div class="col-span-full">
-          <label class="sr-only" for="petNome">Nome do pet</label>
+          <label class="sr-only" for="petNome">{c.petNome.label}</label>
           <input
             class="campo"
             type="text"
             id="petNome"
             name="petNome"
-            placeholder="Nome do pet"
+            placeholder={c.petNome.placeholder}
             maxlength="60"
             required
           />
         </div>
 
         <div>
-          <label class="sr-only" for="petRaca">Raça</label>
+          <label class="sr-only" for="petRaca">{c.petRaca.label}</label>
           <input
             class="campo"
             type="text"
             id="petRaca"
             name="petRaca"
-            placeholder="Raça"
+            placeholder={c.petRaca.placeholder}
             maxlength="60"
           />
         </div>
 
         <div>
-          <label class="sr-only" for="petSexo">Sexo</label>
+          <label class="sr-only" for="petSexo">{c.petSexo.label}</label>
           <input
             class="campo"
             type="text"
             id="petSexo"
             name="petSexo"
-            placeholder="Sexo"
+            placeholder={c.petSexo.placeholder}
             maxlength="20"
           />
         </div>
 
         <div class="col-span-full">
-          <label class="sr-only" for="petDescricao">
-            Descreva seu pet: personalidade, curiosidades, etc.
-          </label>
+          <label class="sr-only" for="petDescricao">{c.petDescricao.label}</label>
           <textarea
             class="campo campo--area"
             id="petDescricao"
             name="petDescricao"
             rows="3"
             maxlength="1000"
-            placeholder="Descreva seu pet (personalidade, curiosidades, etc)"></textarea>
+            placeholder={c.petDescricao.placeholder}></textarea>
         </div>
       </div>
 
@@ -231,10 +230,7 @@
         />
         <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
              palabra «regulamento» debe pasar a ser un enlace al documento. -->
-        <label class="aceite__texto" for="aceiteRegulamento">
-          Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a
-          imagem do meu pet e os dados enviados na divulgação da campanha.
-        </label>
+        <label class="aceite__texto" for="aceiteRegulamento">{formulario.aceite}</label>
       </div>
 
       {/* ------------------------------------------- Retorno para o usuário */}
@@ -268,15 +264,15 @@
                   d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
                 ></path>
               </svg>
-              <span>Anexar foto do pet</span>
+              <span>{formulario.arquivo.rotulo}</span>
             </label>
           </div>
 
           <p class="arquivo__nome" data-arquivo aria-live="polite" hidden></p>
-          <p class="arquivo__ajuda" id="petFoto-ajuda">O arquivo deve ter no máximo, 2mb.</p>
+          <p class="arquivo__ajuda" id="petFoto-ajuda">{formulario.arquivo.ajuda}</p>
         </div>
 
-        <button class="btn-enviar" type="submit" data-enviar>Enviar inscrição</button>
+        <button class="btn-enviar" type="submit" data-enviar>{formulario.enviar}</button>
       </div>
     </form>
   </div>

@@ -1,5 +1,5 @@
 ---
-import { protetoras } from '../data/site';
+import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
 
 /**
  * PROTETORAS — PLACEHOLDER 2026 (bloque 5).
@@ -38,11 +38,11 @@ import { protetoras } from '../data/site';
 
 <section class="bg-brand-blue-sec pb-12 sm:pb-16 lg:pb-20">
   <div class="container-lp">
-    <h2 class="sr-only">Protetoras parceiras</h2>
+    <h2 class="sr-only">{protetorasTitulo}</h2>
 
     {/* El estado del bloque, para lectores de pantalla: sin esto la sección
         queda con un título y absolutamente nada debajo. Copy del briefing. */}
-    <p class="sr-only">Protetoras parceiras em definição.</p>
+    <p class="sr-only">{protetorasAviso}</p>
 
     {/* Las tarjetas vacías no aportan información: hoy son decorativas. */}
     <div

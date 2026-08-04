@@ -1,5 +1,5 @@
 ---
-import { patrocinio, apoio, type Marca } from '../data/site';
+import { gruposMarcas, type Marca } from '../data/site';
 
 /**
  * PATROCÍNIO / APOIO 2026
@@ -29,10 +29,8 @@ interface Grupo {
   marcas: Marca[];
 }
 
-const grupos: Grupo[] = [
-  { titulo: 'Patrocínio:', marcas: patrocinio },
-  { titulo: 'Apoio:', marcas: apoio },
-];
+/* Los dos grupos y su rótulo salen de site.json, como el resto del contenido. */
+const grupos: Grupo[] = gruposMarcas;
 ---
 
 {/* pt corto: la Galeria (misma franja lavanda) ya aporta su propio pb.

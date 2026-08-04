@@ -1,4 +1,5 @@
 ---
+import { adote } from '../data/site';
 /**
  * ADOTE UM AUMIGO — bloque 2 de la LP (campaña Mês Pet 2026).
  *
@@ -52,8 +53,8 @@
       class="order-2 flex w-fit justify-self-center md:order-1 md:-ml-4 md:justify-self-start lg:-ml-8 xl:-ml-12 min-[1360px]:-ml-20"
     >
       <img
-        src="/assets/images/Dog.png"
-        alt="Cachorro preto e branco com a língua para fora, apoiado na faixa colorida"
+        src={adote.cachorro.src}
+        alt={adote.cachorro.alt}
         class="emerge emerge--patas w-[clamp(220px,44vw,566px)] max-w-full"
         width="499"
         height="638"
@@ -73,8 +74,8 @@
     >
       <h2>
         <img
-          src="/assets/images/Selo-Adote-um-Aumigo.png"
-          alt="Adote um AuMigo — Condor"
+          src={adote.selo.src}
+          alt={adote.selo.alt}
           class="w-full max-w-[647px]"
           width="647"
           height="475"

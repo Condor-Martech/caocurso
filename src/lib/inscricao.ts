@@ -1,4 +1,4 @@
-import { caocurso } from '../data/site';
+import { inscricao } from '../data/site';
 
 /**
  * ESTADO DEL PERÍODO DE INSCRIPCIÓN.
@@ -20,7 +20,7 @@ import { caocurso } from '../data/site';
  *
  * ── De dónde salen las fechas ────────────────────────────────────────────────
  *
- * Hoy, de `src/data/site.ts`. Su destino es la tabla `cao_campanha` de Supabase
+ * Hoy, de `src/data/site.json`. Su destino es la tabla `cao_campanha` de Supabase
  * (ver `docs/PLATAFORMA.md`), para poder mover la fecha sin desplegar. Cuando
  * llegue ese momento sólo cambia `janelaInscricao()`; ni el componente ni el
  * endpoint se enteran — por eso la lectura está aislada aquí y no esparcida por
@@ -47,8 +47,8 @@ export interface JanelaInscricao {
  * llama trata el `null` como cerrado (ver `estadoInscricao`).
  */
 export function janelaInscricao(): JanelaInscricao | null {
-  const abreEm = new Date(caocurso.inscricaoAbreEm);
-  const fechaEm = new Date(caocurso.inscricaoFechaEm);
+  const abreEm = new Date(inscricao.abreEm);
+  const fechaEm = new Date(inscricao.fechaEm);
 
   if (Number.isNaN(abreEm.getTime()) || Number.isNaN(fechaEm.getTime())) return null;
   if (abreEm >= fechaEm) return null;
@@ -78,9 +78,5 @@ export function estadoInscricao(agora: Date = new Date()): EstadoInscricao {
   return 'aberta';
 }
 
-/** Rótulo del botón en cada estado. En pt-BR, como todo lo visible. */
-export const ROTULO_INSCRICAO: Record<EstadoInscricao, string> = {
-  'em-breve': 'Em breve',
-  aberta: 'Inscreva-se',
-  finalizada: 'Finalizado',
-};
+/** Rótulo del botón en cada estado. Los textos salen del JSON, como el resto. */
+export const ROTULO_INSCRICAO: Record<EstadoInscricao, string> = inscricao.rotulos;

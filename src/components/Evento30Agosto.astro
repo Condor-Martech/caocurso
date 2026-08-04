@@ -129,18 +129,18 @@ const caixaEstado =
                 rel="noopener noreferrer"
                 class={`${pilulaRegulamento} transition-colors hover:bg-brand-blue hover:text-brand-white`}
               >
-                Confira o regulamento
+                {caocurso.regulamentoRotulo}
               </a>
             ) : (
               <button
                 type="button"
                 disabled
                 aria-disabled="true"
-                title="O regulamento de 2026 estará disponível em breve."
+                title={caocurso.regulamentoIndisponivel}
                 class={`${pilulaRegulamento} cursor-not-allowed`}
               >
-                Confira o regulamento
-                <span class="sr-only"> — disponível em breve</span>
+                {caocurso.regulamentoRotulo}
+                <span class="sr-only">{caocurso.regulamentoIndisponivelLeitor}</span>
               </button>
             )
           }

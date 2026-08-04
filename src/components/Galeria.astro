@@ -1,5 +1,5 @@
 ---
-import { galeria } from '../data/site';
+import { galeria, galeriaTitulo } from '../data/site';
 
 /**
  * GALERIA — "Confira como foi a edição anterior" (2025).
@@ -53,7 +53,7 @@ const PROPORCOES = [
       <h2
         class="text-center text-3xl leading-[1.15] font-black tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]"
       >
-        Confira como foi<br />a edição anterior
+        {galeriaTitulo.map((linha, i) => (i === 0 ? <>{linha}<br /></> : linha))}
       </h2>
 
       <hr class="regla-branca mt-6 w-[46%] max-w-100 border-t-[3px] md:mt-8" />

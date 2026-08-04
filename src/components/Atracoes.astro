@@ -1,5 +1,5 @@
 ---
-import { atracoes } from '../data/site';
+import { atracoes, atracoesTitulo } from '../data/site';
 
 /**
  * ATRAÇÕES 2026 — Camarim, Caricaturista, Petfotos y Petplace en rejilla 2×2
@@ -91,8 +91,7 @@ const desenhosIcone: Record<string, string | undefined> = {
     <h2
       class="mb-20 text-center text-[1.625rem] leading-tight font-black text-brand-blue sm:text-4xl lg:mb-28 lg:text-[3.125rem]"
     >
-      <span class="block">Confira as outras</span>
-      <span class="block">atrações disponíveis:</span>
+      {atracoesTitulo.map((linha) => <span class="block">{linha}</span>)}
     </h2>
 
     {/* auto-rows-fr iguala la altura de las dos filas: en el mockup las cuatro

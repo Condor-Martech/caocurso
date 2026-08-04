@@ -44,9 +44,15 @@
  * diapositivas comparten esa altura, así que cambiar de slide no mueve ni un
  * píxel del resto de la página.
  */
-import { caocurso as caocursoSite, eventos } from '../data/site';
+import { caocurso as caocursoSite, eventos, hero } from '../data/site';
 
 const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.replace(/\.$/, '')}`;
+
+/* Los dos slides salen de site.json. Las fechas NO: el del Cãocurso las toma de
+   `caocurso` y el de adopción las compone desde `eventos`, que son las mismas
+   que pintan los bloques 3 y 7. Duplicarlas en el JSON sería garantizar que un
+   día discrepen. */
+const [slideCao, slideAdote] = hero.slides;
 ---
 
 <section
@@ -57,22 +63,22 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
     <!-- ══ Bloque 1 · Campaña — FIJO ═════════════════════════════════════ -->
     <div class="bloco-fixo">
       <img
-        src="/assets/2026/selo-mespet-2026.webp"
-        alt="Mês Pet Condor 2026 — Agosto é o Mês Pet na Condor"
+        src={hero.selo.src}
+        alt={hero.selo.alt}
         class="selo-mespet"
-        width="760"
-        height="799"
+        width={hero.selo.largura}
+        height={hero.selo.altura}
         fetchpriority="high"
       />
 
       <!-- Lettering, no tipografía: el "e pra gatos também!" es caligráfico y
            ninguna variante de Torus lo reproduce. -->
       <img
-        src="/assets/2026/mote-mespet.webp"
-        alt="Preço baixo pra cachorro, e pra gatos também!"
+        src={hero.mote.src}
+        alt={hero.mote.alt}
         class="mote-mespet"
-        width="760"
-        height="325"
+        width={hero.mote.largura}
+        height={hero.mote.altura}
         fetchpriority="high"
       />
     </div>
@@ -81,35 +87,35 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
     <div
       class="bloco-slider"
       aria-roledescription="carrossel"
-      aria-label="Destaques do Mês Pet"
+      aria-label={hero.aria.carrossel}
     >
-      <div class="pista" id="hero-pista" tabindex="0" aria-label="Diapositivas">
+      <div class="pista" id="hero-pista" tabindex="0" aria-label={hero.aria.pista}>
         <!-- ── Slide 1 · Cãocurso ─────────────────────────────────────── -->
         <article
           class="slide"
           role="group"
           aria-roledescription="slide"
-          aria-label="1 de 2 — Cãocurso"
+          aria-label={slideCao.aria}
         >
           <div class="oferta">
             <h1 class="linha-logo">
               <img
-                src="/assets/2026/selo-caocurso.webp"
-                alt="Cãocurso Condor 2026"
+                src={slideCao.logo.src}
+                alt={slideCao.logo.alt}
                 class="selo-oferta"
-                width="800"
-                height="721"
+                width={slideCao.logo.largura}
+                height={slideCao.logo.altura}
                 fetchpriority="high"
               />
             </h1>
 
             <div class="linha-msg">
               <img
-                src="/assets/2026/mote-passarela.webp"
-                alt="Seu pet é a estrela da nossa passarela!"
+                src={slideCao.mote!.src}
+                alt={slideCao.mote!.alt}
                 class="mote-oferta"
-                width="700"
-                height="438"
+                width={slideCao.mote!.largura}
+                height={slideCao.mote!.altura}
                 fetchpriority="high"
               />
             </div>
@@ -126,8 +132,8 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
                   inscripción con sus tres estados. Este CTA no abre el modal:
                   lleva hasta él. Antes apuntaba a #formulario-inscricao, un id
                   que no existe en ninguna página — el enlace no hacía nada. */}
-              <a href="#inscricao" class="btn-lp btn-primario">
-                Quero inscrever meu pet
+              <a href={slideCao.cta.href} class="btn-lp btn-primario">
+                {slideCao.cta.rotulo}
                 <svg
                   width="20"
                   height="20"
@@ -152,23 +158,23 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
           class="slide"
           role="group"
           aria-roledescription="slide"
-          aria-label="2 de 2 — Adote um AuMigo"
+          aria-label={slideAdote.aria}
         >
           <div class="oferta">
             <h2 class="linha-logo">
               <img
-                src="/assets/images/Selo-Adote-um-Aumigo.png"
-                alt="Adote um AuMigo"
+                src={slideAdote.logo.src}
+                alt={slideAdote.logo.alt}
                 class="selo-aumigo"
-                width="647"
-                height="475"
+                width={slideAdote.logo.largura}
+                height={slideAdote.logo.altura}
                 loading="lazy"
                 decoding="async"
               />
             </h2>
 
             <div class="linha-msg">
-              <p class="claim">Dê uma chance para aquele que nunca te abandona.</p>
+              <p class="claim">{slideAdote.claim}</p>
             </div>
 
             <p class="dados">
@@ -182,8 +188,8 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
             </p>
 
             <div class="acao">
-              <a href="#adote" class="btn-lp btn-claro">Conhecer os AuMigos</a>
-              <p class="nota">Três feiras de adoção, com as protetoras parceiras.</p>
+              <a href={slideAdote.cta.href} class="btn-lp btn-claro">{slideAdote.cta.rotulo}</a>
+              <p class="nota">{slideAdote.nota}</p>
             </div>
           </div>
         </article>
@@ -194,7 +200,7 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
            WCAG 2.2.2 — la rotación se congela con el ratón encima y con el foco
            dentro, y se para del todo en cuanto alguien pulsa una flecha o el
            botón de pausa, que es el único control que queda suelto. -->
-      <button type="button" class="seta seta--ant" id="hero-ant" aria-label="Destaque anterior">
+      <button type="button" class="seta seta--ant" id="hero-ant" aria-label={hero.aria.anterior}>
         <svg
           width="26"
           height="26"
@@ -210,7 +216,7 @@ const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.r
         </svg>
       </button>
 
-      <button type="button" class="seta seta--seg" id="hero-seg" aria-label="Próximo destaque">
+      <button type="button" class="seta seta--seg" id="hero-seg" aria-label={hero.aria.seguinte}>
         <svg
           width="26"
           height="26"

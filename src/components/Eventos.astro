@@ -1,5 +1,9 @@
 ---
-import { eventos } from '../data/site';
+import { eventos, eventosTitulo } from '../data/site';
+
+/* `cor` es un token cerrado en el JSON; aquí se traduce a la paleta. El JSON no
+   puede meter un color fuera del sistema. */
+const COR = { azul: 'text-brand-blue', branco: 'text-brand-white' } as const;
 
 /**
  * EVENTOS — las tres datas de adoção de agosto de 2026.
@@ -42,15 +46,18 @@ import { eventos } from '../data/site';
       id="eventos-titulo"
       class="mx-auto max-w-200 text-center text-[1.625rem] font-black leading-none sm:text-[2.5rem] md:text-[3.25rem] lg:text-[4rem]"
     >
-      <span class="block"
-        ><span class="text-brand-blue">Em três datas,</span>
-        <span class="text-brand-white">três</span></span
-      >
-      <span class="block"
-        ><span class="text-brand-white">chances</span>
-        <span class="text-brand-blue">de encontrar o</span></span
-      >
-      <span class="block text-brand-white">amor mais leal.</span>
+      {
+        eventosTitulo.map((linha) => (
+          <span class="block">
+            {linha.map((f, i) => (
+              <>
+                {i > 0 ? ' ' : ''}
+                <span class={COR[f.cor]}>{f.texto}</span>
+              </>
+            ))}
+          </span>
+        ))
+      }
     </h2>
 
     <!-- Las dos reglas anchas de esta sección son de 4 px en la referencia

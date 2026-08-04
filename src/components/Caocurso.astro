@@ -1,4 +1,5 @@
 ---
+import { caocurso } from '../data/site';
 /**
  * CÃOCURSO — banda KV del concurso, entre dos <Faixa /> (las pinta index.astro).
  *
@@ -45,8 +46,8 @@
     >
       <h2 class="w-full">
         <img
-          src="/assets/2026/selo-caocurso.webp"
-          alt="Cãocurso Condor 2026"
+          src={caocurso.selo.src}
+          alt={caocurso.selo.alt}
           class="mx-auto w-[70%] max-w-[320px] md:mx-0 md:w-[28.2vw] md:max-w-[800px]"
           width="800"
           height="721"
@@ -59,8 +60,8 @@
            baja: el dato está en mayúsculas y hay lectores de pantalla que las
            deletrean. -->
       <img
-        src="/assets/2026/mote-caocurso.webp"
-        alt="Seu pet é a estrela da nossa passarela!"
+        src={caocurso.mote.src}
+        alt={caocurso.mote.alt}
         class="w-[63%] max-w-[286px] md:w-[25.3vw] md:max-w-[900px]"
         width="900"
         height="584"
@@ -74,8 +75,8 @@
          que el mockup deja hasta el borde derecho de la ventana. -->
     <div class="w-full md:w-[54%] md:pe-[6.1vw]">
       <img
-        src="/assets/2026/caocurso-dogs.webp"
-        alt="Três cães fantasiados para o Cãocurso: um de cartola, um dachshund de óculos escuros e bandana xadrez e um caramelo de camisa estampada"
+        src={caocurso.foto.src}
+        alt={caocurso.foto.alt}
         class="mx-auto block w-full max-w-[600px] md:mx-0 md:ms-auto md:w-[46.7vw] md:max-w-[1300px]"
         width="1300"
         height="1406"
