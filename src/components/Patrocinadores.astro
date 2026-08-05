@@ -80,14 +80,17 @@ function caixa(m: Marca) {
   <div class="container-lp flex flex-col gap-8 md:gap-11">
     {
       grupos.map((grupo) => (
-        <div class="flex flex-col items-center gap-6 rounded-[1.75rem] bg-brand-white px-6 py-7 md:flex-row md:gap-4 md:rounded-4xl md:px-8 md:py-8">
-          <h2 class="text-brand-blue text-center text-xl font-bold italic md:w-40 md:shrink-0 md:text-2xl">
+        <div class="flex flex-col items-center gap-6 rounded-[1.75rem] bg-brand-white px-6 py-8 lg:flex-row lg:gap-8 lg:rounded-4xl lg:px-10 lg:py-9">
+          <h2 class="text-brand-blue shrink-0 text-center text-2xl font-black italic lg:w-44 lg:text-[1.875rem]">
             {grupo.titulo}
           </h2>
 
-          {/* Huecos iguales y fila centrada, no `justify-between`: repartir el
-              sobrante entre logos de anchos distintos los separa de forma
-              desigual y es justo lo que hace que una fila se lea descuidada. */}
+          {/* Rejilla, no `flex-wrap`. Con flex la fila desbordaba por poco y
+              dejaba UN logo solo en la segunda línea —Keldog abajo, Doguitos
+              abajo—: duplicaba el alto de la tarjeta y abría un vacío blanco
+              enorme. Una rejilla de columnas fijas siempre parte en filas
+              iguales: 2 en móvil, 3 en tablet, las 6 en una sola línea a partir
+              de xl, que es donde de verdad caben. */}
           <ul class="marcas">
             {grupo.marcas.map((marca) => {
               const { w, h } = caixa(marca);
@@ -118,31 +121,35 @@ function caixa(m: Marca) {
 </section>
 
 <style>
-  /* La fila. `--esc` escala TODOS los logos a la vez conservando la relación
-     entre ellos: el trabajo de igualar el peso óptico se hace una sola vez, en
-     el cálculo de la caja, y aquí sólo se cambia de talla. */
+  /* `--esc` escala TODOS los logos a la vez conservando la relación entre ellos:
+     el trabajo de igualar el peso óptico se hace una sola vez, al calcular la
+     caja, y aquí sólo se cambia de talla. */
   .marcas {
-    --esc: 0.68;
-    display: flex;
+    --esc: 0.78;
+    display: grid;
     width: 100%;
-    flex: 1;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, 1fr);
     align-items: center;
-    justify-content: center;
-    gap: 1.5rem 2rem;
+    justify-items: center;
+    gap: 1.75rem 1.25rem;
   }
 
   @media (min-width: 640px) {
     .marcas {
-      --esc: 0.82;
-      gap: 1.75rem 2.5rem;
+      --esc: 0.9;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem 1.5rem;
     }
   }
 
-  @media (min-width: 1024px) {
+  /* Las seis en una línea. Por debajo de esto no caben con los logos a este
+     tamaño, y prefiero dos filas de tres bien llenas que seis apretados. */
+  @media (min-width: 1280px) {
     .marcas {
       --esc: 1;
-      gap: 2rem 2.75rem;
+      grid-template-columns: repeat(6, auto);
+      justify-content: space-between;
+      gap: 1.5rem;
     }
   }
 
@@ -150,7 +157,7 @@ function caixa(m: Marca) {
     display: flex;
     height: calc(var(--h) * var(--esc));
     width: calc(var(--w) * var(--esc));
-    flex: 0 0 auto;
+    max-width: 100%;
     align-items: center;
     justify-content: center;
   }
@@ -163,14 +170,11 @@ function caixa(m: Marca) {
     object-fit: contain;
   }
 
-  /* El nombre tiene que pesar como un logo, no como un pie de foto. A 17 px
-     dentro de una caja de 60 parecía un hueco olvidado al lado de un sello de
-     92×92; se sube y se deja partir en dos líneas, que es como se comporta un
-     lockup de dos palabras. */
+  /* El nombre tiene que pesar como un logo, no como un pie de foto. */
   .marca__texto {
     color: var(--c-blue);
     font-weight: 800;
-    font-size: clamp(1.0625rem, 1.7vw, 1.5rem);
+    font-size: clamp(1.0625rem, 1.6vw, 1.375rem);
     line-height: 1.1;
     text-align: center;
     text-wrap: balance;

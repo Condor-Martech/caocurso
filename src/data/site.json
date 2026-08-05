@@ -122,9 +122,27 @@
     "titulo": "Protetoras parceiras",
     "aviso": "Protetoras parceiras em definição.",
     "itens": [
-      { "nome": null, "logo": null, "instagram": null },
-      { "nome": null, "logo": null, "instagram": null },
-      { "nome": null, "logo": null, "instagram": null }
+      {
+        "nome": "Instituto Seres & Vidas",
+        "logo": "/assets/images/InstitutoSeres-e-vidas.png",
+        "largura": 335,
+        "altura": 297,
+        "instagram": "https://www.instagram.com/seres_vidas/"
+      },
+      {
+        "nome": "Marcia Santos — a carteira protetora dos animais",
+        "logo": "/assets/images/Marcia-Protetora-300x161.jpg",
+        "largura": 300,
+        "altura": 161,
+        "instagram": "https://www.instagram.com/marciasantos.protetora/"
+      },
+      {
+        "nome": "Instituto SOS 4 Patas Paraná",
+        "logo": "/assets/images/sos-4-patas.png",
+        "largura": 196,
+        "altura": 90,
+        "instagram": "https://www.instagram.com/sos4patas.pr/"
+      }
     ]
   },
 
