@@ -141,20 +141,29 @@ export const requisitos: string[] = dados.requisitos.itens;
 /* -------------------------------------------------------------------------- */
 
 /**
- * ONGs 2026 — EM DEFINIÇÃO.
+ * ONGs 2026 — CONFIRMADAS, y son las mismas tres de 2025.
  *
- * El briefing dice literalmente: «ONGS: Em definição ainda, apenas prever o
- * local». El mockup (recorte y=2000-3000) pinta exactamente eso: tres tarjetas
- * blancas VACÍAS, con sólo el icono de Instagram abajo.
+ * El briefing decía «ONGS: Em definição ainda, apenas prever o local», y el
+ * mockup pintaba tres tarjetas blancas vacías con sólo el icono de Instagram.
+ * Por eso estuvieron en `null`: anunciarlas sin confirmación era inventar el
+ * dato. El cliente confirmó las tres, así que ahora llevan logo y perfil.
  *
- * Por eso NO se reutilizan las tres protectoras de 2025 (Instituto Seres &
- * Vidas, SOS 4 Patas PR, Marcia Santos): anunciarlas como socias de 2026 sería
- * inventar un dato. Los huecos se rellenan cuando el cliente confirme — los tres
- * campos son nulables justamente para eso.
+ * Los campos siguen siendo nulables: si una entrada se queda sin `instagram`, la
+ * tarjeta pinta el icono sin enlace en vez de un enlace a ninguna parte, y sin
+ * `logo` vuelve a ser la tarjeta vacía del mockup. No hay que tocar el
+ * componente para quitar una.
+ *
+ * `largura` y `altura` son las dimensiones REALES del archivo, igual que en
+ * `Marca`: de ellas sale la proporción, y de la proporción el tamaño con el que
+ * cada logo se pinta. Las tres proporciones son muy distintas —1,13 el sello del
+ * Instituto, 2,18 el lockup de SOS 4 Patas— así que igualarlos por ancho o por
+ * alto descuadraría la fila.
  */
 export interface Protetora {
   nome: string | null;
   logo: string | null;
+  largura?: number;
+  altura?: number;
   instagram: string | null;
 }
 

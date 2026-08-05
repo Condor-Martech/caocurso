@@ -1,28 +1,33 @@
 ---
-import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
+import { protetoras, protetorasTitulo, protetorasAviso, type Protetora } from '../data/site';
 
 /**
- * PROTETORAS — PLACEHOLDER 2026 (bloque 5).
+ * PROTETORAS (bloque 5) — las tres tarjetas, ya con logo.
  *
- * El briefing del cliente dice literalmente: «ONGS: Em definição ainda, apenas
- * prever o local». La referencia (`docs/Desktop - CãoCurso.png`, recorte
- * y=2000-3000, tarjetas en y=2799..3051) pinta exactamente eso: tres tarjetas
- * BLANCAS VACÍAS sobre el azul de sección, con SÓLO el icono de Instagram en
- * contorno azul cerca del borde inferior. Ni nombres ni logos.
+ * La referencia (`docs/Desktop - CãoCurso.png`, recorte y=2000-3000, tarjetas
+ * en y=2799..3051) las pinta VACÍAS, con sólo el icono de Instagram en contorno
+ * azul cerca del borde inferior, porque cuando se diseñó el briefing decía
+ * «ONGS: Em definição ainda, apenas prever o local». El cliente confirmó las
+ * tres, así que la tarjeta se completa: el logo arriba y el icono donde estaba.
+ * El resto de la caja no se toca — es lo que manda el arte.
  *
- * Por eso aquí no hay texto: las tres protectoras de 2025 (Instituto Seres &
- * Vidas, SOS 4 Patas PR, Marcia Santos) se retiraron de `src/data/site.ts`, que
- * ahora expone tres huecos `{ nome: null, logo: null, instagram: null }`. Se
- * itera ese array en vez de escribir un «3» a pelo, para que el bloque crezca o
- * mengüe con el dato real.
+ * El array se itera en vez de escribir un «3» a pelo, y los campos siguen
+ * siendo nulables: sin `logo` la tarjeta vuelve a ser la del mockup, y sin
+ * `instagram` el icono es decorativo y NO es un <a> — un enlace a ninguna parte
+ * sería un enlace roto.
  *
- * CAMINO PREPARADO PARA CUANDO LLEGUE EL DATO:
- * en cuanto una entrada del array traiga `instagram`, la tarjeta pinta sola un
- * enlace estirado sobre el icono (patrón stretched-link, ver abajo) con su
- * `aria-label`. Mientras el dato sea `null` el icono es puramente decorativo y
- * NO es un <a>: un enlace a ninguna parte sería un enlace roto. Cuando además
- * lleguen `nome`/`logo` habrá que añadir el <img>/<span> dentro de la tarjeta,
- * arriba del icono, y quitar el `aria-hidden` del contenedor de tarjetas.
+ * ── Tamaño de cada logo ──────────────────────────────────────────────────────
+ *
+ * Mismo criterio que en `Patrocinadores.astro`, y por el mismo motivo: las tres
+ * proporciones no se parecen —1,13 el sello del Instituto, 1,86 el lockup de
+ * Marcia, 2,18 el de SOS 4 Patas—, así que igualarlos por ancho deja al sello
+ * dominando la fila e igualarlos por alto deja a los alargados comiéndosela.
+ *
+ *   ancho = BASE · proporción^(1 − EXPONENTE)
+ *
+ * con EXPONENTE 0,42, el punto intermedio entre igualar alto (0) e igualar área
+ * (0,5). Va en PORCENTAJE del ancho de la tarjeta, no en px: la tarjeta escala
+ * con la rejilla y un tamaño fijo se descolgaría en cuanto cambia el ancho.
  *
  * Medidas tomadas de la referencia a 1366 px de ancho:
  *   · rejilla 926 px = 3 × 290 + 2 × 28 de hueco
@@ -34,6 +39,20 @@ import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
  * panel de Requisitos y las tarjetas (51 px en la referencia) lo pone el
  * padding inferior de la sección Requisitos; duplicarlo aquí lo doblaría.
  */
+
+/* BASE en % del ancho de la tarjeta. Sale del caso más alargado: SOS 4 Patas,
+   2,18:1, que con este valor ocupa el 70 % y deja margen a los lados. */
+const BASE = 44;
+const EXPONENTE = 0.42;
+
+function largura(p: Protetora): number {
+  if (!p.largura || !p.altura) return BASE;
+  return BASE * Math.pow(p.largura / p.altura, 1 - EXPONENTE);
+}
+
+/* Mientras no haya ni un logo, la tarjeta sigue siendo decorativa y el aviso
+   del briefing es lo único que un lector de pantalla puede anunciar. */
+const semDados = protetoras.every((p) => !p.logo && !p.instagram);
 ---
 
 <section class="bg-brand-blue-sec pb-12 sm:pb-16 lg:pb-20">
@@ -41,18 +60,37 @@ import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
     <h2 class="sr-only">{protetorasTitulo}</h2>
 
     {/* El estado del bloque, para lectores de pantalla: sin esto la sección
-        queda con un título y absolutamente nada debajo. Copy del briefing. */}
-    <p class="sr-only">{protetorasAviso}</p>
+        queda con un título y absolutamente nada debajo. Copy del briefing.
+        Con las protectoras confirmadas ya no hay nada «en definición» que
+        anunciar: lo que hay que leer son los tres nombres. */}
+    {semDados && <p class="sr-only">{protetorasAviso}</p>}
 
-    {/* Las tarjetas vacías no aportan información: hoy son decorativas. */}
     <div
       class="mx-auto grid max-w-231.5 grid-cols-3 gap-3 sm:gap-5 lg:gap-7"
-      aria-hidden={protetoras.every((p) => !p.instagram) ? 'true' : undefined}
+      aria-hidden={semDados ? 'true' : undefined}
     >
       {
         protetoras.map((p) => (
-          <div class="flex aspect-290/253 items-end justify-center rounded-[18px] bg-brand-white pb-2 sm:pb-3 lg:pb-5">
-            <span class="relative inline-flex text-brand-blue">
+          <div class="tarjeta relative flex aspect-290/253 flex-col items-center justify-between rounded-[18px] bg-brand-white px-3 pt-4 pb-2 sm:px-4 sm:pt-5 sm:pb-3 lg:pt-7 lg:pb-5">
+            {/* Zona del logo: ocupa lo que sobra por encima del icono y lo
+                centra ahí, para que las tres marcas caigan a la misma altura
+                aunque tengan proporciones distintas. */}
+            <div class="flex min-h-0 w-full flex-1 items-center justify-center">
+              {p.logo && (
+                <img
+                  src={p.logo}
+                  alt={p.nome ?? ''}
+                  width={p.largura}
+                  height={p.altura}
+                  style={`width:${largura(p).toFixed(1)}%`}
+                  class="h-auto max-h-full object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+            </div>
+
+            <span class="relative inline-flex shrink-0 text-brand-blue">
               {/* Icono de Instagram en contorno, sin círculo de fondo.
                   Va inline y no con `IconeInstagram.astro`, que es la variante
                   MACIZA (cuadrado sólido con el anillo calado) y no coincide
@@ -77,20 +115,63 @@ import { protetoras, protetorasTitulo, protetorasAviso } from '../data/site';
                 <circle cx="17.8" cy="5.6" r="1.2" fill="currentColor" stroke="none" />
               </svg>
 
-              {/* Enlace estirado: sólo existe cuando hay perfil que enlazar. */}
-              {p.instagram && (
-                <a
-                  href={p.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="absolute -inset-2 rounded-full"
-                  aria-label={p.nome ? `Instagram de ${p.nome}` : 'Instagram da protetora'}
-                />
-              )}
             </span>
+
+            {/* Enlace estirado sobre la TARJETA ENTERA, no sólo sobre el icono:
+                con el logo dentro, lo que la gente va a pulsar es la tarjeta, y
+                en móvil el icono mide 24 px, menos de la mitad del objetivo
+                táctil recomendado. El icono se queda como la señal visual de a
+                dónde lleva.
+                Sólo existe cuando hay perfil que enlazar: un <a> sin destino
+                sería un enlace roto. */}
+            {p.instagram && (
+              <a
+                href={p.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="absolute inset-0 rounded-[18px]"
+                aria-label={p.nome ? `Instagram de ${p.nome}` : 'Instagram da protetora'}
+              />
+            )}
           </div>
         ))
       }
     </div>
   </div>
 </section>
+
+<style>
+  /* La tarjeta reacciona, no el enlace: el <a> es invisible y cubre la caja
+     entera, así que sin esto no habría ninguna señal de que aquello se pulsa.
+     Se queda en un empujón de escala —nada de sombra ni de cambio de color—
+     porque esta franja es plana a propósito: el blanco corta contra el azul sin
+     relieve, y meterle una sombra al pasar por encima rompería eso. */
+  .tarjeta {
+    transition: scale 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .tarjeta:has(a:hover) {
+    scale: 1.02;
+  }
+
+  /* El foco se pinta sobre el azul de la sección, no sobre el blanco de la
+     tarjeta: por eso es blanco y va por fuera. */
+  .tarjeta:has(a:focus-visible) {
+    outline: 3px solid var(--c-white);
+    outline-offset: 4px;
+  }
+
+  .tarjeta a:focus-visible {
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tarjeta {
+      transition: none;
+    }
+
+    .tarjeta:has(a:hover) {
+      scale: 1;
+    }
+  }
+</style>
