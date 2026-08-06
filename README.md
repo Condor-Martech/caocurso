@@ -218,11 +218,33 @@ Ele apaga a foto **antes** da ficha, de propósito. Se algo falhar no meio, o qu
 uma ficha sem foto — visível, com nome e e-mail, fácil de resolver. Ao contrário sobraria
 uma foto sem ficha, que é exatamente o problema que se está evitando.
 
-> ⚠️ **Isto é apagar de verdade, e não é o que a LGPD pede.** Quando alguém exerce o
-> direito de exclusão é preciso poder demonstrar *quando* aquilo foi atendido, e para isso
-> existe `excluido_em`: a linha some da planilha no envio seguinte e a vaga volta ao
-> concurso, mas fica o registro. Um `DELETE` não deixa rastro de ter cumprido. O script é
-> para dados de teste e para recolher órfãs.
+> ⚠️ **Isto é apagar de verdade, e é para dados de teste.** Um pedido de exclusão de uma
+> pessoa real tem outro comando — ver abaixo.
+
+### Atender um pedido de exclusão (LGPD art. 18)
+
+```bash
+node scripts/limpar-inscricoes.mjs --excluir <uuid>            # mostra
+node scripts/limpar-inscricoes.mjs --excluir <uuid> --apagar   # faz
+```
+
+| Some | Fica |
+|---|---|
+| A foto, do bucket | O `id` |
+| Nome, nascimento, CPF, e-mail, telefone | `criado_em` e `excluido_em` |
+| Nome, raça, sexo, espécie e descrição do pet | Os consentimentos |
+
+**Os consentimentos ficam de propósito.** Não identificam ninguém —são
+`{tipo, versao, texto_sha256, em}`, o hash do texto aceito— e são exatamente a prova de que
+houve base legal para tratar aqueles dados enquanto foram tratados. Apagá-los deixaria a
+Condor sem como demonstrá-lo.
+
+A linha some da planilha no mesmo comando, e a vaga volta ao concurso.
+
+> ⚠️ **Não faça isso pelo painel.** Marcar `excluido_em` à mão tira a pessoa da planilha,
+> mas deixa nome, e-mail, telefone, CPF e a foto intactos no banco. Isso não é apagar: é
+> esconder. Se essa pessoa perguntar «vocês apagaram meus dados?», a resposta honesta seria
+> «não completamente».
 
 ### A planilha do júri e do CRM
 

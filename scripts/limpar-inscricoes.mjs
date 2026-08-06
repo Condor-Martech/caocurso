@@ -61,12 +61,13 @@ const PASTA = '2026'; // la única carpeta del bucket; ver lib/storage.ts
 
 function ajuda() {
   console.log(`
+  node scripts/limpar-inscricoes.mjs --excluir <uuid>   LGPD: atender un pedido de supresión
   node scripts/limpar-inscricoes.mjs --sincronizar      reescribe la hoja, sin borrar nada
   node scripts/limpar-inscricoes.mjs --orfas            fotos sin ficha
-  node scripts/limpar-inscricoes.mjs --id <uuid>        una inscripción
+  node scripts/limpar-inscricoes.mjs --id <uuid>        una inscripción (borrado técnico)
   node scripts/limpar-inscricoes.mjs --tudo             todas (pruebas)
 
-  Añade --apagar para que borre de verdad. Sin eso sólo enseña qué haría.
+  Añade --apagar para que se ejecute de verdad. Sin eso sólo enseña qué haría.
   --sincronizar no borra nunca, así que no necesita --apagar.
 `);
 }
@@ -186,6 +187,104 @@ async function apagarInscricao({ id, foto_key, tutor_nome, pet_nome }) {
  * SITE_URL, así que los que quedaron escritos antes apuntan a donde ya no toca.
  * La hoja se rehace sola en la siguiente inscripción, pero si no llega ninguna
  * se queda con enlaces muertos hasta que alguien lo note. */
+/* ─────────────────────────────────────── LGPD: derecho de supresión ── */
+
+/**
+ * Atiende un pedido de borrado del art. 18 de la LGPD.
+ *
+ * NO es lo mismo que `--id`, y la diferencia importa:
+ *
+ *   --id       borrado técnico. La fila desaparece. Para datos de prueba.
+ *   --excluir  la persona pidió que borren sus datos. Se borran de verdad,
+ *              pero queda constancia de que se atendió y cuándo.
+ *
+ * Hasta ahora `excluido_em` sólo hacía que la ficha desapareciera de la hoja y
+ * devolviera la plaza. Los datos seguían enteros en la base y la foto en el
+ * bucket: eso no es borrar, es esconder. Si la persona preguntaba «¿me
+ * borraron?», la respuesta honesta era «no del todo».
+ *
+ * Lo que se va:  foto, nombre, nacimiento, CPF, e-mail, teléfono, y todo lo del
+ *                pet, incluida la descripción.
+ * Lo que queda:  el `id`, `criado_em`, `excluido_em` y los consentimientos.
+ *
+ * Los consentimientos se conservan a propósito. No identifican a nadie —son
+ * `{tipo, versao, texto_sha256, em}`, el hash del texto que se aceptó— y son
+ * justamente la prueba de que hubo base legal para tratar esos datos mientras
+ * se trataron. Borrarlos dejaría a la Condor sin cómo demostrarlo.
+ *
+ * Los campos NOT NULL no admiten vaciarse, así que llevan un marcador. Los
+ * índices únicos son PARCIALES (`WHERE excluido_em IS NULL`), de modo que varias
+ * fichas suprimidas con el mismo marcador no chocan entre sí, y esa persona
+ * puede volver a inscribirse si quiere.
+ */
+if (tem('--excluir')) {
+  const id = valor('--excluir');
+  if (!id) {
+    ajuda();
+    process.exit(1);
+  }
+
+  const { data, error } = await sb
+    .from('cao_inscricao')
+    .select('id, foto_key, tutor_nome, tutor_email, pet_nome, excluido_em')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) {
+    console.log(`\n  No hay ninguna ficha con id ${id}.\n`);
+    process.exit(1);
+  }
+  if (data.excluido_em) {
+    console.log(`\n  Esa ficha ya fue suprimida en ${data.excluido_em}. No hago nada.\n`);
+    process.exit(0);
+  }
+
+  console.log(APAGAR ? '\nAtendiendo la supresión de:' : '\nSe suprimirían los datos de:');
+  console.log(`  ${data.tutor_nome} <${data.tutor_email}> — pet ${data.pet_nome}`);
+  console.log(`  foto: ${data.foto_key}`);
+
+  if (!APAGAR) {
+    console.log('\n  Añade --apagar para ejecutarlo.\n');
+    process.exit(0);
+  }
+
+  /* La foto primero. Si fallara y aun así se anonimizara la fila, se perdería
+     la `foto_key` y con ella la única forma de saber qué archivo era suyo. */
+  const { error: eFoto } = await sb.storage.from(BUCKET).remove([data.foto_key]);
+  if (eFoto) {
+    console.log(`\n  ⚠️  La foto no se pudo borrar (${eFoto.message}). No toco la ficha.\n`);
+    process.exit(1);
+  }
+
+  const MARCA = '(dados suprimidos)';
+  const { error: eFicha } = await sb
+    .from('cao_inscricao')
+    .update({
+      tutor_nome: MARCA,
+      tutor_nascimento: null,
+      tutor_cpf: null,
+      tutor_email: MARCA,
+      tutor_telefone: MARCA,
+      pet_nome: MARCA,
+      pet_raca: null,
+      pet_sexo: null,
+      pet_especie: null,
+      pet_descricao: null,
+      foto_key: MARCA,
+      excluido_em: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (eFicha) {
+    console.log(`\n  ⚠️  La foto se borró pero la ficha no: ${eFicha.message}\n`);
+    process.exit(1);
+  }
+
+  console.log('  datos suprimidos · foto borrada · queda la fecha como constancia');
+  await sincronizarPlanilha();
+  console.log('');
+  process.exit(0);
+}
+
 if (tem('--sincronizar')) {
   const base = env.SITE_URL || 'http://localhost:4321';
   console.log(`\n  Enlaces de foto apuntando a: ${base}`);
@@ -211,7 +310,10 @@ if (tem('--orfas')) {
   const usadas = new Set(fichas.map((f) => f.foto_key));
   const orfas = objetos.map((o) => `${PASTA}/${o.name}`).filter((k) => !usadas.has(k));
 
-  console.log(`\n${objetos.length} fotos en el bucket · ${usadas.size} con ficha · ${orfas.length} sin ficha\n`);
+  const conFicha = objetos.length - orfas.length;
+  console.log(
+    `\n${objetos.length} fotos en el bucket · ${conFicha} con ficha · ${orfas.length} huérfanas\n`
+  );
   if (!orfas.length) {
     console.log('  No hay huérfanas.\n');
     process.exit(0);

@@ -12,6 +12,7 @@ import {
 import { processarFoto, FotoInvalida } from '../../lib/foto';
 import { guardarFoto, removerFoto } from '../../lib/storage';
 import { sincronizarPlanilha } from '../../lib/planilha';
+import { ipDoPedido, registrarTentativa } from '../../lib/limite';
 
 export const prerender = false;
 
@@ -190,6 +191,23 @@ function idadeEmAnos(nascimento: Date, hoje = new Date()): number {
 }
 
 export const POST: APIRoute = async ({ request, url }) => {
+  /* Lo PRIMERO de todo, antes incluso de mirar el plazo: si alguien está
+     insistiendo, no se le lee el cuerpo ni se consulta la campaña. Cada
+     petición que llega aquí cuesta una lectura a Supabase y, si trae foto,
+     buferizar hasta 25 MB en memoria. Un bucle de `curl` sin esto tumba el
+     servidor antes de llenar el concurso. Ver src/lib/limite.ts. */
+  const veredicto = registrarTentativa(ipDoPedido(request));
+  if (!veredicto.permitido) {
+    const minutos = Math.ceil(veredicto.esperaSegundos / 60);
+    return json(
+      {
+        success: false,
+        message: `Muitas tentativas. Tente de novo em ${minutos} minuto${minutos > 1 ? 's' : ''}.`,
+      },
+      429
+    );
+  }
+
   /* El período de inscripción se comprueba AQUÍ, y no sólo al pintar el botón.
      Un botón que no aparece es cosmética: la ruta sigue existiendo y acepta un
      POST de `curl` el día después del cierre. Sin esta comprobación
