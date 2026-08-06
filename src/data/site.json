@@ -4,17 +4,16 @@
     "url": "https://pet.condor.com.br",
     "ano": 2026,
     "descricao": "No Mês do Pet da Condor: adote um AuMigo, inscreva seu pet no Cãocurso e confira todas as atrações.",
-    "regulamentoPdf": null,
-    "regulamentoDisponivel": false,
+    "regulamentoPdf": "https://s3.cndr.me/lp-content/caocurso/docs/2025_Regulamento_Caocurso.pdf",
+    "regulamentoDisponivel": true,
     "copyright": "©Condor 2026. Todos os direitos reservados."
   },
 
   "inscricao": {
-    "abreEm": "2026-08-03T00:00:00-03:00",
-    "fechaEm": "2026-08-21T23:59:59-03:00",
     "rotulos": {
       "em-breve": "Em breve",
       "aberta": "Inscreva-se",
+      "esgotada": "Esgotado",
       "finalizada": "Finalizado"
     }
   },
@@ -258,7 +257,7 @@
     "aceite": "Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a imagem do meu pet e os dados enviados na divulgação da campanha.",
     "arquivo": {
       "rotulo": "Anexar foto do pet",
-      "ajuda": "O arquivo deve ter no máximo, 2mb."
+      "ajuda": "JPG, PNG ou WebP. Pode enviar a foto direto do celular."
     },
     "enviar": "Enviar inscrição"
   },

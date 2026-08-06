@@ -46,8 +46,18 @@
  * píxel del resto de la página.
  */
 import { caocurso as caocursoSite, eventos, hero } from '../data/site';
+import { periodoInscricao } from '../lib/inscricao';
 
-const prazo = `${caocursoSite.inscricaoRotulo} ${caocursoSite.inscricaoPeriodo.replace(/\.$/, '')}`;
+/* El período sale de `cao_campanha` en Supabase, que es lo que también decide
+   el estado del botón del bloque 7. Si este texto viviera sólo en el JSON,
+   mover el cierre en el panel dejaría al botón obedeciendo y a la página
+   anunciando la fecha vieja.
+
+   El texto del JSON queda de reserva para cuando no se pueda leer: mejor una
+   fecha de más que un hueco en blanco en el hero. */
+const periodo = (await periodoInscricao()) ?? caocursoSite.inscricaoPeriodo;
+
+const prazo = `${caocursoSite.inscricaoRotulo} ${periodo.replace(/\.$/, '')}`;
 
 /* Los dos slides salen de site.json. Las fechas NO: el del Cãocurso las toma de
    `caocurso` y el de adopción las compone desde `eventos`, que son las mismas
@@ -353,11 +363,19 @@ const [slideCao, slideAdote] = hero.slides;
     }
   }
 
+  /* El `gap` sólo se ve MIENTRAS se pasa la pista —en reposo se ve una
+     diapositiva y nada más—, y ahí es justo lo que hace falta: sin él las dos
+     tarjetas viajan pegadas por el canto y durante el gesto se leen como una
+     sola pieza partida en vez de como dos ofertas distintas.
+     No le quita ancho a la tarjeta: el hueco va ENTRE diapositivas, no dentro.
+     Sí mueve el origen de cada una, así que el script no puede seguir contando
+     `clientWidth * i` para desplazarse — ver `irA()`. */
   .pista {
     display: flex;
     min-width: 0;
     min-height: 0;
     flex: 1;
+    gap: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -409,7 +427,12 @@ const [slideCao, slideAdote] = hero.slides;
     gap: 0.55rem;
     border-radius: 1.75rem;
     background: var(--c-blue);
-    padding: 0.9rem 1rem 1rem;
+    /* El relleno lateral es 1,5rem y no 1rem: con 16 px el claim del AuMigo
+       («Dê uma chance para aquele que nunca te abandona.») llegaba a ras del
+       canto redondeado y la tarjeta se leía apretada. Sube SÓLO en horizontal
+       — el vertical está calculado para que el hero mida exactamente una
+       pantalla, y ahí cada décima cuenta. */
+    padding: 0.9rem 1.5rem 1rem;
     text-align: center;
     box-shadow:
       0 20px 38px -18px rgb(0 0 0 / 0.55),
@@ -439,7 +462,10 @@ const [slideCao, slideAdote] = hero.slides;
   @media (max-width: 359px) {
     .oferta {
       gap: 0.3rem;
-      padding: 0.6rem 0.7rem 0.7rem;
+      /* Aquí el lateral sube menos (1rem, no 1,5): a 320 px de ancho, 24 px por
+         lado le quitarían al texto la mitad de una palabra y el claim pasaría a
+         cuatro líneas, que es justo el desbordamiento que este bloque evita. */
+      padding: 0.6rem 1rem 0.7rem;
     }
   }
 
@@ -827,9 +853,18 @@ const [slideCao, slideAdote] = hero.slides;
       if (conta) conta.textContent = String(i + 1);
     };
 
+    /* `offsetLeft` de la propia diapositiva, no `clientWidth * i`: la pista
+       lleva un `gap` entre diapositivas, así que a partir de la segunda el
+       origen ya no cae en un múltiplo del ancho visible. Con la cuenta vieja el
+       desplazamiento se quedaba corto y sólo lo salvaba el reajuste del
+       scroll-snap. */
     const irA = (i: number) => {
+      /* Los dos `offsetLeft` se miden contra el mismo padre —`.bloco-slider`,
+         que es el único posicionado—, así que la resta da la distancia real
+         dentro de la pista y no depende de dónde empiece ésta. */
+      const destino = slides[i] as HTMLElement | undefined;
       pista.scrollTo({
-        left: pista.clientWidth * i,
+        left: destino ? destino.offsetLeft - pista.offsetLeft : pista.clientWidth * i,
         behavior: reduz.matches ? 'auto' : 'smooth',
       });
     };
