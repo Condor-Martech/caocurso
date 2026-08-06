@@ -54,16 +54,22 @@ Todas tomadas. Nenhuma pendente.
 | Seleção dos vencedores | **Júri presencial** | Sem software no meio |
 | CPF na planilha | **Vai** — é ali que se cruza com o Clube | Obriga acesso por conta nomeada. Ver §3, «Acesso» |
 
-> **O MinIO ficou de fora, e vale saber por quê.** A ideia era poupar a cota gratuita do
-> Supabase com fotos pesadas. Quando saiu o número real —**50 inscrições**— a conta virou
-> outra: medido com fotos reais depois do reprocessamento, a média é **113 KB** e o pior
-> caso **228 KB**, então as 50 ocupam entre **6 e 12 MB de 1 GB**. O MinIO não poupava
-> nada e acrescentava uma peça a mais que pode falhar. (O teto real desse plano são umas
-> **4.500 inscrições** — ver `README.md`.)
+> **O MinIO entrou por ordem, não por cálculo — e vale saber por quê.** Este bloco dizia o
+> contrário até 2026-08-06: que o MinIO ficara de fora porque não poupava nada. O
+> raciocínio técnico continua correto e é o que segue abaixo; o que mudou é que **deixou de
+> ser a pergunta**.
 >
-> O MinIO **segue em uso para outra coisa**: o PDF do regulamento e os logos dos
-> patrocinadores, que são arquivos que se querem trocar sem rebuild. São dois problemas
-> diferentes com a mesma palavra no meio.
+> O cálculo era este: com **50 inscrições** e fotos reprocessadas —média **113 KB**, pior
+> caso **228 KB**— o total são **6 a 12 MB de 1 GB**. O storage do Supabase sobrava, e o
+> MinIO acrescentava uma peça a mais que pode falhar.
+>
+> Em 2026-08-06 o cliente mandou tirar as fotos do Supabase. É uma decisão de quem é dono
+> dos dados, não uma otimização, e a resposta certa a isso não é rediscutir a conta. **O que
+> importa é que custou um arquivo** (`src/lib/storage.ts`) porque o banco guarda a `key` e
+> nunca a URL — ver §4.
+>
+> ⚠️ O preço real é o que ficou no §4: **são dois serviços em vez de um**, e o Supabase
+> dava uma rede por baixo do código (`allowed_mime_types`) que o MinIO não dá.
 
 ---
 
@@ -535,8 +541,10 @@ descrevia um projeto maior do que o que existe. Foi removido, e o motivo importa
   `client_max_body_size` do Nginx, que está em 30 MB.
 - **O outbox `cao_evento_integracao` e o worker que o consumiria** — ver §3. Com 50 fichas
   é infraestrutura para um problema que não se tem.
-- **O MinIO para as fotos** — ver §1. Segue em uso para o regulamento e os logos, que é
-  outro problema.
+- ~~**O MinIO para as fotos**~~ — **deixou de estar descartado em 2026-08-06**, por ordem
+  do cliente, e é o que está implementado hoje. Fica riscado e não apagado justamente
+  porque esta lista existe para que ninguém reproponha o já discutido: quem a leia tem de
+  ver que esta mudou de lado, e por quê. Ver §1 e §4.
 - **O n8n como intermediário até a planilha** — um contêiner a mais para fazer um `POST`
   que o próprio servidor faz em quinze linhas.
 - **Migrar o formulário para ilha React com `client:visible`** — era da época em que a

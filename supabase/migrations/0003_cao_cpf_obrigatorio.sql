@@ -27,8 +27,17 @@
 --
 -- ⚠️ LGPD: exigir CPF precisa de justificativa, e aqui existe e é limpa — é a
 -- condição de participação que o briefing define, não um dado recolhido «por
--- via das dúvidas». O CPF continua FORA da planilha (ver docs/PLATAFORMA.md §3):
--- quem precisar cruzá-lo faz isso no painel do Supabase.
+-- via das dúvidas».
+--
+-- ⚠️ O CPF **VAI à planilha**, e é a terceira coluna. Este comentário dizia o
+-- contrário —«continua FORA da planilha, quem precisar cruzá-lo faz isso no
+-- painel do Supabase»— e ficou desatualizado no mesmo dia: sem a coluna, o
+-- cruzamento com a base do Clube Condor, que é MANUAL e se faz naquela aba,
+-- não tinha como acontecer, e este interruptor exigia um dado que ninguém
+-- podia usar. Ver docs/PLATAFORMA.md §3 e src/lib/planilha-colunas.mjs.
+--
+-- A contrapartida é de operação: a planilha virou um cadastro com CPF, e o
+-- compartilhamento tem de ser por conta nomeada.
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE public.cao_campanha

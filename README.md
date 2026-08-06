@@ -146,6 +146,12 @@ projeto (Dashboard → SQL Editor). São idempotentes.
 |---|---|
 | `0001_cao_inscricao.sql` | Tabela `cao_inscricao`, índices de duplicidade, RLS fechado. **O bucket que ela cria ficou morto**: as fotos foram para o MinIO em 2026-08-06 |
 | `0002_cao_campanha_e_vagas.sql` | Tabela `cao_campanha`, vista `cao_estado_inscricao`, função `criar_inscricao()` |
+| `0003_cao_cpf_obrigatorio.sql` | Coluna `cao_campanha.cpf_obrigatorio` (padrão `true`) e recria a vista para expô-la |
+
+> ⚠️ **São três, e a terceira não é opcional.** Sem a `0003` a coluna não existe, e o
+> `UPDATE` da seção «Exigir ou não o CPF» falha com «column cpf_obrigatorio does not
+> exist». **E falha em silêncio**: `src/lib/inscricao.ts` lê a vista com `select('*')` e
+> trata a coluna ausente como `true`, então o formulário exige CPF e não há como desligá-lo.
 
 ### As três peças
 
@@ -349,7 +355,8 @@ Editor → `cao_inscricao` → exportar CSV.
 
 ```bash
 curl -H "Origin: http://localhost:4321" \
-     -F "tutorNome=Teste Silva" -F "tutorEmail=a@b.com" -F "tutorTelefone=41999999999" \
+     -F "tutorNome=Teste Silva" -F "tutorCpf=048.123.456-00" \
+     -F "tutorEmail=a@b.com" -F "tutorTelefone=41999999999" \
      -F "petNome=Rex" -F "aceiteRegulamento=on" -F "petFoto=@pet.jpg" \
      http://localhost:4321/api/inscricao
 ```
@@ -429,7 +436,7 @@ guardar estado local.
 ├── Dockerfile                  multi-etapa, usuário node, healthcheck em /healthz
 ├── docker-compose.yml          porta só em 127.0.0.1, init:true, env_file
 ├── deploy/nginx.conf.example   proxy reverso — leia os avisos
-├── supabase/migrations/        0001 e 0002
+├── supabase/migrations/        0001, 0002 e 0003
 ├── scripts/optimizar-assets.mjs
 ├── assets-fonte/               ⚠️ ~1 GB de gráfica. Fora do git e fora de public/
 ├── src/
@@ -515,12 +522,14 @@ vários sistemas de deploy, a mesma.
 | | Limite | Com ~50 inscrições |
 |---|---|---|
 | Banco | 500 MB | ~50 KB |
-| Storage | 1 GB | ~12 MB |
 | Egress | 5 GB/mês | irrelevante |
-| Upload por arquivo | 50 MB | subimos ~113 KB |
+| ~~Storage~~ | ~~1 GB~~ | **não se aplica**: as fotos vão ao MinIO desde 2026-08-06 |
 
-O teto real é o **storage**: cerca de 4.500 inscrições, medido com fotos reais depois do
-reprocessamento (média 113 KB, pior caso 228 KB). Bem acima do previsto.
+**Sobra tudo, e por muito.** Uma ficha são ~1 KB de texto: caberiam centenas de milhares
+antes de encostar nos 500 MB. Esta tabela dizia que o teto era o storage —umas 4.500
+inscrições, com fotos de 113 KB de média— e desde a mudança para o MinIO isso deixou de
+ser um limite do Supabase. Se algum dia o storage voltar a importar, o número a olhar é o
+do **MinIO**, que é da Condor e não tem cota gratuita.
 
 > O limite real não é técnico, são as **50 vagas** de `cao_campanha`. E o que impede alguém
 > de queimá-las com um laço é o limite de tentativas: **8 por IP a cada 10 minutos**
@@ -547,13 +556,15 @@ reprocessamento (média 113 KB, pior caso 228 KB). Bem acima do previsto.
   de estar resolvido *antes* de abrir ao público, porque com inscrições já recolhidas não há
   conserto
 - **Retenção e expurgo** — prazo pós-campanha, sem definir
-- **Direito de exclusão** — a coluna `excluido_em` existe e é respeitada pela vista e por
-  `/foto/<id>`, mas não há fluxo para acioná-la
+- ~~**Direito de exclusão**~~ — **feito**, e documentado acima em «Atender um pedido de
+  exclusão (LGPD art. 18)»: `--excluir <uuid> --apagar` apaga a foto do bucket, anonimiza
+  os campos pessoais e deixa o registro de quando o pedido foi atendido
 
 **Técnico:**
 
-- Servir imagens e o PDF a partir do MinIO (`lp-content/caocurso/`, já subidos) para trocar
-  um logo sem build. O código ainda aponta para `/assets/`
+- Servir **as imagens** a partir do MinIO (`lp-content/caocurso/`, já subidas) para trocar
+  um logo sem build. **O PDF do regulamento já sai de lá** (`regulamentoPdf` em
+  `site.json`); o que continua em `/assets/` são os logos e o KV
 - Sem JavaScript, a resposta do formulário aparece como JSON cru. O dado é gravado, mas é feio
 
 ---

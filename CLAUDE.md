@@ -304,7 +304,7 @@ Outras pastas servidas:
   à mão, saem de `assets-fonte/galeria/`.
 - `public/assets/patrocinadores/` — os logos chapados que **de fato são servidos**: 5
   arquivos de 2025 reaproveitados (Friskies, Dog Chow, Kelcat, Keldog, brf pet). Os
-  outros dois, Doogs e Procão, já saem do KV 2026 em `public/assets/2026/`.
+  outros três —Nestlé Purina, Doogs e Procão— já saem do KV 2026 em `public/assets/2026/`.
 
   O material de origem que o marketing mandou —180 arquivos, 78 MB de `.zip`, `.ai` e
   manuais de marca em PDF da Nestlé, Mars e Kelco— vive em
@@ -431,8 +431,10 @@ O seu propósito é **cadastrar UM pet com a sua foto para o concurso Cãocurso*
 
 Campos, conforme o briefing (`docs/LP Cão Curso.docx`):
 
-- **Tutor:** `tutorNome`*, `tutorNascimento`, `tutorCpf` (o do Clube Condor),
-  `tutorEmail`*, `tutorTelefone`*
+- **Tutor:** `tutorNome`*, `tutorNascimento`, **`tutorCpf`*** (o do Clube Condor —
+  obrigatório enquanto `cao_campanha.cpf_obrigatorio` estiver em `true`, que é o padrão
+  desde 2026-08-06 **e também o valor que se assume quando a campanha não pode ser lida**;
+  ver «O CPF é obrigatório, por interruptor»), `tutorEmail`*, `tutorTelefone`*
 - **Pet:** `petNome`*, `petRaca`, `petSexo`, `petDescricao`, **`petFoto`*** (máx. **25 MB**)
 - `aceiteRegulamento`* — regulamento + autorização de uso de imagem. **Não está na
   arte**; foi acrescentado a pedido do cliente porque um concurso com foto precisa disso
@@ -476,7 +478,7 @@ Ou, do jeito que produção vai rodar:
 
 ```bash
 docker compose up -d --build
-curl -s localhost:4321/healthz   # 200 = o Supabase responde. 503 = não.
+curl -s localhost:4321/healthz   # 200 = Supabase E MinIO respondem. 503 = um dos dois não
 ```
 
 > ⚠️ **A validação do `.env` é preguiçosa.** O `astro:env` só confere as variáveis quando
@@ -635,7 +637,8 @@ Esta pasta é **isolada e autossuficiente**:
 ├── src/
 │   ├── pages/
 │   │   ├── index.astro        (MAIN — os 11 blocos + 4 Faixa)
-│   │   ├── healthz.ts         (200 se o Supabase responde, 503 se não. Alvo do HEALTHCHECK)
+│   │   ├── healthz.ts         (200 se o Supabase E o MinIO respondem; 503 dizendo qual
+│   │   │                       dos dois falhou. Alvo do HEALTHCHECK)
 │   │   ├── foto/[id].ts       (302 para uma URL assinada de 300 s. O bucket segue privado)
 │   │   └── api/
 │   │       ├── inscricao.ts   (POST multipart/form-data)
@@ -758,7 +761,7 @@ node ./dist/server/entry.mjs   # Rodar o build
 
 # Como produção vai rodar
 docker compose up -d --build
-curl -s localhost:4321/healthz # 200 = o Supabase responde. 503 = não.
+curl -s localhost:4321/healthz # 200 = Supabase E MinIO respondem. A mensagem do 503 diz qual falhou
 docker logs petcondor-lp -f    # aqui aparecem os erros de envio à planilha
 
 # Reconverter o KV quando o marketing entregar arte nova
@@ -767,7 +770,8 @@ node scripts/optimizar-assets.mjs   # assets-fonte/ → public/assets/2026/
 # Testar o endpoint de inscrição.
 # O -H "Origin: …" é OBRIGATÓRIO: sem ele o Astro 7 corta o POST com um 403 (CSRF).
 curl -H "Origin: http://localhost:4321" \
-     -F "tutorNome=Teste Silva" -F "tutorEmail=a@b.com" -F "tutorTelefone=41999999999" \
+     -F "tutorNome=Teste Silva" -F "tutorCpf=048.123.456-00" \
+     -F "tutorEmail=a@b.com" -F "tutorTelefone=41999999999" \
      -F "petNome=Rex" -F "aceiteRegulamento=on" -F "petFoto=@pet.jpg" \
   http://localhost:4321/api/inscricao
 
@@ -786,8 +790,19 @@ node scripts/limpar-inscricoes.mjs --tudo --apagar   # faz, ficha e foto
 node scripts/limpar-inscricoes.mjs --orfas --apagar  # recolhe o que já sobrou
 ```
 
-Para uma exclusão de LGPD é outra coisa: preenche-se `excluido_em`, e aí a ficha some da
-planilha e devolve a vaga, mas fica o registro de quando foi atendida.
+Para uma exclusão de LGPD é outra coisa, e **não é preencher `excluido_em` à mão**:
+
+```bash
+node scripts/limpar-inscricoes.mjs --excluir <uuid> --apagar
+```
+
+Isso apaga a foto do bucket, anonimiza nome, nascimento, CPF, e-mail, telefone e descrição,
+e **deixa `excluido_em` preenchido** — a ficha some da planilha, devolve a vaga e fica o
+registro de quando o pedido foi atendido.
+
+⚠️ **Marcar `excluido_em` pelo painel não é apagar, é esconder**: a pessoa sai da planilha
+mas nome, CPF, telefone e a foto seguem inteiros no banco. Se ela perguntar «vocês apagaram
+meus dados?», a resposta honesta seria «não». Ver `README.md` e `docs/PLATAFORMA.md` §5.
 
 ---
 
@@ -814,8 +829,8 @@ planilha e devolve a vaga, mas fica o registro de quando foi atendida.
 
 👉 **Depois:** `npm run dev` — a LP está construída e alinhada ao KV 2026.
 
-👉 **De código falta pouco:** apontar o regulamento de 2026 quando ele chegar, e servir o
-regulamento e os logos a partir do MinIO para poder trocá-los sem rebuild.
+👉 **De código falta pouco:** apontar o regulamento de 2026 quando ele chegar —o de 2025 já
+sai do MinIO— e mover também os logos para lá, para poder trocá-los sem rebuild.
 
 👉 **O que falta de verdade não é código:** a decisão do cliente sobre o consentimento do
 CRM —e essa é irreversível assim que a primeira ficha entrar— e o deploy no VPS, que faz a
