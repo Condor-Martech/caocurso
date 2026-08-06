@@ -3,9 +3,12 @@
 Landing page de **pet.condor.com.br**, a campanha *Mês Pet* / *Cãocurso* da rede Condor.
 Uma página só, com um formulário de inscrição que grava no Supabase.
 
-**Stack:** Astro 7 (`output: 'server'`) · React 19 · Tailwind CSS v4 · TypeScript · Node ≥ 22.12
-**Persistência:** Supabase (Postgres + Storage)
+**Stack:** Astro 7 (`output: 'server'`) · Tailwind CSS v4 · TypeScript · Node ≥ 22.12
+**Persistência:** Supabase (Postgres) · **MinIO** para as fotos, bucket privado
 **Deploy:** VPS com Docker, atrás de Nginx
+
+> React 19 está instalado e **sem nenhuma ilha**: o formulário é Astro puro. E o Storage
+> do Supabase deixou de se usar em 2026-08-06, quando as fotos foram para o MinIO.
 
 > Toda a interface, a documentação e as mensagens de commit deste repositório são em
 > **português do Brasil**.
@@ -56,8 +59,20 @@ O formulário abre como **modal** a partir do botão do bloco «29 de agosto». 
 ele é uma seção normal no fim da página e o botão é uma âncora até ela — continua sendo
 possível se inscrever.
 
-São **11 campos**. Obrigatórios: nome, e-mail e telefone do tutor; nome e **foto** do pet; e
-o aceite do regulamento. Opcionais: nascimento, CPF, raça, sexo e descrição.
+**No celular não é um cartão, é uma folha de tela cheia**: cabeçalho fixo, só o corpo
+desliza, e o rodapé com «Anexar foto» e «Enviar inscrição» sempre à vista. Onze campos não
+cabem numa tela de celular de nenhuma maneira —e com o teclado aberto sobram uns 360 px—
+então o que se conserta não é a rolagem: é que o botão de enviar deixe de ficar enterrado
+no fim dela. O porquê, com as medidas, está em [`CLAUDE.md`](CLAUDE.md).
+
+Ao gravar, o formulário **é substituído por uma tela de sucesso** com o nome do pet
+(«Pipoca já está concorrendo no Cãocurso 2026»), que fecha sozinha em 6 s e tem botão
+«Fechar». Antes era uma barra dentro do cartão que em celular podia ficar fora da tela — e
+como **não há e-mail de confirmação**, essa é a única confirmação que a pessoa recebe.
+
+São **11 campos**. Obrigatórios: nome, e-mail e telefone do tutor; **CPF** (por
+interruptor, ver mais abaixo); nome e **foto** do pet; e o aceite do regulamento.
+Opcionais: nascimento, raça, sexo e descrição.
 
 ### Os quatro estados do botão
 
@@ -254,6 +269,36 @@ A linha some da planilha no mesmo comando, e a vaga volta ao concurso.
 Sincroniza sozinha. Depois de **cada** inscrição salva, o servidor manda a lista inteira
 para um Web App do Google Apps Script, que reescreve a aba. Ver [`deploy/planilha.gs`](deploy/planilha.gs)
 — as instruções de instalação estão no cabeçalho do próprio arquivo.
+
+**As colunas:** nome do tutor, nascimento, **CPF**, e-mail, telefone, nome do pet, raça,
+sexo, descrição, data da inscrição e o link da foto. Vivem num único lugar,
+[`src/lib/planilha-colunas.mjs`](src/lib/planilha-colunas.mjs), que o servidor e o script
+de manutenção **importam** — estiveram duplicadas e a cópia ficou para trás justo quando o
+CPF entrou.
+
+Três campos saem **formatados**, e nenhum é por estética:
+
+| | Vai como | Se fosse cru |
+|---|---|---|
+| CPF | `048.123.456-00` | Onze dígitos são um **número** para o Sheets, e um número não guarda o zero da frente: quem cruzar à mão com a base do Clube leria um CPF errado |
+| Telefone | `(41) 98888-7777` | `41988887777` num bloco, impossível de ler ou de discar |
+| Nascimento | `12/05/1984`, texto | Como data de verdade, a conversão desde UTC a atrasa **um dia** |
+
+⚠️ **Com 11 dígitos, um `55` na frente não se recorta** — `55` também é o DDD de Santa
+Maria (RS), e recortá-lo inventaria um número que não existe. Só a partir de 12 dígitos há
+espaço para código de país e DDD, e aí sim sai `+55 (41) 98888-7777`. Qualquer tamanho que
+não encaixe **volta tal como está**: uma célula feia é melhor que um telefone mutilado.
+
+> ⚠️ **A planilha leva CPF, e isso muda como se compartilha.** Deixou de ser uma lista de
+> nomes de pets: é um cadastro. **Conta nomeada, e só a quem precisa** — «qualquer pessoa
+> com o link» não serve. O CPF vai porque o cruzamento com a base do Clube Condor é manual
+> e se faz nessa aba; sem a coluna, exigir CPF no formulário não servia para nada.
+
+> 📌 **Pendente de colar no Apps Script.** `deploy/planilha.gs` ganhou o trecho que força
+> CPF, telefone e nascimento a **formato de texto** na planilha. Não é urgente —o CPF viaja
+> mascarado (`048.123.456-00`) e por isso já sobrevive— mas é a segunda rede: onze dígitos
+> crus são um número para o Sheets, e um número não guarda o zero da frente. Cola-se o
+> arquivo no editor do script e faz-se **Implantar → Nova versão** (salvar não basta).
 
 Três coisas que explicam o desenho:
 
@@ -458,6 +503,10 @@ vários sistemas de deploy, a mesma.
 | **403 no `curl`** ao testar o endpoint | Falta `-H "Origin: …"` |
 | Imagem não carrega | Confira se o caminho existe em `public/`. Um `src` quebrado **não** é erro de tipos: `astro check` e o build passam igual |
 | Projeto do Supabase fora do ar | Projetos gratuitos **pausam após 1 semana sem atividade**. Reative pelo painel |
+| A inscrição entrou mas **a aba não muda** | O Sheets **não repinta sozinho** o que um script escreveu: F5. E confira a aba — os dados caem em «Inscrições», não em «Página1» |
+| A planilha demora **~11 s** no primeiro envio | Arranque a frio do Apps Script depois de um redeploy. Em quente são ~2,5 s |
+| `⚠️ No pude avisar a la hoja: operation was aborted due to timeout` ao apagar | O Apps Script passou dos 30 s. **O apagado sim ocorreu**; só a aba ficou atrasada. Conserta-se com `--sincronizar` |
+| O CPF aparece **sem o zero da frente** | Alguém escreveu na aba por fora, em cru. O envio manda `048.123.456-00` justamente para que o Sheets o trate como texto |
 
 ---
 

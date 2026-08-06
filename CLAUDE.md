@@ -8,18 +8,26 @@ isolado da LP do Pet Condor.
 **Objetivo:** construir a landing page de **pet.condor.com.br** (campanha *Mês Pet* /
 *Cãocurso* da rede Condor) usando Astro + Tailwind CSS + React.
 
-**Stack:** Astro 7.x (`output: 'server'` + `@astrojs/node` standalone) | React 19 |
-Tailwind CSS v4 | TypeScript | Node.js ≥22.12.0 | Supabase (Postgres + Storage) | sharp
+**Stack:** Astro 7.x (`output: 'server'` + `@astrojs/node` standalone) | Tailwind CSS v4 |
+TypeScript | Node.js ≥22.12.0 | **Supabase** (Postgres) | **MinIO** (as fotos) | sharp
+
+> React 19 e `@astrojs/react` **seguem instalados e sem nenhuma ilha**. Não é descuido nem
+> dívida: a ideia de migrar o formulário para React é de quando a persistência ainda não
+> existia, e não sobreviveu ao contato com o problema real — o que o formulário precisava
+> era do servidor, não do cliente. E o **Storage do Supabase já não se usa**: as fotos
+> foram para o MinIO em 2026-08-06.
 
 **Idioma:** **português do Brasil (pt-BR), 100%** — tanto os textos visíveis do site
 quanto a documentação e as mensagens de commit deste repositório.
 
-**Estado:** LP alinhada ao **KV 2026**, com a inscrição **persistida no Supabase** e a
-planilha do júri se abastecendo sozinha. Build limpo, `astro check` com 0 erros, sem
-caminhos de assets quebrados. A tag `v2026-base` marca o fim do saneamento visual: é para
-lá que se volta se um retoque de layout der errado. O que falta antes de abrir ao público
-não é arquitetura: é uma decisão de LGPD que cabe ao cliente e o deploy no VPS, que é da
-equipe de infra. Ver «Estado de implementação».
+**Estado:** LP alinhada ao **KV 2026**, com a inscrição **persistida no Supabase**, as
+fotos no **MinIO** e a planilha do júri se abastecendo sozinha —**com CPF**, que é o dado
+pelo qual toda esta campanha existe. No celular o formulário é uma **folha de tela cheia**
+e termina numa tela de sucesso com o nome do pet. Build limpo, `astro check` com 0 erros,
+sem caminhos de assets quebrados. A tag `v2026-base` marca o fim do saneamento visual: é
+para lá que se volta se um retoque de layout der errado. O que falta antes de abrir ao
+público não é arquitetura: é uma decisão de LGPD que cabe ao cliente e o deploy no VPS, que
+é da equipe de infra. Ver «Estado de implementação».
 
 **Onde isto vive de verdade:** o [`README.md`](README.md) é o manual de operação — como
 subir, que variáveis existem, como consertar a planilha, o que fazer quando algo quebra.
@@ -135,7 +143,7 @@ Light, Regular, SemiBold, Bold, Heavy) convertidos para `.woff2`.
 - Exige `output: 'server'` + um adapter SSR em `astro.config.mjs`, ou as rotas de API não
   são executadas. **Adapter atual: `@astrojs/node` em modo `standalone`.**
 
-  O build sai em **`dist/`** — `dist/server/` (o servidor HTTP, 588 KB, dos quais 226 são
+  O build sai em **`dist/`** — `dist/server/` (o servidor HTTP, 612 KB, dos quais 228 são
   o `entry.mjs`) e `dist/client/` (o estático, 7,8 MB). O site roda num **VPS com
   Docker**, atrás de um Nginx: os artefatos são `Dockerfile`, `docker-compose.yml` e
   `deploy/`.
@@ -161,6 +169,8 @@ inscrição, em ordem:
 3. sobe ao bucket privado do MinIO            src/lib/storage.ts    → key 2026/<uuid>.webp
 4. grava a ficha                              rpc criar_inscricao   → tabela cao_inscricao
 5. empurra a planilha do júri, sem await      src/lib/planilha.ts   → Web App do Apps Script
+                                              └ as colunas e o formato de cada campo:
+                                                src/lib/planilha-colunas.mjs
 ```
 
 Cada peça tem o seu módulo, e isso é de propósito: **`src/lib/storage.ts` é o único
@@ -168,6 +178,28 @@ arquivo que sabe onde vivem as fotos.** E já se cobrou: em 2026-08-06 o cliente
 tirar as fotos do Supabase e pô-las no **MinIO**, e a mudança custou esse arquivo e mais
 nenhum. O endpoint, `/foto/<id>`, a planilha e os links já escritos nela seguiram
 funcionando — porque o banco guarda a `key`, nunca a URL.
+
+**As colunas da planilha vivem num arquivo só, e isso foi aprendido do jeito caro.**
+`planilha-colunas.mjs` é `.mjs` para que `scripts/limpar-inscricoes.mjs` —node puro, sem
+Astro— importe **a mesma lista** que o servidor. Antes eram duas cópias, com um comentário
+que avisava «é a única costura frágil deste script»: quando o CPF entrou na lista, a cópia
+ficou para trás. Um comentário que alerta de um risco não evita o risco.
+
+O que a planilha leva, e por quê:
+
+| Coluna | Formato | Por quê |
+|---|---|---|
+| `CPF` | `048.123.456-00` | Onze dígitos crus são um **número** para o Sheets, e um número não guarda o zero da frente. A máscara o torna texto |
+| `Telefone` | `(41) 98888-7777` | ⚠️ Com 11 dígitos um `55` na frente **não se recorta**: `55` também é o DDD de Santa Maria (RS). Só a partir de 12 há espaço para país E DDD |
+| `Nascimento` | `12/05/1984`, texto | Convertida a data de verdade, `new Date('1984-05-12')` é meia-noite **em UTC** — em Brasília ainda é o dia 11 |
+| `Data da inscrição` | Date real | Esta sim se converte: o júri vai querer ordenar e filtrar por intervalo |
+
+⚠️ **O CPF vai à planilha, e é uma correção, não um descuido.** Houve uma versão sem ele,
+com um raciocínio que soava bem —é o dado que transforma um vazamento chato num grave— e
+estava errado **para esta campanha**: o cruzamento com a base do Clube Condor é manual e se
+faz nessa aba, então sem a coluna se exigia de 50 pessoas um dado que ninguém podia usar.
+A contrapartida é de operação, não de código: a planilha virou um cadastro e o
+compartilhamento tem de ser **por conta nomeada**.
 
 Hoje: **MinIO, bucket privado `caocursantes`** em `s3.cndr.me`. Não o `lp-content` do
 regulamento e dos logos, que deixa listar o seu índice sem credenciais — e uma key de UUID
@@ -187,7 +219,7 @@ recebe uma tela de falha por causa da planilha.
 > que a persistência ainda não existia e não sobreviveu ao contato com o problema real —
 > o que o formulário precisava era do servidor, não do cliente. O JavaScript que ele tem
 > —abrir e fechar o modal com foco e Escape, as máscaras de CPF, telefone e data, o envio
-> por `fetch` e a redução da imagem— são ~390 linhas de script simples, sem framework.
+> por `fetch` e a redução da imagem— são ~600 linhas de script simples, sem framework.
 
 Ver [`docs/PLATAFORMA.md`](docs/PLATAFORMA.md) para o modelo de dados e a LGPD, e o
 [`README.md`](README.md) para operar.
@@ -345,6 +377,56 @@ quando o período está fechado deixaria a âncora apontando para o nada.
 `role="dialog"` e `aria-modal` são colocados pelo script ao abrir, não pelo HTML:
 enquanto é uma seção normal não há diálogo a anunciar.
 
+#### No celular é uma folha, e o botão de enviar não se perde
+
+Abaixo de 768 px o modal deixa de ser um cartão centrado e vira uma **folha de tela
+cheia**: cabeçalho fixo em cima, **só o corpo rola**, e o rodapé com «Anexar foto» e
+«Enviar inscrição» fixo embaixo.
+
+Não é enfeite, é aritmética. Medido com Chrome em janelas reais, o cartão pede de 880 a
+1.000 px contra os 553-745 que um celular tem — de 118 % a 178 % da tela:
+
+| | janela | cartão | |
+|---|---|---|---|
+| iPhone SE | 553 | 984 | Galaxy S23 673 · 997 |
+| iPhone 15 | 659 | 921 | Pixel 8 731 · 931 |
+| iPad mini | 954 | 810 ✅ | Notebook 1366 660 · 628 ✅ |
+
+**Rolagem zero não é alcançável, e é bom saber por quê antes de tentar de novo.** São onze
+campos: partir em dois passos também não chega —o passo do pet mede 695 px contra os 673 de
+um Galaxy S23— e **com o teclado aberto sobram uns 360 px de janela**, onde não cabe
+nenhum formulário. O navegador tem de rolar para manter à vista o campo focado, e isso
+acontece igual com três campos. O que se conserta é outra coisa: até aqui o botão de enviar
+vivia enterrado no fim de 1,4 telas de cartão.
+
+⚠️ **A altura da folha sai de `visualViewport`, não de `100svh`.** Ao abrir o teclado, o
+iOS encolhe o viewport visual e deixa o de layout intacto: uma camada `fixed` de `100svh`
+fica com o rodapé debaixo das teclas. O script publica `--folha-h` e `--folha-topo`; sem
+suporte cai em `100svh`, que é o que havia. Pelo mesmo motivo o modo compacto do rodapé é
+uma **classe** (`.folha-baixa`) e não uma media query de `max-height`: essas se medem
+contra o viewport de layout e nunca disparariam com o teclado aberto.
+
+#### A inscrição termina numa tela de sucesso, não numa barrinha
+
+Ao gravar a ficha, o formulário **é substituído** por um painel com o tique, «Inscrição
+realizada com sucesso!» e o nome do pet — que vem do servidor (`petNome` no JSON) e entra
+no DOM com `textContent`, nunca com `innerHTML`.
+
+Era uma barra azul dentro do cartão, e em celular podia **não ser vista**: ficava na altura
+do meio de um cartão de 900 px, então enviando do fim ela nem aparecia na tela. Como não há
+e-mail de confirmação, aquela barra era a única confirmação que a pessoa ia receber.
+
+Não é um segundo modal por cima: são duas camadas, duas armadilhas de foco, e o formulário
+de trás continuaria rolando. É o mesmo modal que troca de conteúdo — e assim o cartão
+encolhe de 900 px para 334, que já se lê sozinho como «pronto».
+
+Fecha sozinho em **6 s** (eram 3, curtos demais para ler um nome), e tem um botão «Fechar»
+à vista. Quem devolve o cartão ao seu estado é o **fechamento**, não o envio: assim dá no
+mesmo fechar pelo botão, pelo X, com Escape ou deixando o tempo correr.
+
+Os **erros seguem na barra vermelha** dentro do formulário, de propósito: num erro a pessoa
+precisa ver os seus campos para corrigir, não que os tapem.
+
 O seu propósito é **cadastrar UM pet com a sua foto para o concurso Cãocurso**.
 
 Campos, conforme o briefing (`docs/LP Cão Curso.docx`):
@@ -417,12 +499,26 @@ curl -s localhost:4321/healthz   # 200 = o Supabase responde. 503 = não.
 | 7 | **Persistência**: Supabase (tabela + bucket privado), foto reprocessada, deploy em Docker | ✅ feito |
 | 8 | **Vagas e planilha**: 4º estado «Esgotado», teto de 50, espelho automático na planilha do júri | ✅ feito |
 | 9 | **Fechamento do fluxo**: CPF obrigatório por interruptor, limite de tentativas, exclusão LGPD que apaga de verdade | ✅ feito |
+| 10 | **Usabilidade no celular e o CPF na planilha**: folha de tela cheia, tela de sucesso, colunas numa fonte única | ✅ feito |
 
 **Verificado (2026-08-06):** `astro check` 0/0/0 · `npm run build` limpo · endpoint testado
 em 5 casos (201 válido, 400 sem aceite, 409 duplicado, 400 CPF inválido, 400 menor de
 idade) · 10 requisições simultâneas disputando 1 vaga → exatamente 1 × 201 e 9 × 409 ·
 planilha testada de ponta a ponta contra uma hoja real (inscrição → `{"ok":true}` do Apps
 Script → linha na aba → link da foto abrindo a imagem).
+
+**Verificado no celular (2026-08-06), com Chrome em janelas reais:**
+
+- A folha, em 6 aparelhos de 553 a 745 px de altura: cabeçalho 62 px, rodapé 134 px, o
+  botão «Enviar inscrição» **à vista em todos**, e também com o teclado aberto (janela de
+  360 px → corpo de 196 px, e nenhum alvo de toque abaixo de 40 px).
+- O ciclo completo no navegador: máscaras → envio → tela de sucesso com o nome do pet → o
+  foco vai para o painel → fechar devolve o formulário → reabrir mostra os campos limpos.
+- Escritório a 1366×660, 1440×900 e 768×954 **sem mudanças**: o X na sua esquina, sem
+  chocar com o título, e foto e botão na mesma fila.
+- **Sem JavaScript**: segue sendo uma seção normal com 11 campos e um POST multipart real.
+- A planilha, contra a aba de verdade: `048.123.456-00` com o zero da frente vivo, e
+  `(41) 98888-7777` legível.
 
 `dist/client` = **7,8 MB** (eram 86 antes de tirar os kits de marca de `public/`). Nenhum
 `.zip`, `.ai` nem `Thumbs.db` fica publicado. A imagem Docker ronda os 480 MB.
@@ -519,10 +615,10 @@ Esta pasta é **isolada e autossuficiente**:
 ```
 /home/diego/armando/Sites/petcondor/
 ├── astro.config.mjs           (output: 'server' + @astrojs/node standalone,
-│                               passthroughImageService, env.schema com 7 variáveis)
+│                               passthroughImageService, env.schema com 11 variáveis)
 ├── Dockerfile                 (multi-stage node:22-slim, USER node, HEALTHCHECK /healthz)
 ├── docker-compose.yml         (127.0.0.1:4321, init: true, env_file: .env)
-├── .env.example               (a planta das 7 variáveis; o .env NÃO é versionado)
+├── .env.example               (a planta das 11 variáveis; o .env NÃO é versionado)
 ├── deploy/
 │   ├── nginx.conf.example     (proxy reverso — leia o `map` do Origin antes de tocar)
 │   └── planilha.gs            (o Apps Script que recebe e reescreve a aba do júri)
@@ -569,9 +665,13 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   ├── s3.d.ts           (os tipos de s3.mjs, para o astro check)
 │   │   ├── foto.ts            (sharp: valida os magic bytes, gira, apaga o EXIF, WebP)
 │   │   ├── planilha.ts        (monta e empurra a lista ao Web App do júri)
+│   │   ├── planilha-colunas.mjs (as colunas e o formato de cada campo — CPF incluído.
+│   │   │                       .mjs para que o script de limpeza importe A MESMA lista:
+│   │   │                       tê-la duplicada já custou o CPF)
+│   │   ├── planilha-colunas.d.ts (os tipos do anterior, para o astro check)
 │   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
 │   ├── data/
-│   │   ├── site.json          (TODO o conteúdo visível: 179 strings, 15 blocos)
+│   │   ├── site.json          (TODO o conteúdo visível: 192 strings, 15 blocos)
 │   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)
 │   ├── layouts/
 │   │   └── Layout.astro       (lang="pt-BR")
@@ -723,9 +823,10 @@ equipe de infra. O logo da Fancy Feast e a 13ª foto da galeria seguem esperando
 
 ---
 
-**Estado:** ✅ LP alinhada ao KV 2026 · inscrição no Supabase · planilha do júri automática
-· testado de ponta a ponta contra uma planilha real.
+**Estado:** ✅ LP alinhada ao KV 2026 · inscrição no Supabase · planilha do júri automática,
+**com CPF** · formulário como folha de tela cheia no celular · testado de ponta a ponta
+contra uma planilha real e num navegador móvel.
 
-**Versão:** 5.0 (persistência e planilha — a base visual segue em `v2026-base`)
+**Versão:** 6.0 (celular e planilha completa — a base visual segue em `v2026-base`)
 
 **Última atualização:** 2026-08-06

@@ -52,7 +52,7 @@ Todas tomadas. Nenhuma pendente.
 | Quem empurra | **A própria LP**, sem worker | Ver §3 |
 | Deploy | **VPS com Docker**, `@astrojs/node` standalone | Build em `dist/`, contêiner atrás de Nginx |
 | Seleção dos vencedores | **Júri presencial** | Sem software no meio |
-| CPF na planilha | **Não vai** | Ver §3, «Acesso» |
+| CPF na planilha | **Vai** — é ali que se cruza com o Clube | Obriga acesso por conta nomeada. Ver §3, «Acesso» |
 
 > **O MinIO ficou de fora, e vale saber por quê.** A ideia era poupar a cota gratuita do
 > Supabase com fotos pesadas. Quando saiu o número real —**50 inscrições**— a conta virou
@@ -266,10 +266,28 @@ simultâneas são dois `doPost`, e sem trava uma limpa enquanto a outra escreve.
 - Compartilhada **por conta nominal** dentro do workspace da Condor. **Nunca «qualquer
   pessoa com o link»**: é o vetor de vazamento número um e o Google não registra quem
   baixou.
-- Colunas: nome, e-mail, telefone, nome do pet, raça, sexo, descrição, data e o link da
-  foto. **O CPF não** — é o dado que transforma um vazamento chato num vazamento grave, e
-  para premiar ou contatar não acrescenta nada. Se o CRM precisar dele como chave de
-  cruzamento, é uma linha em `src/lib/planilha.ts`; que seja decisão consciente.
+- Colunas: nome, **nascimento**, **CPF**, e-mail, telefone, nome do pet, raça, sexo,
+  descrição, data e o link da foto.
+- **O CPF vai, e vai de propósito.** Houve uma versão sem ele —o raciocínio era que é o
+  dado que transforma um vazamento chato num vazamento grave— e estava errado para esta
+  campanha: o briefing pede «CPF cadastrado no Clube Condor», o cliente o tornou
+  obrigatório, e o cruzamento com a base de sócios é **manual, feito nesta aba**. Sem a
+  coluna, exigia-se um dado que ninguém podia usar.
+- ⚠️ **A consequência é esta lista de acesso, não a coluna.** Com CPF dentro, «qualquer
+  pessoa com o link» passa de má prática a incidente à espera de acontecer. Conta nominal,
+  e só a quem precisa.
+- **Três campos saem formatados, e nenhum por estética.** O CPF vai mascarado
+  (`048.123.456-78`), o telefone legível (`(41) 98888-7777`) e o nascimento como texto
+  `12/05/1984`. Onze dígitos seguidos são um *número* para o Sheets e um número não guarda
+  zeros à esquerda; e uma data-só convertida com `new Date()` chega **um dia atrasada**,
+  porque é meia-noite em UTC. O Apps Script ainda força as três colunas a formato de texto,
+  que é a segunda rede.
+- ⚠️ **No telefone, um `55` na frente de 11 dígitos não se recorta**: `55` também é o DDD de
+  Santa Maria (RS). Só a partir de 12 dígitos há espaço para país e DDD.
+- Tudo isto vive em `src/lib/planilha-colunas.mjs`, que o servidor **e** o script de
+  manutenção importam. É `.mjs` por isso: `planilha.ts` importa `astro:env` e um script de
+  node puro não pode carregá-lo. Antes eram duas cópias à mão, e a cópia ficou para trás
+  justamente quando o CPF entrou na lista.
 - O token do Web App **não é a `service_role`**. Ele acaba guardado nas propriedades de um
   script da Google, legível por quem edite a planilha: se vazar, o que se perde é a
   capacidade de reescrever essa aba. A `service_role` perderia o banco inteiro.
@@ -354,6 +372,7 @@ mortos.
 | 6 | Retenção | ⚠️ sem definir. Prazo pós-campanha + expurgo, **também da planilha** |
 | 7 | Menores | ⚠️ o endpoint exige +18 pela data de nascimento quando ela é informada, mas o campo é opcional. O simples é exigir +18 no regulamento |
 | 8 | Transferência internacional | ⚠️ o Supabase é Brasil, a planilha não. Cláusulas + acesso nominal |
+| 9 | **CPF fora do banco** | ⚠️ desde 2026-08-06 o CPF **vai à planilha** (§3), porque o cruzamento com o Clube Condor é manual e se faz ali. É a decisão certa para a campanha e **sobe o nível de exposição**: a aba deixou de ser uma lista de pets e é um cadastro. Compartilhamento por conta nomeada, e o ponto 6 —retenção— passa a valer também para o CPF |
 
 ### O ponto 4 esteve resolvido pela metade, e vale saber por quê
 
@@ -457,9 +476,13 @@ um o tira pelas ferramentas de desenvolvimento—; a regra é a do servidor.
 ⚠️ Mexer no interruptor não é retroativo em nenhuma direção: desligá-lo não apaga os CPFs
 já gravados, e ligá-lo depois não preenche as fichas que entraram sem ele.
 
-⚠️ **O CPF não vai à planilha** (§3), então o cruzamento não se faz a partir dela: teria de
-ser no painel do Supabase, por quem tenha acesso. Se a Condor quiser cruzar pela planilha,
-é preciso incluir a coluna — e aí a planilha passa a ser um documento bem mais sensível.
+✅ **O CPF vai à planilha** (§3), que é onde o cruzamento com a base do Clube acontece — é
+manual, e é feito por uma pessoa em cima daquela aba. Durante um tempo a coluna não existia
+e isso deixava a obrigatoriedade sem sentido: exigia-se um dado que ninguém conseguia usar.
+
+⚠️ **Em troca, a planilha passou a ser um documento sensível.** Deixou de ser uma lista de
+nomes de pets e é um cadastro com CPF: o compartilhamento tem de ser por conta nomeada, e
+só a quem precisa. «Qualquer pessoa com o link» deixa de ser aceitável.
 
 ### O que fica desprotegido enquanto isso
 
