@@ -311,6 +311,22 @@ const exigirCpf = await cpfObrigatorio();
                   d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
                 ></path>
               </svg>
+              {/* El tic sustituye al clipe cuando ya hay foto. El cambio lo hace
+                  el CSS con `:valid` —el input es `required`, así que sólo es
+                  válido cuando tiene archivo—, y por eso funciona también sin
+                  JavaScript. */}
+              <svg
+                class="arquivo__tique"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 12.5 9.5 18 20 6.5"></path>
+              </svg>
               <span>{formulario.arquivo.rotulo}</span>
             </label>
           </div>
@@ -683,32 +699,51 @@ const exigirCpf = await cpfObrigatorio();
     z-index: 1;
   }
 
+  /* Éste es el único control de la tarjeta que NO es un campo de texto: es un
+     botón. Se pintaba con el mismo gris que los placeholders, así que se leía
+     como un campo vacío —o peor, como algo desactivado— y no se sabía si podía
+     pulsarse. Ahora tiene tres estados que se distinguen a un metro:
+
+       vacío     contorno y texto AZUL           → «esto se pulsa»
+       al pasar  fondo azul muy claro
+       elegida   AZUL SÓLIDO, blanco, con tic    → «ya está»
+
+     No compite con el botón de enviar: aquél mide 60 px y 1,75rem, éste 44 px. */
   .arquivo__pill {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.625rem;
     width: 100%;
-    border: 2px solid var(--campo-borda);
+    border: 2px solid var(--c-blue);
     border-radius: 9999px;
     padding: 0.5rem 1.5rem;
-    color: var(--campo-suave);
+    color: var(--c-blue);
     font-size: 1rem;
+    font-weight: 600;
     line-height: 1.5;
     cursor: pointer;
     transition:
       border-color 0.15s ease,
+      background-color 0.15s ease,
       color 0.15s ease;
   }
 
-  .arquivo__clipe {
+  .arquivo__clipe,
+  .arquivo__tique {
     flex: none;
     width: 1.25rem;
     height: 1.25rem;
   }
 
+  .arquivo__tique {
+    display: none;
+  }
+
+  /* El azul clarito del hover se deriva del propio token de marca con
+     `color-mix`, no de un HEX nuevo: la paleta está cerrada. */
   .arquivo__input:hover ~ .arquivo__pill {
-    border-color: rgb(0 0 0 / 0.18);
+    background-color: color-mix(in srgb, var(--c-blue) 8%, var(--c-white));
   }
 
   .arquivo__input:focus-visible ~ .arquivo__pill {
@@ -716,8 +751,32 @@ const exigirCpf = await cpfObrigatorio();
     outline-offset: 2px;
   }
 
-  .arquivo__input[aria-invalid='true'] ~ .arquivo__pill {
+  /* CON FOTO. `:valid` sobre un input `required` de tipo file significa
+     exactamente «tiene archivo», así que este cambio de estado NO necesita
+     JavaScript: quien tenga los scripts bloqueados lo ve igual. */
+  .arquivo__input:valid ~ .arquivo__pill {
+    background-color: var(--c-blue);
+    color: var(--c-white);
+  }
+
+  .arquivo__input:valid ~ .arquivo__pill .arquivo__clipe {
+    display: none;
+  }
+
+  .arquivo__input:valid ~ .arquivo__pill .arquivo__tique {
+    display: block;
+  }
+
+  .arquivo__input:valid:hover ~ .arquivo__pill {
+    background-color: var(--c-blue-deep);
+  }
+
+  /* El error manda sobre todo lo anterior: si el servidor rechazó la foto se ve
+     en rojo aunque el input siga teniendo un archivo dentro. */
+  .arquivo__input[aria-invalid='true'] ~ .arquivo__pill,
+  .arquivo__input[aria-invalid='true']:valid ~ .arquivo__pill {
     border-color: var(--c-red);
+    background-color: var(--c-white);
     color: var(--c-red);
   }
 
