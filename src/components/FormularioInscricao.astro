@@ -50,8 +50,18 @@
  * funcionando (el usuario acaba en la respuesta JSON, feo pero no roto).
  */
 import { formulario } from '../data/site';
+import { cpfObrigatorio } from '../lib/inscricao';
 
 const { campos: c } = formulario;
+
+/* El CPF es obligatorio o no según `cao_campanha.cpf_obrigatorio`, no según una
+   constante de aquí: la campaña ya está abierta y esa es una decisión de
+   negocio que tiene que poder cambiarse con un UPDATE, sin build ni despliegue.
+
+   Esto es sólo la mitad amable —el navegador avisa antes de enviar—. La regla
+   de verdad la aplica `POST /api/inscricao` leyendo lo mismo, porque un
+   `required` se quita desde las herramientas de desarrollo en dos clics. */
+const exigirCpf = await cpfObrigatorio();
 ---
 
 <div id="modal-inscricao" class="modal" data-modal>
@@ -90,7 +100,23 @@ const { campos: c } = formulario;
       {/* ------------------------------------------------ Dados do Tutor */}
       <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
 
-      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+      {/* Los datos del tutor se emparejan a partir de `sm`, y no de los 380 px
+          que usa el bloque del pet, porque aquí los placeholders son frases y no
+          palabras.
+
+          A media columna en un móvil quedan ~81 px útiles —descontando los
+          20 px de padding y los 2 de borde a cada lado—, y ahí caben «Raça» y
+          «Sexo» pero no una fecha ni una frase. Los dos placeholders de esta
+          fila se estaban cortando, y el del CPF perdía justo lo que importa:
+          que es el del Clube Condor, no uno cualquiera. Apilados hay 188 px ya
+          en la pantalla más estrecha.
+
+          El punto más apretado de todo el rango NO es el móvil, es 768 px:
+          ahí entra `md:grid-cols-[5fr_6fr]` con un hueco de 4rem, y la columna
+          estrecha se queda en 181 px útiles. Cualquier placeholder de esta
+          rejilla tiene que caber ahí, y con margen: hasta que carga la Torus
+          el texto se pinta con la fuente del sistema, que es más ancha. */}
+      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 sm:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
         <div class="col-span-full">
           <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
           <input
@@ -107,7 +133,25 @@ const { campos: c } = formulario;
         </div>
 
         <div>
-          <!-- type="text" y no type="date" a propósito: ver el <script>. -->
+          <!-- type="text" y no type="date", a propósito, por tres motivos:
+
+               · `type="date"` IGNORA el placeholder y pinta siempre el formato
+                 del sistema. Aquí las etiquetas son sr-only, así que el
+                 placeholder ES el nombre del campo: el usuario dejaría de leer
+                 «Nascimento» para leer sólo «dd/mm/aaaa». Se cambia una
+                 ambigüedad por otra.
+               · Ese formato lo decide el idioma del SISTEMA OPERATIVO, no el
+                 `lang="pt-BR"` de la página. Un brasileño con el móvil en
+                 inglés vería mm/dd/aaaa, que es justo lo que se quiere evitar.
+               · Una fecha de nacimiento es el peor caso para un calendario:
+                 abre en el mes actual y hay que retroceder cuarenta años.
+
+               El formato se comunica por tres vías: el placeholder lo lleva
+               escrito, la máscara del <script> pone las barras al teclear, y
+               si aun así falla el `pattern`, el navegador enseña el `title`
+               dentro del globo de validación —también en móvil—. El endpoint
+               acepta dd/mm/aaaa y aaaa-mm-dd, así que cambiar de idea más
+               adelante no obliga a tocar el servidor. -->
           <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
           <input
             class="campo"
@@ -133,6 +177,7 @@ const { campos: c } = formulario;
             placeholder={c.tutorCpf.placeholder}
             inputmode="numeric"
             maxlength="14"
+            required={exigirCpf}
           />
         </div>
 

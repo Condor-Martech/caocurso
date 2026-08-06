@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createHash } from 'node:crypto';
-import { estadoInscricao } from '../../lib/inscricao';
+import { estadoInscricao, cpfObrigatorio } from '../../lib/inscricao';
 import { formulario } from '../../data/site';
 import {
   supabase,
@@ -264,6 +264,14 @@ export const POST: APIRoute = async ({ request, url }) => {
         'tutorNascimento'
       );
     }
+  }
+
+  /* La regla de verdad sobre el CPF, no el `required` del HTML — ese se quita
+     desde las herramientas de desarrollo en dos clics. Sale de
+     `cao_campanha.cpf_obrigatorio`, la misma fuente que lee el formulario, así
+     que encender o apagar el interruptor mueve las dos mitades a la vez. */
+  if (!tutorCpf && (await cpfObrigatorio())) {
+    return erro('Informe o CPF cadastrado no Clube Condor.', 400, 'tutorCpf');
   }
 
   if (tutorCpf) {

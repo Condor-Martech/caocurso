@@ -169,10 +169,40 @@ não fica desalinhado.
 > lê como UTC e o período fecharia às 20:59 do dia 21, horário de Brasília — três horas
 > antes do previsto. Em `abre_em` o desvio é o mesmo e abre três horas mais cedo.
 
+### Exigir ou não o CPF — **sem deploy**
+
+Mesma tabela, coluna `cpf_obrigatorio`. Hoje está em **`true`**: ninguém se inscreve sem
+informar um CPF válido.
+
+```sql
+UPDATE public.cao_campanha SET cpf_obrigatorio = false;  -- volta a ser opcional
+```
+
+Vale nos dois lados ao mesmo tempo — o `required` do formulário e a checagem do endpoint
+leem a mesma coluna —, e pega na carga seguinte, com os mesmos 10 segundos de cache.
+
+> ⚠️ **Obrigatório não é verificado.** O que se confere é que os dígitos verificadores
+> fecham, não que a pessoa seja sócia do Clube Condor: isso exigiria acesso à base de
+> sócios, que não existe. O que se ganha exigindo é que **todas** as fichas tenham CPF, de
+> modo que o cruzamento contra a base da Condor seja possível — e esse cruzamento é
+> trabalho humano, antes de 29/08. Ver `docs/PLATAFORMA.md` §6.
+
 ### Ver a foto de uma inscrição
 
 `https://pet.condor.com.br/foto/<id>`, onde `<id>` é o `id` da linha. O endereço é estável e
 não expira; ele consulta a key, assina na hora e redireciona. O bucket continua privado.
+
+### Apagar uma inscrição
+
+**Pelo painel, apague a linha E a foto.** O Table Editor mexe só na tabela: a foto continua
+no bucket `fotos-caocurso`, sem nada que aponte para ela e sem forma de encontrá-la a não
+ser comparando à mão. Já aconteceu uma vez.
+
+A `foto_key` da linha é onde ela está (`2026/<uuid>.webp`) — copie antes de apagar.
+
+Para uma exclusão de LGPD é outra coisa: aí **não se apaga**, se preenche `excluido_em`.
+A linha some da planilha no envio seguinte e a vaga volta ao concurso, mas fica o registro
+de quando foi atendido — que é justamente o que um `DELETE` não deixa.
 
 ### A planilha do júri e do CRM
 

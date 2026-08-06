@@ -136,23 +136,35 @@ normalizar depois o que já foi coletado.
 Uma linha só, garantida por `CREATE UNIQUE INDEX ON cao_campanha ((true))`.
 
 ```sql
-id            text PRIMARY KEY   -- 'caocurso-2026'
-abre_em       timestamptz        -- '2026-08-03 00:00:00-03'
-fecha_em      timestamptz        -- '2026-08-21 23:59:59-03'
-limite_vagas  integer            -- 50
-atualizado_em timestamptz NOT NULL DEFAULT now()
+id              text PRIMARY KEY   -- 'caocurso-2026'
+abre_em         timestamptz        -- '2026-08-03 00:00:00-03'
+fecha_em        timestamptz        -- '2026-08-21 23:59:59-03'
+limite_vagas    integer            -- 50
+cpf_obrigatorio boolean            -- true (migração 0003) — ver §6
+atualizado_em   timestamptz NOT NULL DEFAULT now()
 ```
 
 **Isto está no banco e não no `site.ts` por um motivo prático:** mudar a data de
-fechamento ou subir o teto de 50 é um `update` de dez segundos, sem rebuild e sem
-redeploy. É a diferença entre resolver um pedido do cliente na hora ou em meia manhã.
+fechamento, subir o teto de 50 ou deixar de exigir o CPF é um `update` de dez segundos,
+sem rebuild e sem redeploy. É a diferença entre resolver um pedido do cliente na hora ou
+em meia manhã — e a campanha já está aberta.
+
+`lib/inscricao.ts` lê a vista com `select('*')` e não com a lista de colunas, de propósito:
+com nomes explícitos, pedir uma coluna que a vista ainda não tem devolve erro, e isso
+transforma «falta aplicar uma migração» em «a portada inteira diz Em breve».
 
 ⚠️ **As datas levam offset `-03` escrito à mão**, na migração e em qualquer `update`.
 `'2026-08-21 23:59:59'` sem fuso é lido como UTC, e o período fecharia às 20:59 do dia 21
 em Brasília.
 
-A vista `cao_estado_inscricao` junta **numa consulta só** a janela, o limite e a contagem
-de fichas vivas — cinco colunas cruas (`id, abre_em, fecha_em, limite_vagas, inscritos`).
+A vista `cao_estado_inscricao` junta **numa consulta só** a janela, o limite, a contagem
+de fichas vivas e o interruptor do CPF — seis colunas cruas (`id, abre_em, fecha_em,
+limite_vagas, inscritos, cpf_obrigatorio`).
+
+> `cpf_obrigatorio` está no fim, e não ao lado de `limite_vagas` onde ficaria bem, porque
+> o `CREATE OR REPLACE VIEW` só aceita **acrescentar** colunas ao final: uma coluna nova no
+> meio o Postgres entende como renomear a que estava ali, e recusa. Como quem lê é um
+> `select('*')` que pega pelo nome, a ordem não importa para o código.
 Ela não decide nada: quem transforma isso em `em-breve` / `aberta` / `esgotada` /
 `finalizada` é `estadoInscricao()`, em `src/lib/inscricao.ts`, que a lê com **cache de 10
 segundos** — sem ele, cada visita à home seria uma consulta ao banco.
@@ -336,14 +348,79 @@ resolvida antes de abrir o formulário ao público.**
 
 ---
 
-## 6. O que falta
+## 6. O CPF e o Clube Condor — em aberto, de propósito
+
+O briefing pede **«CPF cadastrado no Clube Condor»**. Isso não é um campo a mais: é uma
+**condição de participação**. Só que o formulário não tem como verificá-la.
+
+| | Verifica? |
+|---|---|
+| Que os dígitos verificadores fecham | ✅ `cpfValido()` em `api/inscricao.ts` |
+| Que o CPF é de quem o digita | ❌ |
+| Que está cadastrado no Clube Condor | ❌ — exigiria acesso à base de sócios |
+
+Daí saem três buracos. Um CPF real de quem não é sócio entra igual. **Um CPF alheio
+também** — e esse é o pior, porque CPF não é segredo: acaba-se guardando o dado de alguém
+que nunca consentiu, e o índice único **tranca o dono de verdade** quando ele tentar se
+inscrever. E, sem alguém que cruze a lista, o dado não serve para nada.
+
+**A assimetria é o fundo da questão.** O custo de guardar CPF é fixo e se paga sempre: é o
+dado que transforma um vazamento chato num grave. O benefício —saber quem é sócio— só
+existe **se alguém da Condor sentar e cruzar a lista antes de 29/08**. Se ninguém for
+fazer isso, o CPF é passivo puro.
+
+Por isso a pergunta não é «obrigatório ou opcional», e sim:
+
+> **Quem cruza as inscrições contra a base do Clube Condor, e até que data?**
+> Se a resposta for «ninguém», o campo não deveria existir — deduplica-se por e-mail.
+
+**Decisão do cliente em 2026-08-06: o CPF passa a ser obrigatório**, seja a pessoa sócia
+do Clube ou não. Isso não resolve a verificação —continua sem existir— mas garante que
+**todas** as fichas tenham o dado, de modo que o cruzamento seja possível para o conjunto
+e não só para quem teve vontade de preencher.
+
+Vive num interruptor e não numa constante: `cao_campanha.cpf_obrigatorio` (migração 0003).
+A campanha já está aberta, e uma decisão de negócio não pode depender de um deploy.
+
+```sql
+UPDATE public.cao_campanha SET cpf_obrigatorio = false;  -- volta a ser opcional
+```
+
+O formulário e o endpoint leem a MESMA coluna. O `required` do HTML é cortesia —qualquer
+um o tira pelas ferramentas de desenvolvimento—; a regra é a do servidor.
+
+⚠️ Mexer no interruptor não é retroativo em nenhuma direção: desligá-lo não apaga os CPFs
+já gravados, e ligá-lo depois não preenche as fichas que entraram sem ele.
+
+⚠️ **O CPF não vai à planilha** (§3), então o cruzamento não se faz a partir dela: teria de
+ser no painel do Supabase, por quem tenha acesso. Se a Condor quiser cruzar pela planilha,
+é preciso incluir a coluna — e aí a planilha passa a ser um documento bem mais sensível.
+
+### O que fica desprotegido enquanto isso
+
+Com o CPF opcional, as duas regras de unicidade deixam uma brecha:
+
+| Índice | Impede |
+|---|---|
+| `cao_inscricao_cpf_unica` | uma inscrição por CPF — **só se o CPF vier** |
+| `cao_inscricao_email_pet_unica` | o mesmo e-mail repetir o **mesmo nome de pet** |
+
+Ou seja: **sem CPF, o mesmo e-mail inscreve quantos pets quiser**, bastando mudar o nome.
+Com 50 vagas, uma pessoa pode levar boa parte do concurso. Fechar isso é trocar o segundo
+índice por `lower(tutor_email)` sozinho — mas aí uma família deixa de poder inscrever dois
+pets, e isso também é decisão de negócio.
+
+---
+
+## 7. O que falta
 
 | | O quê | Tamanho |
 |---|---|---|
 | 1 | **Separar os consentimentos** (§5.1) — depende de decisão do cliente | 1 dia depois da resposta |
 | 2 | **Limite de tentativas em `POST /api/inscricao`** — hoje nada impede queimar as 50 vagas num script | ~30 min |
-| 3 | Definir retenção e o expurgo pós-campanha, incluindo a planilha | decisão + 1 h |
-| 4 | Deploy no VPS — artefatos prontos, executa a equipe de infra | fora deste repositório |
+| 3 | **O CPF e o Clube Condor** (§6) — depende de saber quem verifica | decisão |
+| 4 | Definir retenção e o expurgo pós-campanha, incluindo a planilha | decisão + 1 h |
+| 5 | Deploy no VPS — artefatos prontos, executa a equipe de infra | fora deste repositório |
 
 Tudo o mais desta lista, nas versões anteriores deste documento, está construído.
 

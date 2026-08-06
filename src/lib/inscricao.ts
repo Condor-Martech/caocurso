@@ -38,6 +38,19 @@ export interface EstadoCampanha {
   fechaEm: Date;
   limiteVagas: number;
   inscritos: number;
+  /**
+   * El interruptor del «CPF cadastrado no Clube Condor» (migración 0003).
+   *
+   * Vive en el banco y no aquí porque la campaña ya está abierta: si mañana
+   * Condor confirma que hay que exigirlo, se enciende con un UPDATE y vale en
+   * diez segundos, sin build y sin despliegue.
+   *
+   * Encenderlo NO comprueba que la persona sea socia —no hay forma desde
+   * aquí—; lo que consigue es que ninguna ficha entre sin CPF, de modo que el
+   * cruce contra la base de Condor sea posible para todas y no sólo para las
+   * de quien tuvo ganas de rellenarlo.
+   */
+  cpfObrigatorio: boolean;
 }
 
 /**
@@ -73,9 +86,14 @@ async function lerCampanha(): Promise<EstadoCampanha | null> {
   if (cache && agora < cache.expiraEn) return cache.valor;
 
   try {
+    /* `*` y no la lista de columnas, a propósito. Con nombres explícitos,
+       PostgREST devuelve error si pide una columna que la vista todavía no
+       tiene — y eso convierte «falta aplicar una migración» en «la portada
+       entera dice Em breve». Con `*` llega lo que haya, y lo que falte cae al
+       valor por defecto de abajo. El precio es unos bytes de más. */
     const { data, error } = await supabase
       .from('cao_estado_inscricao')
-      .select('abre_em, fecha_em, limite_vagas, inscritos')
+      .select('*')
       .single();
 
     if (error || !data) throw error ?? new Error('cao_estado_inscricao vacía');
@@ -85,6 +103,13 @@ async function lerCampanha(): Promise<EstadoCampanha | null> {
       fechaEm: new Date(data.fecha_em),
       limiteVagas: Number(data.limite_vagas),
       inscritos: Number(data.inscritos),
+      /* `!== false` y no `=== true`: si la columna todavía no existe —migración
+         0003 sin aplicar— llega `undefined` y aquí eso significa EXIGIRLO.
+         Es el lado correcto en el que fallar. La regla de negocio es que el CPF
+         es obligatorio; si el código y el banco se desincronizan, el precio de
+         pedirlo de más es que alguien lo teclee, y el de pedirlo de menos son
+         fichas sin CPF que ya no se pueden completar. */
+      cpfObrigatorio: data.cpf_obrigatorio !== false,
     };
 
     if (
@@ -149,6 +174,24 @@ export async function vagasRestantes(): Promise<number | null> {
   const c = await lerCampanha();
   if (!c) return null;
   return Math.max(0, c.limiteVagas - c.inscritos);
+}
+
+/**
+ * ¿Hay que exigir el CPF? Lo decide `cao_campanha.cpf_obrigatorio`.
+ *
+ * Lo consumen DOS sitios y no es casualidad: el `required` del input, que es
+ * cortesía —el navegador avisa antes de enviar—, y el endpoint, que es la
+ * regla. Un atributo HTML lo quita cualquiera con las herramientas de
+ * desarrollo; si sólo estuviera ahí, «obligatorio» no significaría nada.
+ *
+ * Devuelve `true` cuando la campaña no se puede leer, por lo mismo que explica
+ * `lerCampanha()`: si el código y el banco se desincronizan, es mejor pedir el
+ * dato de más que quedarse con fichas incompletas que ya no se pueden
+ * completar.
+ */
+export async function cpfObrigatorio(): Promise<boolean> {
+  const c = await lerCampanha();
+  return c ? c.cpfObrigatorio : true;
 }
 
 /**

@@ -435,6 +435,12 @@ Script → linha na aba → link da foto abrindo a imagem).
    `docs/PLATAFORMA.md` §5.
 2. **Limite de tentativas em `POST /api/inscricao`.** Hoje não há nenhum: nada impede
    alguém de queimar as 50 vagas num script. ~30 min de trabalho.
+2b. **O CPF é obrigatório, por interruptor.** Decisão do cliente em 2026-08-06. Mas
+   obrigatório **não é verificado**: o briefing pede «cadastrado no Clube Condor» e não há
+   acesso à base de sócios, então o que se confere é só o dígito verificador. O que se
+   ganha é que todas as fichas tenham o dado para o cruzamento, que é humano. Liga-se e
+   desliga-se com um `UPDATE` em `cao_campanha.cpf_obrigatorio`, sem deploy. Ver
+   `docs/PLATAFORMA.md` §6.
 3. **Deploy no VPS.** Os artefatos estão prontos (`Dockerfile`, `docker-compose.yml`,
    `deploy/nginx.conf.example`) e quem os executa é a equipe de infra, não este repositório.
    As duas linhas inegociáveis do Nginx estão no `README.md`.

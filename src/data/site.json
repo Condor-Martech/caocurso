@@ -237,12 +237,12 @@
       "tutorNome": { "label": "Nome completo", "placeholder": "Nome completo" },
       "tutorNascimento": {
         "label": "Data de nascimento, no formato dia/mês/ano",
-        "placeholder": "Data de nascimento",
+        "placeholder": "Nasc. dd/mm/aaaa",
         "title": "Use o formato dd/mm/aaaa."
       },
       "tutorCpf": {
         "label": "CPF cadastrado no Clube Condor",
-        "placeholder": "CPF cadastrado no Clube Condor"
+        "placeholder": "CPF do Clube Condor"
       },
       "tutorEmail": { "label": "E-mail", "placeholder": "E-mail" },
       "tutorTelefone": { "label": "Telefone com DDD", "placeholder": "Telefone" },

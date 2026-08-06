@@ -77,13 +77,19 @@ function doPost(e) {
       return responder({ ok: false, erro: 'ocupado' });
     }
 
+    var onde;
     try {
-      escrever(dados);
+      onde = escrever(dados);
     } finally {
       trava.releaseLock();
     }
 
-    return responder({ ok: true, total: dados.linhas.length });
+    /* `onde` devolve o nome e a URL da planilha, e o nome da aba. Não é
+       decoração: quando alguém disser «mandei uma inscrição e não vejo nada»,
+       isto responde numa tacada se o problema é a aba, outra planilha ou de
+       verdade o envio. Sem isto só se sabe que algo foi escrito em algum
+       lugar. */
+    return responder({ ok: true, total: dados.linhas.length, onde: onde });
   } catch (erro) {
     Logger.log('doPost: ' + erro);
     return responder({ ok: false, erro: String(erro) });
@@ -231,6 +237,13 @@ function escrever(dados) {
     .getRange(1, colunas.length + 2)
     .setValue('Atualizado: ' + Utilities.formatDate(carimbo, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'))
     .setFontColor('#888888');
+
+  return {
+    planilha: planilha.getName(),
+    url: planilha.getUrl(),
+    aba: aba.getName(),
+    linhas: linhas.length,
+  };
 }
 
 /**
