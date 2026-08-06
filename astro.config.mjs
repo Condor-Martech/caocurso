@@ -43,10 +43,25 @@ export default defineConfig({
     schema: {
       SUPABASE_URL: envField.string({ context: 'server', access: 'secret' }),
       SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: 'server', access: 'secret' }),
-      SUPABASE_BUCKET_FOTOS: envField.string({
+      // As fotos vivem no MinIO da Condor, num bucket PRÓPRIO e privado —
+      // `caocursantes`, não o `lp-content` do regulamento e dos logos, que deixa
+      // listar o seu índice sem credenciais. Ver src/lib/storage.ts.
+      //
+      // ⚠️ A região é `us-east` e NÃO `us-east-1`. O MinIO a compara literal e
+      // responde `AuthorizationHeaderMalformed`, que parece um problema de
+      // credencial e não é.
+      MINIO_ENDPOINT: envField.string({
         context: 'server',
         access: 'secret',
-        default: 'fotos-caocurso',
+        default: 'https://s3.cndr.me',
+      }),
+      MINIO_REGIAO: envField.string({ context: 'server', access: 'secret', default: 'us-east' }),
+      MINIO_ACCESS_KEY: envField.string({ context: 'server', access: 'secret' }),
+      MINIO_SECRET_KEY: envField.string({ context: 'server', access: 'secret' }),
+      MINIO_BUCKET_FOTOS: envField.string({
+        context: 'server',
+        access: 'secret',
+        default: 'caocursantes',
       }),
 
       // Secreto de un solo propósito para `GET /api/exportar`, que es lo que

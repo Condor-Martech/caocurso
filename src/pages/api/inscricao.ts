@@ -402,7 +402,32 @@ export const POST: APIRoute = async ({ request, url }) => {
     });
 
     if (error) {
-      await removerFoto(fotoKey);
+      /* La foto SÓLO se borra si consta que la transacción no llegó a existir.
+         Y eso se sabe por una cosa: que el error traiga un SQLSTATE.
+
+         postgrest-js NO lanza cuando falla el transporte: devuelve
+         `{ error: { message: 'FetchError: …', code: '' } }`. Es decir, un 504
+         del gateway, un corte de conexión o un pooler que cuelga entran por
+         esta misma rama —con la transacción posiblemente YA COMPROMETIDA— y
+         antes se borraba la foto igual.
+
+         El resultado era el peor de los posibles: una ficha viva apuntando a
+         un objeto que ya no existe. El jurado abre /foto/<id>, recibe un 404 y
+         no hay nada que lo detecte: `--orfas` busca sobras en el bucket, no
+         fichas sin foto. Encima esa persona ocupa una plaza y, si reintenta,
+         choca con el índice único y recibe «já foi inscrito».
+
+         Al revés el precio es una foto huérfana, que `--orfas` sí recoge. */
+      const temSqlstate = /^[0-9A-Z]{5}$/.test(error.code ?? '');
+      if (temSqlstate) {
+        await removerFoto(fotoKey);
+      } else {
+        console.error(
+          `inscricao: erro de transporte ao gravar. A foto ${fotoKey} fica no bucket ` +
+            'de propósito — pode haver uma ficha apontando para ela. Detalhe:',
+          error.message
+        );
+      }
 
       /* Cupo lleno. Puede llegar aquí aunque el estado leído arriba dijera
          'aberta': entre aquella lectura —cacheada unos segundos— y este

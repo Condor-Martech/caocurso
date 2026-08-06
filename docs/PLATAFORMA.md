@@ -22,7 +22,10 @@ LP (Astro, contêiner Docker atrás de Nginx)
 Supabase ◀───────────────── fonte de verdade
    ├─ cao_inscricao         uma linha por participante
    ├─ cao_campanha          uma linha só: janela de datas + teto de vagas
-   └─ fotos-caocurso        bucket PRIVADO, WebP já reprocessado
+   └─ (as fotos NÃO ficam aqui — ver abaixo)
+   │
+MinIO  s3.cndr.me
+   └─ caocursantes          bucket PRIVADO, WebP já reprocessado
    │
    └──▶ e, logo depois de gravar e sem esperar por isso,
         a LP empurra a lista inteira ──▶ Web App do Apps Script
@@ -44,7 +47,7 @@ Todas tomadas. Nenhuma pendente.
 | | Valor | Por quê |
 |---|---|---|
 | Banco de dados | **Supabase** (Postgres) | `sa-east-1` São Paulo: o dado não sai do Brasil |
-| Storage da foto | **Supabase Storage**, bucket privado `fotos-caocurso` | Ver §4 |
+| Storage da foto | **MinIO**, bucket privado `caocursantes` | Ordem do cliente em 2026-08-06. Ver §4 |
 | Espelho para o júri | **Planilha do Google**, reescrita inteira a cada envio | Ver §3 |
 | Quem empurra | **A própria LP**, sem worker | Ver §3 |
 | Deploy | **VPS com Docker**, `@astrojs/node` standalone | Build em `dist/`, contêiner atrás de Nginx |
@@ -275,9 +278,38 @@ simultâneas são dois `doPost`, e sem trava uma limpa enquanto a outra escreve.
 
 ## 4. A foto
 
-**Decidido: Supabase Storage, bucket `fotos-caocurso`, privado**, com
-`file_size_limit` de 5 MB e `allowed_mime_types` restrito a `image/webp` — o bucket
-recusa qualquer outra coisa mesmo que o código erre.
+**MinIO da Condor, bucket `caocursantes`, privado.** Em `s3.cndr.me`, com key
+`2026/<uuid>.webp`.
+
+Esteve no Supabase Storage até 2026-08-06, quando o cliente mandou tirá-lo de lá. **O custo
+dessa mudança foi um arquivo**: `src/lib/storage.ts`. O endpoint da inscrição, `/foto/<id>`,
+a planilha e os links que já estavam escritos nela continuaram funcionando sem tocar em
+nada, porque **o banco guarda a key e nunca a URL** (§2). É o único momento em que essa
+decisão se cobra sozinha.
+
+### Por que um bucket próprio e não o `lp-content`
+
+O `lp-content`, onde já estão o regulamento e os logos, **deixa listar o seu índice sem
+credenciais**:
+
+```
+curl "https://s3.cndr.me/lp-content?list-type=2"   →  200, a lista inteira
+```
+
+Uma key de UUID protege contra **adivinhar**, não contra **listar**. Ali dentro, a lista de
+todas as fotos dos pets estaria a um comando de distância, e são dados pessoais que também
+vão para uma planilha compartilhada. Além disso há ~34 arquivos de outros projetos da
+Condor: uma credencial acotada a `caocursantes` não alcança nenhum deles se vazar.
+
+### O que se perdeu ao sair do Supabase
+
+O bucket do Supabase validava por conta própria: `file_size_limit` de 5 MB e
+`allowed_mime_types` restrito a `image/webp`. Era uma rede POR BAIXO do código. O MinIO não
+tem equivalente — se um dia o código subir o que não deve, já não há quem o pare. O que
+resta é `lib/foto.ts`, que só produz WebP, e a validação dos magic bytes.
+
+E agora são **dois serviços em vez de um**: se o Supabase OU o MinIO estiverem fora do ar,
+não há inscrição. A foto sobe antes de inserir a ficha.
 
 O caminho de uma foto, do celular ao bucket:
 
@@ -316,7 +348,7 @@ mortos.
 |---|---|---|
 | 1 | **Consentimento agrupado** | ⛔ **Pendente, e é o único bloqueio real.** Ver abaixo |
 | 2 | EXIF com GPS | ✅ Resolvido: `lib/foto.ts` recodifica e descarta metadados |
-| 3 | Bucket privado | ✅ Resolvido: `fotos-caocurso` não é público, URLs assinadas de 300 s |
+| 3 | Bucket privado | ✅ Resolvido: `caocursantes` responde 403 sem assinatura, verificado de fora |
 | 4 | Direito de exclusão | ✅ Resolvido de verdade — ver abaixo |
 | 5 | Base legal | consentimento — falta documentá-la no regulamento |
 | 6 | Retenção | ⚠️ sem definir. Prazo pós-campanha + expurgo, **também da planilha** |

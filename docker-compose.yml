@@ -25,8 +25,8 @@ services:
       - '127.0.0.1:4321:4321'
 
     # Sin volúmenes: el servidor no escribe nada en disco. La ficha va a
-    # Supabase y la foto a Supabase Storage. Si algún día aparece un volumen
-    # aquí, es señal de que algo volvió a guardar estado local.
+    # Supabase y la foto al MinIO. Si algún día aparece un volumen aquí, es
+    # señal de que algo volvió a guardar estado local.
 
     logging:
       driver: json-file

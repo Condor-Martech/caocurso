@@ -51,22 +51,39 @@ let ultimaLimpeza = Date.now();
  * La IP de quien llama.
  *
  * Detrás del nginx la conexión viene de `127.0.0.1`, así que la dirección real
- * está en `X-Forwarded-For` — el primer valor de la lista, que es el cliente;
- * los siguientes son los proxies por los que pasó.
+ * llega en una cabecera. **Cuál se lee no da igual**, y una versión anterior de
+ * esta función lo tenía justo al revés.
  *
- * ⚠️ Esa cabecera la puede escribir cualquiera. Aquí sirve porque **el nginx la
- * reescribe** (`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`),
- * de modo que lo que llega es lo que él vio. Si un día el contenedor quedara
- * expuesto directamente a internet, esto dejaría de valer y habría que pasar a
- * la dirección del socket.
+ * `X-Real-IP` la fija el nginx con `proxy_set_header X-Real-IP $remote_addr`,
+ * que **sobrescribe** lo que el cliente hubiera mandado. Es un dato del proxy.
+ *
+ * `X-Forwarded-For` va con `$proxy_add_x_forwarded_for`, que **NO reescribe:
+ * concatena**. Nginx la construye como `$http_x_forwarded_for, $remote_addr`,
+ * de modo que el PRIMER valor de esa lista es literalmente lo que escribió el
+ * cliente. Leerlo era regalar el límite: un bucle con una cabecera distinta en
+ * cada vuelta —`X-Forwarded-For: 10.0.0.1`, `10.0.0.2`…— estrenaba contador en
+ * cada petición y los 8 intentos no contaban nunca. Y como este límite es lo
+ * primero del endpoint, saltárselo abría a la vez el tope de 50 plazas y el
+ * buffer de 25 MB por petición.
+ *
+ * Por eso ahora manda `X-Real-IP`, y de `X-Forwarded-For` se toma el ÚLTIMO
+ * valor, que es el que añadió el proxy más cercano y el cliente no controla.
+ *
+ * ⚠️ Si un día el contenedor quedara expuesto directamente a internet, sin
+ * nginx delante, ninguna de las dos valdría y habría que usar la dirección del
+ * socket.
  */
 export function ipDoPedido(request: Request): string {
+  const real = request.headers.get('x-real-ip')?.trim();
+  if (real) return real;
+
   const encaminhado = request.headers.get('x-forwarded-for');
   if (encaminhado) {
-    const primeiro = encaminhado.split(',')[0]?.trim();
-    if (primeiro) return primeiro;
+    const partes = encaminhado.split(',');
+    const ultimo = partes[partes.length - 1]?.trim();
+    if (ultimo) return ultimo;
   }
-  return request.headers.get('x-real-ip')?.trim() || 'desconhecido';
+  return 'desconhecido';
 }
 
 export interface Veredicto {

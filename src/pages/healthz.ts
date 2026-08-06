@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../lib/supabase';
+import { storageResponde } from '../lib/storage';
 
 export const prerender = false;
 
@@ -23,6 +24,17 @@ export const prerender = false;
  *
  * `head: true` no trae ninguna fila; sólo la cuenta. Es una petición mínima que
  * el healthcheck puede repetir cada 30 segundos sin consumir nada.
+ *
+ * ── Y desde 2026-08-06, DOS servicios ───────────────────────────────────────
+ *
+ * Las fotos se fueron al MinIO. Antes viajaban por el mismo cliente de Supabase
+ * que esta ruta ya ejercitaba; ahora son cinco variables más y una credencial
+ * contra otro servidor. Comprobar sólo Supabase dejaba pasar exactamente el
+ * fallo que esta ruta existe para atrapar: un contenedor con la clave del MinIO
+ * mal pegada salía `healthy` y reventaba en la primera inscripción.
+ *
+ * Se comprueban los dos, y el mensaje dice CUÁL falló — un 503 que no distingue
+ * obliga a adivinar justo cuando hay prisa.
  */
 export const GET: APIRoute = async () => {
   try {
@@ -32,7 +44,15 @@ export const GET: APIRoute = async () => {
 
     if (error) {
       console.error('healthz: Supabase respondeu com erro:', error.message);
-      return new Response(`erro: ${error.message}`, { status: 503 });
+      return new Response(`erro no Supabase: ${error.message}`, { status: 503 });
+    }
+
+    try {
+      await storageResponde();
+    } catch (e) {
+      const detalhe = e instanceof Error ? e.message : String(e);
+      console.error('healthz: MinIO respondeu com erro:', detalhe);
+      return new Response(`erro no MinIO: ${detalhe}`, { status: 503 });
     }
 
     return new Response('ok', {

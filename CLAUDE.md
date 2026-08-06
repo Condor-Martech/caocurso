@@ -158,14 +158,20 @@ inscrição, em ordem:
 ```
 1. valida os 11 campos                        src/pages/api/inscricao.ts
 2. reprocessa a foto com sharp                src/lib/foto.ts       → WebP 1600 px q82, sem EXIF
-3. sobe ao bucket privado                     src/lib/storage.ts    → key 2026/<uuid>.webp
+3. sobe ao bucket privado do MinIO            src/lib/storage.ts    → key 2026/<uuid>.webp
 4. grava a ficha                              rpc criar_inscricao   → tabela cao_inscricao
 5. empurra a planilha do júri, sem await      src/lib/planilha.ts   → Web App do Apps Script
 ```
 
 Cada peça tem o seu módulo, e isso é de propósito: **`src/lib/storage.ts` é o único
-arquivo que sabe onde vivem as fotos.** Trocar de provedor é reescrever esse arquivo e
-mais nada — o banco guarda a `key`, nunca a URL.
+arquivo que sabe onde vivem as fotos.** E já se cobrou: em 2026-08-06 o cliente mandou
+tirar as fotos do Supabase e pô-las no **MinIO**, e a mudança custou esse arquivo e mais
+nenhum. O endpoint, `/foto/<id>`, a planilha e os links já escritos nela seguiram
+funcionando — porque o banco guarda a `key`, nunca a URL.
+
+Hoje: **MinIO, bucket privado `caocursantes`** em `s3.cndr.me`. Não o `lp-content` do
+regulamento e dos logos, que deixa listar o seu índice sem credenciais — e uma key de UUID
+protege contra adivinhar, não contra listar. Ver `docs/PLATAFORMA.md` §4.
 
 O passo 4 é uma **função do Postgres**, não um `insert` solto. Ela toma um advisory lock
 antes de contar as vagas, de modo que dez pessoas disputando a última não podem virar
@@ -558,6 +564,9 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   │                       finalizada. Consumido pelo botão E pelo endpoint)
 │   │   ├── supabase.ts        (o cliente service_role. SÓ servidor)
 │   │   ├── storage.ts         (o ÚNICO módulo que sabe onde vivem as fotos)
+│   │   ├── s3.mjs            (SigV4 à mão: subir, assinar, apagar, listar.
+│   │   │                      .mjs para que o script de limpeza use O MESMO)
+│   │   ├── s3.d.ts           (os tipos de s3.mjs, para o astro check)
 │   │   ├── foto.ts            (sharp: valida os magic bytes, gira, apaga o EXIF, WebP)
 │   │   ├── planilha.ts        (monta e empurra a lista ao Web App do júri)
 │   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)

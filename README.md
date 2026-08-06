@@ -45,7 +45,7 @@ carga seguinte, sem build e sem deploy.
    Formulário ── POST /api/inscricao (multipart) ──►
         1. valida os 11 campos
         2. reprocessa a foto: confere bytes reais, tira o EXIF, WebP 1600 px
-        3. sobe a foto ao bucket privado         ──► Supabase Storage
+        3. sobe a foto ao bucket privado         ──► MinIO (s3.cndr.me)
         4. chama criar_inscricao() — trava, confere vagas, insere ──► Supabase
         5. devolve 201
 ```
@@ -98,7 +98,10 @@ Copie `.env.example` para `.env`. **O `.env` não é versionado e não entra na 
 |---|---|
 | `SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | A chave **secreta**, não a anônima. Ignora o RLS |
-| `SUPABASE_BUCKET_FOTOS` | Bucket das fotos. Padrão: `fotos-caocurso` |
+| `MINIO_ENDPOINT` | O S3 do MinIO. Padrão: `https://s3.cndr.me` |
+| `MINIO_REGIAO` | **`us-east`**, não `us-east-1` — o MinIO compara literal |
+| `MINIO_BUCKET_FOTOS` | Bucket privado das fotos. Padrão: `caocursantes` |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Credencial **acotada a esse bucket**, não a mestra |
 | `PLANILHA_WEBHOOK_URL` | O Web App do Apps Script, terminado em `/exec`. Vazio = não sincroniza |
 | `PLANILHA_WEBHOOK_TOKEN` | O mesmo segredo que se cola no menu «Cãocurso» da planilha |
 | `SITE_URL` | Endereço público, só para o link da foto. Em produção: `https://pet.condor.com.br` |
@@ -126,7 +129,7 @@ projeto (Dashboard → SQL Editor). São idempotentes.
 
 | Migração | O que cria |
 |---|---|
-| `0001_cao_inscricao.sql` | Tabela `cao_inscricao`, índices de duplicidade, RLS fechado, bucket privado `fotos-caocurso` |
+| `0001_cao_inscricao.sql` | Tabela `cao_inscricao`, índices de duplicidade, RLS fechado. **O bucket que ela cria ficou morto**: as fotos foram para o MinIO em 2026-08-06 |
 | `0002_cao_campanha_e_vagas.sql` | Tabela `cao_campanha`, vista `cao_estado_inscricao`, função `criar_inscricao()` |
 
 ### As três peças

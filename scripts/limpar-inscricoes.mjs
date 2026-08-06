@@ -2,7 +2,7 @@
  * Borra inscripciones SIN dejar fotos huérfanas, y recoge las que ya quedaron.
  *
  * Una inscripción vive en dos sitios: la ficha en la tabla `cao_inscricao` y la
- * foto en el bucket `fotos-caocurso`. La ficha guarda la KEY de la foto, y es lo
+ * foto en el bucket `caocursantes` del MinIO. La ficha guarda la KEY, y es lo
  * único que sabe dónde está.
  *
  * Por eso borrar la fila desde el Table Editor del panel deja la foto ahí, sin
@@ -34,6 +34,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
+import { criarClienteS3 } from '../src/lib/s3.mjs';
 
 /* El .env se lee a mano: este script corre fuera de Astro, así que no existe
    `astro:env`. Sólo nos interesan tres variables y ninguna lleva comillas. */
@@ -46,7 +47,12 @@ async function lerEnv() {
     const m = /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(linha.trim());
     if (m) env[m[1]] = m[2];
   }
-  for (const k of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
+  for (const k of [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'MINIO_ACCESS_KEY',
+    'MINIO_SECRET_KEY',
+  ]) {
     if (!env[k]) throw new Error(`Falta ${k} en el .env.`);
   }
   return env;
@@ -76,7 +82,17 @@ const env = await lerEnv();
 const sb = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-const BUCKET = env.SUPABASE_BUCKET_FOTOS || 'fotos-caocurso';
+/* Las fotos viven en MinIO, no en Supabase. Este script usa EL MISMO módulo de
+   firma que el servidor (`src/lib/s3.mjs`) y no una copia: una copia acabaría
+   divergiendo, y aquí lo que se ejecuta es un borrado. */
+const BUCKET = env.MINIO_BUCKET_FOTOS || 'caocursantes';
+const s3 = criarClienteS3({
+  endpoint: env.MINIO_ENDPOINT || 'https://s3.cndr.me',
+  regiao: env.MINIO_REGIAO || 'us-east',
+  accessKey: env.MINIO_ACCESS_KEY,
+  secretKey: env.MINIO_SECRET_KEY,
+});
+const caminhoDe = (key) => `${BUCKET}/${key}`;
 
 /* ─────────────────────────────────────────────────────────── la planilla ── */
 
@@ -168,9 +184,10 @@ async function apagarInscricao({ id, foto_key, tutor_nome, pet_nome }) {
   console.log(`    foto: ${foto_key}`);
   if (!APAGAR) return;
 
-  const { error: eFoto } = await sb.storage.from(BUCKET).remove([foto_key]);
-  if (eFoto) {
-    console.log(`    ⚠️  la foto no se pudo borrar (${eFoto.message}). Dejo la ficha.`);
+  try {
+    await s3.apagar(caminhoDe(foto_key));
+  } catch (e) {
+    console.log(`    ⚠️  la foto no se pudo borrar (${e.message}). Dejo la ficha.`);
     return;
   }
   const { error: eFicha } = await sb.from('cao_inscricao').delete().eq('id', id);
@@ -250,9 +267,10 @@ if (tem('--excluir')) {
 
   /* La foto primero. Si fallara y aun así se anonimizara la fila, se perdería
      la `foto_key` y con ella la única forma de saber qué archivo era suyo. */
-  const { error: eFoto } = await sb.storage.from(BUCKET).remove([data.foto_key]);
-  if (eFoto) {
-    console.log(`\n  ⚠️  La foto no se pudo borrar (${eFoto.message}). No toco la ficha.\n`);
+  try {
+    await s3.apagar(caminhoDe(data.foto_key));
+  } catch (e) {
+    console.log(`\n  ⚠️  La foto no se pudo borrar (${e.message}). No toco la ficha.\n`);
     process.exit(1);
   }
 
@@ -297,10 +315,14 @@ if (tem('--sincronizar')) {
 }
 
 if (tem('--orfas')) {
-  const { data: objetos, error: eLista } = await sb.storage
-    .from(BUCKET)
-    .list(PASTA, { limit: 1000 });
-  if (eLista) throw new Error(`No puedo listar el bucket: ${eLista.message}`);
+  /* El listado devuelve keys COMPLETAS («2026/uuid.webp»), no nombres sueltos
+     como hacía Supabase. Por eso ya no hay que recomponerlas más abajo. */
+  let objetos;
+  try {
+    objetos = await s3.listar(BUCKET, `${PASTA}/`);
+  } catch (e) {
+    throw new Error(`No puedo listar el bucket: ${e.message}`);
+  }
 
   /* Se comparan TODAS las fichas, incluidas las que tienen `excluido_em`: una
      supresión lógica conserva la foto a propósito, así que su key no sobra. */
@@ -308,7 +330,7 @@ if (tem('--orfas')) {
   if (eFichas) throw new Error(`No puedo leer las fichas: ${eFichas.message}`);
 
   const usadas = new Set(fichas.map((f) => f.foto_key));
-  const orfas = objetos.map((o) => `${PASTA}/${o.name}`).filter((k) => !usadas.has(k));
+  const orfas = objetos.filter((k) => !usadas.has(k));
 
   const conFicha = objetos.length - orfas.length;
   console.log(
@@ -324,9 +346,20 @@ if (tem('--orfas')) {
     console.log('\n  Añade --apagar para borrarlas.\n');
     process.exit(0);
   }
-  const { error } = await sb.storage.from(BUCKET).remove(orfas);
-  console.log(error ? `\n  ⚠️  ${error.message}\n` : `\n  ${orfas.length} borradas.\n`);
-  process.exit(error ? 1 : 0);
+  /* Una a una: el S3 tiene un DeleteObjects por lotes, pero exige firmar un XML
+     con checksum y no vale la pena por unas pocas fotos. Si una falla, se dice
+     cuál y las demás siguen. */
+  let fallos = 0;
+  for (const k of orfas) {
+    try {
+      await s3.apagar(caminhoDe(k));
+    } catch (e) {
+      fallos++;
+      console.log(`  ⚠️  ${k}: ${e.message}`);
+    }
+  }
+  console.log(`\n  ${orfas.length - fallos} borradas${fallos ? `, ${fallos} fallaron` : ''}.\n`);
+  process.exit(fallos ? 1 : 0);
 }
 
 if (tem('--id')) {
