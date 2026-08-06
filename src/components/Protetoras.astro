@@ -29,6 +29,11 @@ import { protetoras, protetorasTitulo, protetorasAviso, type Protetora } from '.
  * (0,5). Va en PORCENTAJE del ancho de la tarjeta, no en px: la tarjeta escala
  * con la rejilla y un tamaño fijo se descolgaría en cuanto cambia el ancho.
  *
+ * En celular el porcentaje se multiplica por 1,12 (el `calc()` sobre
+ * `--largura`): la tarjeta empilhada es bastante más chica que la de la fila de
+ * tres, y con el mismo porcentaje el logo quedaba perdido dentro del blanco. De
+ * `md` para arriba vuelve al valor exacto, que es el medido en el arte.
+ *
  * Medidas tomadas de la referencia a 1366 px de ancho:
  *   · rejilla 926 px = 3 × 290 + 2 × 28 de hueco
  *   · tarjeta 290 × 253 px (razón 290/253) · radio de esquina 18 px
@@ -45,7 +50,7 @@ import { protetoras, protetorasTitulo, protetorasAviso, type Protetora } from '.
  * dava cartões de ~90 px: o logo saía com uns 40 px de largura e o ícone com
  * 24 px. A fila de três só entra a partir de `md`, onde o cartão volta a medir
  * ~220 px; abaixo disso empilha (como todo o resto da página) com um teto de
- * 16 rem, para o cartão não virar uma laje branca de ponta a ponta.
+ * 14 rem, para o cartão não virar uma laje branca de ponta a ponta.
  *
  * Por isso o padding do cartão e o tamanho do ícone vão em PORCENTAGEM da
  * largura do cartão, e não em px por breakpoint: são as proporções medidas na
@@ -79,7 +84,7 @@ const semDados = protetoras.every((p) => !p.logo && !p.instagram);
     {semDados && <p class="sr-only">{protetorasAviso}</p>}
 
     <div
-      class="mx-auto grid max-w-64 grid-cols-1 gap-4 md:max-w-231.5 md:grid-cols-3 md:gap-5 lg:gap-7"
+      class="mx-auto grid max-w-56 grid-cols-1 gap-4 md:max-w-231.5 md:grid-cols-3 md:gap-5 lg:gap-7"
       aria-hidden={semDados ? 'true' : undefined}
     >
       {
@@ -95,8 +100,8 @@ const semDados = protetoras.every((p) => !p.logo && !p.instagram);
                   alt={p.nome ?? ''}
                   width={p.largura}
                   height={p.altura}
-                  style={`width:${largura(p).toFixed(1)}%`}
-                  class="h-auto max-h-full object-contain"
+                  style={`--largura:${largura(p).toFixed(1)}%`}
+                  class="h-auto max-h-full w-[calc(var(--largura)*1.12)] object-contain md:w-(--largura)"
                   loading="lazy"
                   decoding="async"
                 />

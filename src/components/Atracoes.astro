@@ -95,13 +95,17 @@ const desenhosIcone: Record<string, string | undefined> = {
     </h2>
 
     {/* auto-rows-fr iguala la altura de las dos filas: en el mockup las cuatro
-        tarjetas miden lo mismo aunque dos descripciones ocupen dos líneas. */}
-    <div class="mx-auto grid max-w-235 auto-rows-fr grid-cols-1 gap-7 sm:grid-cols-2">
+        tarjetas miden lo mismo aunque dos descripciones ocupen dos líneas.
+
+        En una sola columna la rejilla toma todo el ancho del contenedor y la
+        tarjeta se vuelve una laja blanca de borde a borde; por eso el tope de
+        20 rem, que se levanta en cuanto entran las dos columnas de `sm`. */}
+    <div class="mx-auto grid max-w-80 auto-rows-fr grid-cols-1 gap-7 sm:max-w-235 sm:grid-cols-2">
       {
         atracoes.map((a) => (
           <div class="flex flex-col items-center rounded-3xl bg-brand-white px-6 pt-7 pb-5 text-center">
             <svg
-              class="h-16 w-16 text-brand-blue sm:h-18 sm:w-18"
+              class="h-18 w-18 text-brand-blue"
               viewBox="0 0 48 48"
               fill="none"
               stroke="currentColor"
