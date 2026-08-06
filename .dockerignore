@@ -1,0 +1,40 @@
+# Lo que NO entra en el contexto de build.
+#
+# Esto no es higiene, es lo que hace la diferencia entre un build de segundos y
+# uno que no termina: `assets-fonte/` son 997 MB de material de imprenta y
+# `node_modules/` otros 363. El demonio de Docker copia TODO el contexto antes
+# de ejecutar la primera instrucción, así que sin este fichero se empaquetan
+# 1,4 GB para construir una imagen que pesa una fracción de eso.
+
+# Material de origen: resolución de imprenta y fotos del fotógrafo. Lo que se
+# sirve sale de public/, generado por scripts/optimizar-assets.mjs.
+assets-fonte/
+
+# Se reinstalan dentro de la imagen, para la arquitectura correcta. Copiarlos
+# desde el host además rompería sharp, que trae binarios nativos.
+node_modules/
+
+# Salidas de build: se regeneran dentro.
+dist/
+.astro/
+
+# ⚠️ Las credenciales NUNCA se hornean en la imagen. Se inyectan en tiempo de
+# ejecución (env_file en el compose). Una imagen con el .env dentro filtra la
+# service_role a cualquiera que haga `docker history`.
+.env
+.env.*
+!.env.example
+
+# Historia y herramientas: no aportan nada al runtime.
+.git/
+.gitignore
+.claude/
+.impeccable/
+
+# Arte y briefing de campaña: material interno, no se publica.
+docs/
+
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db

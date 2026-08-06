@@ -31,15 +31,12 @@ const COR = { azul: 'text-brand-blue', branco: 'text-brand-white' } as const;
  */
 ---
 
-<section
-  aria-labelledby="eventos-titulo"
-  class="bg-brand-blue-sec pb-0 pt-36 md:pt-44 lg:pt-50"
->
+<section aria-labelledby="eventos-titulo" class="bg-brand-blue-sec pb-0">
   <!--
     El padding superior es grande a propósito: el perro de "Adote um AuMigo"
     cuelga de la franja con `.emerge--patas` (margin-bottom negativo, no empuja
-    el flujo) y sus patas invaden esta sección ~150 px a 1366 px. Este colchón
-    es el que impide que se le monten encima del título.
+    el flujo) y sus patas invaden esta sección. Este colchón es el que impide
+    que se le monten encima del título. La cuenta va en el <style> de abajo.
   -->
   <div class="container-lp">
     <h2
@@ -87,3 +84,28 @@ const COR = { azul: 'text-brand-blue', branco: 'text-brand-white' } as const;
     <hr class="regla-branca mt-10 w-full max-w-200 border-t-4" />
   </div>
 </section>
+
+<style>
+  /* El colchón de arriba SIGUE AL PERRO, no al breakpoint.
+
+     Eran tres escalones fijos —pt-36 / md:pt-44 / lg:pt-50— y el estorbo que
+     esquivan no da escalones: las patas cuelgan un 45,9 % del ANCHO de la
+     imagen (ver `.emerge--patas` en global.css) y esa imagen mide
+     `clamp(220px, 44vw, 566px)`, así que el estorbo crece con la ventana de
+     forma continua. Con escalones fijos el aire sobrante iba de 87 px en un
+     móvil a 16 px a 1366: el mismo bloque respiraba distinto según el
+     dispositivo, y en móvil —que es donde el perro es más pequeño— sobraba un
+     dedo de azul vacío antes del título.
+
+     La cuenta, de arriba abajo:
+       patas que cuelgan  = 45,9 % del ancho del perro
+       − la franja        = las patas la cruzan por delante, ese trozo no
+                            invade esta sección
+       + 1,5rem           = el aire real entre la pata y el título
+
+     Sale ~24-34 px de holgura a cualquier ancho, y el número no hay que
+     retocarlo cuando cambie el tamaño del perro: sale del mismo sitio. */
+  section {
+    padding-top: calc(0.459 * clamp(220px, 44vw, 566px) - var(--faixa-h) + 1.5rem);
+  }
+</style>

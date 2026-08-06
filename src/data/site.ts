@@ -37,15 +37,24 @@ export interface Imagem {
 /* -------------------------------------------------------------------------- */
 
 /**
- * `regulamentoPdf` está a `null` porque el PDF de 2026 todavía no existe: sólo
- * está el de 2025, que ya no aplica. Antes se apuntaba a
- * /assets/docs/2026_Regulamento_Caocurso.pdf, un fichero que nunca se subió, así
- * que el botón daba un 404.
+ * `regulamentoPdf` apunta al MinIO de Condor (`s3.cndr.me`, bucket
+ * `lp-content`), no a `public/`. El documento es material de campaña que el
+ * marketing sustituye sin tocar el código ni volver a desplegar: subiendo el
+ * archivo nuevo con la misma key, el botón ya sirve el nuevo.
  *
- * Decisión del cliente: el botón «Confira o regulamento» se queda VISIBLE pero
- * DESHABILITADO, con aire de «em breve». Nada de enlaces rotos. Cuando llegue el
- * PDF: subirlo a public/assets/docs/, poner su ruta en el JSON y
- * `regulamentoDisponivel: true`.
+ * OJO con el host: la consola de MinIO vive en `minio.cndr.me` y ahí la misma
+ * ruta devuelve la SPA en HTML, no el PDF. El endpoint S3 —el que sirve el
+ * objeto con `Content-Type: application/pdf`— es `s3.cndr.me`. Pegar la URL que
+ * enseña el navegador de la consola (`/browser/lp-content/caocurso%2F…`) abre el
+ * gestor de archivos, no el documento.
+ *
+ * ⚠️ **Hoy sirve el regulamento de 2025**: es el único que existe. El botón dice
+ * «Confira o regulamento» sin año, así que no miente, pero las fechas y las
+ * reglas de dentro son las del año pasado. Cuando llegue el de 2026 se sube al
+ * mismo bucket y se cambia la key aquí.
+ *
+ * `regulamentoDisponivel` sigue siendo el interruptor: en `false` el botón se
+ * pinta igual pero deshabilitado, con aire de «em breve». Nada de enlaces rotos.
  */
 export const SITE = dados.site;
 
@@ -56,20 +65,25 @@ export const copyright = dados.site.copyright;
 /* -------------------------------------------------------------------------- */
 
 /**
- * Las dos fechas que deciden si el botón dice «Em breve», «Inscreva-se» o
- * «Finalizado». La lógica vive en `src/lib/inscricao.ts`.
+ * Aquí ya sólo quedan los RÓTULOS del botón: «Em breve», «Inscreva-se»,
+ * «Esgotado» y «Finalizado». Son copy, y el copy vive en el JSON.
  *
- * **El offset `-03:00` está escrito a mano y es deliberado.** `new Date('2026-08-21')`
- * se interpreta como UTC, así que en Brasil el período habría cerrado a las 21:00
- * del día 20 — un día antes, y sin que nadie se entere hasta que lleguen las
- * quejas. Brasil no aplica horario de verano desde 2019, así que -03:00 vale todo
- * el año.
+ * **Las fechas y el límite de vacantes ya no están aquí.** Se mudaron a la
+ * tabla `cao_campanha` de Supabase, como preveía `docs/PLATAFORMA.md`. El
+ * motivo es operacional: la página se renderiza en el servidor en cada
+ * petición, así que cambiar la fecha de cierre o el número de plazas en el
+ * panel de Supabase se refleja en la carga siguiente, **sin build y sin
+ * desplegar**. Esta campaña ya movió sus fechas una vez.
  *
- * Y el cierre es a las 23:59:59 del 21, no a las 00:00: «de 03/08 a 21/08»
- * incluye el día 21 entero.
+ * Quien las lee es `src/lib/inscricao.ts`, que además cachea el resultado unos
+ * segundos para no ir a São Paulo en cada visita.
  *
- * Estas dos fechas se mudan a la tabla `cao_campanha` de Supabase (ver
- * docs/PLATAFORMA.md); mientras tanto viven en el JSON.
+ * ⚠️ Al escribirlas en la base, siempre con offset. `'2026-08-21 23:59:59'` sin
+ * zona se interpreta como UTC y el período cerraría a las 20:59 del día 21 —tres
+ * día antes— sin que nadie se entere hasta que lleguen las quejas. Brasil no
+ * aplica horario de verano desde 2019, así que `-03:00` vale todo el año. Y el
+ * cierre va a las 23:59:59 del 21, no a las 00:00: «de 03/08 a 21/08» incluye
+ * el día 21 entero.
  */
 export const inscricao = dados.inscricao;
 

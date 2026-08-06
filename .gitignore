@@ -15,14 +15,10 @@ pnpm-debug.log*
 .env
 .env.production
 
-# uploads del formulario de inscripción (no versionar fotos de usuarios)
-uploads/
-
 # macOS / editores
 .DS_Store
 *.local
 Thumbs.db
-.vercel
 
 # Material de origen: los ficheros tal como los entrega marketing —resolución de
 # imprenta, vectoriales y manuales de marca de terceros—. Vive AQUÍ y no bajo

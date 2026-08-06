@@ -1,8 +1,18 @@
 import type { APIRoute } from 'astro';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { estadoInscricao } from '../../lib/inscricao';
+import { createHash } from 'node:crypto';
+import { estadoInscricao, cpfObrigatorio } from '../../lib/inscricao';
+import { formulario } from '../../data/site';
+import {
+  supabase,
+  PG_DUPLICADO,
+  PG_VAGAS_ESGOTADAS,
+  PG_AINDA_NAO_ABRIU,
+  PG_PERIODO_ENCERRADO,
+} from '../../lib/supabase';
+import { processarFoto, FotoInvalida } from '../../lib/foto';
+import { guardarFoto, removerFoto } from '../../lib/storage';
+import { sincronizarPlanilha } from '../../lib/planilha';
+import { ipDoPedido, registrarTentativa } from '../../lib/limite';
 
 export const prerender = false;
 
@@ -20,7 +30,8 @@ export const prerender = false;
  *     tutorEmail          formato de e-mail
  *     tutorTelefone       10 a 13 dígitos (fijo con DDD … móvil con +55)
  *     petNome             texto
- *     petFoto             JPG / PNG / WebP, máximo 2 MB
+ *     petFoto             JPG / PNG / WebP, máximo 25 MB (el navegador la reduce
+ *                         antes de subir; el servidor la reprocesa igual)
  *     aceiteRegulamento   checkbox: llega como 'on' (también se aceptan 'true' y '1')
  *
  *   Opcionales
@@ -34,36 +45,62 @@ export const prerender = false;
  * «Selecione a espécie do pet.». Ese es el bug que corrige este archivo:
  * `petEspecie` pasa a opcional y el aceite acepta el valor real del navegador.
  *
- * La ficha nace en estado `pendente`: no debe recibir votos hasta ser moderada.
+ * Persistencia: la ficha va a la tabla `cao_inscricao` de Supabase y la foto al
+ * bucket privado, siempre a través de `lib/storage.ts` — que es la única pieza
+ * que sabe dónde viven las fotos. La tabla guarda la KEY, nunca la URL.
  *
- * ⚠️ Persistencia: escribe en disco (uploads/ + inscricoes.jsonl). Esto funciona
- * en local, pero **NO en Vercel**, que es el adapter de este proyecto: el
- * sistema de archivos de una función es de sólo lectura salvo /tmp, y /tmp es
- * efímero y por instancia. Desplegado, el `fs.mkdir` falla y el endpoint
- * responde 500 — y la deduplicación por tutor+pet tampoco puede funcionar,
- * porque cada instancia vería su propio fichero. Antes de abrir el formulario
- * al público hay que mover la foto a un blob store y la ficha a una base de
- * datos (ver los documentos de arquitectura de la plataforma de formularios).
- *
- * ⚠️ LGPD: la ficha guarda datos personales (nombre, e-mail, teléfono y, si se
- * rellena, CPF). El JSONL de desarrollo está en claro y no debe salir de la
- * máquina local; el almacenamiento definitivo tiene que cifrar el CPF y tener
- * una política de retención.
+ * Antes esto escribía en disco (uploads/ + inscricoes.jsonl). Servía para
+ * probar, pero no como destino: sin consultas, sin copia de seguridad, sin
+ * forma de que el jurado y el CRM accedan sin entrar al servidor, y con la
+ * deduplicación dependiendo de releer un fichero entero en cada envío.
  */
 
-/* Mismo límite que promete el texto de ayuda del formulario («no máximo, 2mb»).
-   Antes eran 5 MB aquí y 2 MB en la interfaz: el usuario podía subir una foto de
-   4 MB, ver el formulario aceptarla y recibir un error del servidor. */
-const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+/* Techo contra abusos, NO una restricción de almacenamiento.
+ *
+ * Eran 2 MB, y eso rechazaba a casi todo el mundo: prácticamente ningún móvil
+ * actual produce una foto de menos de 2 MB (un iPhone da 3-6 MB, un Samsung de
+ * 200MP hasta 40). El límite venía de cuando la foto se guardaba tal cual en
+ * disco; ahora `processarFoto` la recodifica a WebP de ~250 KB, así que da
+ * igual con qué tamaño entre.
+ *
+ * Sigue habiendo un tope porque el cuerpo de la petición se buferiza en
+ * memoria antes de procesarse.
+ *
+ * ⚠️ Al desplegar detrás de Nginx hay que subir `client_max_body_size` (por
+ * defecto son 1 MB): si no, el usuario recibe un 413 del proxy y este código
+ * no llega a ejecutarse nunca. */
+const MAX_FOTO_BYTES = 25 * 1024 * 1024;
 const MAX_DESCRICAO = 1000;
 
+/* Prueba de consentimiento (LGPD).
+ *
+ * Se guarda un array de `{tipo, versao, texto_sha256, em}` y no un booleano,
+ * porque hay que poder demostrar QUÉ TEXTO EXACTO aceptó cada persona. El hash
+ * se calcula sobre el texto real que se le mostró: si mañana cambia la
+ * redacción, las fichas viejas siguen apuntando a la que estaba vigente.
+ *
+ * ⚠️ Pendiente: este único texto agrupa tres finalidades distintas —participar,
+ * ceder la imagen del pet y ceder los datos para divulgación—. Bajo LGPD
+ * requieren consentimientos separados. Hay que resolverlo ANTES de abrir el
+ * formulario al público: con inscripciones ya recogidas no se puede arreglar.
+ * Y si los contactos van a alimentar el CRM, esa es una cuarta finalidad que
+ * el texto actual tampoco menciona. */
+const CONSENTIMENTO_VERSAO = '2026-1';
+const CONSENTIMENTO_TEXTO = formulario.aceite;
+const CONSENTIMENTO_SHA256 = createHash('sha256')
+  .update(CONSENTIMENTO_TEXTO, 'utf8')
+  .digest('hex');
+
+/* Filtro rápido y de cortesía. El `type` lo declara el cliente y se falsea
+   renombrando el fichero, así que la comprobación que de verdad vale es la de
+   los primeros bytes, dentro de `processarFoto`. Esta sólo sirve para dar un
+   mensaje claro y temprano en el caso honesto.
+
+   Nota sobre el iPhone: que HEIC NO esté en esta lista ni en el `accept` del
+   input es deliberado. Safari convierte la foto a JPEG al seleccionarla cuando
+   el `accept` no admite HEIC; si lo admitiéramos, llegaría HEIC crudo y habría
+   que saber decodificarlo. */
 const TIPOS_ACEITOS = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const EXTENSOES: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/jpg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
 
 /* Un <input type="checkbox"> marcado manda 'on'. 'true' y '1' se aceptan para
    que la API siga sirviendo a clientes que no sean este formulario (curl, un
@@ -72,10 +109,6 @@ const VALORES_ACEITE = ['on', 'true', '1', 'sim'];
 
 const IDADE_MINIMA = 18;
 const IDADE_MAXIMA = 120;
-
-const DIR_DADOS = path.resolve(process.cwd(), 'uploads');
-const DIR_FOTOS = path.join(DIR_DADOS, 'fotos');
-const ARQUIVO_INSCRICOES = path.join(DIR_DADOS, 'inscricoes.jsonl');
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -157,20 +190,43 @@ function idadeEmAnos(nascimento: Date, hoje = new Date()): number {
   return idade;
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, url }) => {
+  /* Lo PRIMERO de todo, antes incluso de mirar el plazo: si alguien está
+     insistiendo, no se le lee el cuerpo ni se consulta la campaña. Cada
+     petición que llega aquí cuesta una lectura a Supabase y, si trae foto,
+     buferizar hasta 25 MB en memoria. Un bucle de `curl` sin esto tumba el
+     servidor antes de llenar el concurso. Ver src/lib/limite.ts. */
+  const veredicto = registrarTentativa(ipDoPedido(request));
+  if (!veredicto.permitido) {
+    const minutos = Math.ceil(veredicto.esperaSegundos / 60);
+    return json(
+      {
+        success: false,
+        message: `Muitas tentativas. Tente de novo em ${minutos} minuto${minutos > 1 ? 's' : ''}.`,
+      },
+      429
+    );
+  }
+
   /* El período de inscripción se comprueba AQUÍ, y no sólo al pintar el botón.
      Un botón que no aparece es cosmética: la ruta sigue existiendo y acepta un
      POST de `curl` el día después del cierre. Sin esta comprobación
      «Finalizado» no significa nada.
 
      Va lo primero, antes incluso de leer el cuerpo: si el plazo está cerrado no
-     hay motivo para bufferizar una foto de 2 MB. */
-  const estado = estadoInscricao();
+     hay motivo para bufferizar la foto entera. */
+  const estado = await estadoInscricao();
   if (estado === 'em-breve') {
     return erro('As inscrições ainda não estão abertas.', 403);
   }
   if (estado === 'finalizada') {
     return erro('O período de inscrição está encerrado.', 403);
+  }
+  /* Rechazo temprano por cupo lleno. No es la comprobación que cuenta —esa la
+     hace `criar_inscricao()` bajo bloqueo, y es la única sin carrera— pero
+     evita subir la foto para nada cuando ya se sabe que no hay sitio. */
+  if (estado === 'esgotada') {
+    return erro('As vagas para o Cãocurso já estão esgotadas.', 409);
   }
 
   const contentType = request.headers.get('content-type') ?? '';
@@ -228,6 +284,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
+  /* La regla de verdad sobre el CPF, no el `required` del HTML — ese se quita
+     desde las herramientas de desarrollo en dos clics. Sale de
+     `cao_campanha.cpf_obrigatorio`, la misma fuente que lee el formulario, así
+     que encender o apagar el interruptor mueve las dos mitades a la vez. */
+  if (!tutorCpf && (await cpfObrigatorio())) {
+    return erro('Informe o CPF cadastrado no Clube Condor.', 400, 'tutorCpf');
+  }
+
   if (tutorCpf) {
     const cpf = digitos(tutorCpf);
     if (cpf.length !== 11) {
@@ -280,75 +344,120 @@ export const POST: APIRoute = async ({ request }) => {
     return erro('Formato inválido. Use JPG, PNG ou WebP.', 400, 'petFoto');
   }
   if (foto.size > MAX_FOTO_BYTES) {
-    return erro('A foto deve ter no máximo 2 MB.', 400, 'petFoto');
+    return erro('A foto deve ter no máximo 25 MB.', 400, 'petFoto');
   }
 
   /* ---------------------------------------------------------- persistência */
 
-  try {
-    await fs.mkdir(DIR_FOTOS, { recursive: true });
+  /* Primero la foto, después la ficha. El orden importa:
+   *
+   * Al revés —fila insertada, subida fallida— quedaría una inscripción
+   * apuntando a una imagen inexistente: un dato corrupto que sólo se descubre
+   * cuando alguien intenta verla, ya en pleno concurso. En este orden, lo peor
+   * que puede quedar es un fichero huérfano, que el `catch` borra y que en el
+   * caso más tonto cuesta 250 KB. */
+  let fotoKey: string | null = null;
 
-    // Deduplica por tutor + pet: reinscribir la misma mascota no crea otra ficha.
-    const chave = `${tutorEmail.toLowerCase()}|${petNome.toLowerCase()}`;
-    const existentes = await fs.readFile(ARQUIVO_INSCRICOES, 'utf-8').catch(() => '');
-    if (
-      existentes
-        .split('\n')
-        .filter(Boolean)
-        .some((linha) => {
-          try {
-            return JSON.parse(linha).chave === chave;
-          } catch {
-            return false;
-          }
-        })
-    ) {
-      return erro('Este pet já foi inscrito com esse e-mail.', 409, 'petNome');
+  try {
+    const processada = await processarFoto(new Uint8Array(await foto.arrayBuffer()));
+    fotoKey = await guardarFoto(processada.bytes, processada.contentType);
+
+    /* Se reparsea la fecha en vez de arrastrarla desde la validación: ya se
+       comprobó arriba que es real y que el tutor es mayor de edad, así que
+       aquí sólo hace falta el formato que espera Postgres (aaaa-mm-dd). */
+    const nascimento = tutorNascimento ? parseData(tutorNascimento) : null;
+
+    /* Se llama a la función y no a `.insert()` directamente porque el cupo no
+       se puede comprobar desde aquí sin abrir una carrera: con una plaza libre,
+       dos envíos simultáneos leerían 49 los dos e insertarían los dos.
+       `criar_inscricao` toma un bloqueo, cuenta e inserta en la misma
+       transacción, y además vuelve a validar la ventana — es el único camino
+       por el que una inscripción puede entrar. Ver la migración 0002. */
+    const { data, error } = await supabase.rpc('criar_inscricao', {
+      dados: {
+        tutor_nome: tutorNome,
+        tutor_nascimento: nascimento ? nascimento.toISOString().slice(0, 10) : null,
+        tutor_cpf: tutorCpf ? digitos(tutorCpf) : null,
+        tutor_email: tutorEmail,
+        tutor_telefone: telefone,
+
+        pet_nome: petNome,
+        pet_raca: petRaca || null,
+        pet_sexo: petSexo || null,
+        pet_especie: petEspecie || null,
+        pet_descricao: petDescricao || null,
+
+        /* La KEY, nunca la URL: ver `lib/storage.ts`. */
+        foto_key: fotoKey,
+
+        consentimentos: [
+          {
+            tipo: 'regulamento_e_imagem',
+            versao: CONSENTIMENTO_VERSAO,
+            texto_sha256: CONSENTIMENTO_SHA256,
+            em: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+
+    if (error) {
+      await removerFoto(fotoKey);
+
+      /* Cupo lleno. Puede llegar aquí aunque el estado leído arriba dijera
+         'aberta': entre aquella lectura —cacheada unos segundos— y este
+         momento pudo entrar el último. Ésta es la respuesta que vale. */
+      if (error.code === PG_VAGAS_ESGOTADAS) {
+        return erro('As vagas para o Cãocurso já estão esgotadas.', 409);
+      }
+
+      /* La ventana, revalidada por el banco. Sólo se llega aquí si el reloj o
+         las fechas cambiaron a mitad de envío. */
+      if (error.code === PG_AINDA_NAO_ABRIU) {
+        return erro('As inscrições ainda não estão abertas.', 403);
+      }
+      if (error.code === PG_PERIODO_ENCERRADO) {
+        return erro('O período de inscrição está encerrado.', 403);
+      }
+
+      /* El duplicado lo decide el índice único, no una lectura previa: dos
+         envíos simultáneos leerían los dos antes de que el otro escriba. */
+      if (error.code === PG_DUPLICADO) {
+        return error.message.includes('cpf')
+          ? erro('Este CPF já foi usado em outra inscrição.', 409, 'tutorCpf')
+          : erro('Este pet já foi inscrito com esse e-mail.', 409, 'petNome');
+      }
+
+      throw error;
     }
 
-    const id = `pet_${randomUUID().slice(0, 8)}`;
-    const nomeArquivo = `${id}${EXTENSOES[foto.type] ?? '.jpg'}`;
-    await fs.writeFile(
-      path.join(DIR_FOTOS, nomeArquivo),
-      Buffer.from(await foto.arrayBuffer())
-    );
+    /* La función devuelve el uuid directamente, no una fila. */
+    const id = data as unknown as string;
 
-    const ficha = {
-      id,
-      chave,
-      status: 'pendente', // não recebe votos até ser moderada
-      votos: 0,
-
-      tutorNome,
-      tutorNascimento: tutorNascimento || null,
-      tutorCpf: tutorCpf ? digitos(tutorCpf) : null,
-      tutorEmail,
-      tutorTelefone: telefone,
-
-      petNome,
-      petRaca: petRaca || null,
-      petSexo: petSexo || null,
-      petDescricao: petDescricao || null,
-      petEspecie: petEspecie || null,
-
-      fotoArquivo: nomeArquivo,
-
-      aceiteRegulamento,
-      aceiteEm: new Date().toISOString(), // prova de consentimento (LGPD)
-      criadoEm: new Date().toISOString(),
-    };
-
-    await fs.appendFile(ARQUIVO_INSCRICOES, `${JSON.stringify(ficha)}\n`, 'utf-8');
+    /* La planilla del jurado, en marcha. Deliberadamente SIN await: la ficha
+       ya está guardada, y si Google tarda o falla eso no puede convertirse en
+       un error para quien acaba de rellenar once campos. Se corrige sola en el
+       envío siguiente. Ver src/lib/planilha.ts. */
+    sincronizarPlanilha(url.origin);
 
     return json(
       {
         success: true,
         id,
-        message: `Inscrição enviada! ${petNome} vai concorrer no Cãocurso. Assim que a foto for aprovada, avisamos por e-mail.`,
+        message: `Inscrição enviada! ${petNome} vai concorrer no Cãocurso.`,
       },
       201
     );
   } catch (e) {
+    /* La foto ya subió pero la ficha no llegó a existir: no dejarla ahí. */
+    if (fotoKey) await removerFoto(fotoKey);
+
+    /* Imagen ilegible o disfrazada: es culpa del envío, no del servidor, y el
+       usuario puede arreglarlo eligiendo otra foto. */
+    if (e instanceof FotoInvalida) {
+      return erro(e.message, 400, 'petFoto');
+    }
+
     console.error('Erro ao salvar inscrição:', e);
     return erro('Não foi possível concluir a inscrição. Tente novamente.', 500);
   }

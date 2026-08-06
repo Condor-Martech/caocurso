@@ -8,15 +8,22 @@ isolado da LP do Pet Condor.
 **Objetivo:** construir a landing page de **pet.condor.com.br** (campanha *Mês Pet* /
 *Cãocurso* da rede Condor) usando Astro + Tailwind CSS + React.
 
-**Stack:** Astro 7.x (`output: 'server'` + `@astrojs/vercel`) | React 19 | Tailwind CSS v4 | TypeScript | Node.js ≥22.12.0
+**Stack:** Astro 7.x (`output: 'server'` + `@astrojs/node` standalone) | React 19 |
+Tailwind CSS v4 | TypeScript | Node.js ≥22.12.0 | Supabase (Postgres + Storage) | sharp
 
 **Idioma:** **português do Brasil (pt-BR), 100%** — tanto os textos visíveis do site
 quanto a documentação e as mensagens de commit deste repositório.
 
-**Estado:** LP realinhada ao **KV 2026** e **saneada**. Build limpo, `astro check` com 0
-erros, sem caminhos de assets quebrados. O rebuild está commitado e marcado com a tag
-`v2026-base`: é para esse ponto que se volta. Próximo trabalho: persistência do
-formulário no Supabase, com espelho numa planilha do Google para o marketing.
+**Estado:** LP alinhada ao **KV 2026**, com a inscrição **persistida no Supabase** e a
+planilha do júri se abastecendo sozinha. Build limpo, `astro check` com 0 erros, sem
+caminhos de assets quebrados. A tag `v2026-base` marca o fim do saneamento visual: é para
+lá que se volta se um retoque de layout der errado. O que falta antes de abrir ao público
+não é arquitetura: é uma decisão de LGPD que cabe ao cliente e o deploy no VPS, que é da
+equipe de infra. Ver «Estado de implementação».
+
+**Onde isto vive de verdade:** o [`README.md`](README.md) é o manual de operação — como
+subir, que variáveis existem, como consertar a planilha, o que fazer quando algo quebra.
+Este arquivo descreve **a LP**; o README descreve **o serviço**.
 
 **Pasta do Projeto Central (Referência):** `/home/diego/armando/Migraciones/petCondor/site`
 
@@ -54,18 +61,21 @@ Continua recuperável do histórico do git até `1796aa1`.
 
 ## 📚 Documentação Disponível Nesta Pasta
 
-São **três arquivos**, e nenhum sobra:
+São **quatro**, e nenhum sobra. Cada um responde a uma pergunta diferente:
 
-1. **`docs/Desktop - CãoCurso.png`** 🎯 — a arte aprovada 2026. Manda sobre tudo
-2. **`docs/LP Cão Curso.docx`** 🎯 — o briefing. Manda em datas, copy e marcas
-3. **`docs/PLATAFORMA.md`** — para onde vai a persistência: Supabase, o espelho na
-   planilha do Google, o modelo de dados, LGPD e a ordem de trabalho
+| Arquivo | Responde |
+|---|---|
+| **`docs/Desktop - CãoCurso.png`** 🎯 | *Como é que fica?* — a arte aprovada 2026. Manda sobre tudo |
+| **`docs/LP Cão Curso.docx`** 🎯 | *O que diz o copy?* — o briefing. Manda em datas e marcas |
+| **`README.md`** | *Como se opera?* — subir, variáveis, consertar, o que fazer quando quebra |
+| **`docs/PLATAFORMA.md`** | *Como estão os dados?* — tabelas, a planilha, o que a LGPD ainda cobra |
 
-Mais este arquivo, que é o que descreve a LP tal como está construída.
+Mais este arquivo, que é o que descreve **a LP tal como está construída** — as regras que
+não se deduzem lendo o código porque são decisões, não implementação.
 
 > Antes eram treze documentos, 8.619 linhas: a campanha de 2025, um modal que já não
 > existe e uma plataforma de votação com feed público, antifraude e moderação que nunca
-> foi o escopo. Hoje são 259 linhas. Está tudo no histórico do git.
+> foi o escopo. Está tudo no histórico do git.
 
 ---
 
@@ -123,14 +133,16 @@ Light, Regular, SemiBold, Bold, Heavy) convertidos para `.woff2`.
 - **`POST /api/inscricao`** com **`multipart/form-data`** (`petFoto` é um arquivo e não
   cabe num body JSON).
 - Exige `output: 'server'` + um adapter SSR em `astro.config.mjs`, ou as rotas de API não
-  são executadas. **Adapter atual: `@astrojs/vercel`.**
+  são executadas. **Adapter atual: `@astrojs/node` em modo `standalone`.**
 
-  ⚠️ **Mas produção NÃO é a Vercel: o site vai para um VPS com Docker.** A decisão está
-  tomada; a migração do adapter está *adiada de propósito*, não esquecida. Não otimize
-  para a Vercel nem tome o build de `.vercel/output` como artefato de deploy. Quando for
-  a hora: `@astrojs/node` em modo `standalone`, fora o `vercel.json` e a opção
-  `imageService: false` (é do adapter da Vercel), e um Dockerfile multi-stage com
-  `.dockerignore` — sem ele o contexto de build engole `assets-fonte/`, quase 1 GB.
+  O build sai em **`dist/`** — `dist/server/` (o servidor HTTP, 588 KB, dos quais 226 são
+  o `entry.mjs`) e `dist/client/` (o estático, 7,8 MB). O site roda num **VPS com
+  Docker**, atrás de um Nginx: os artefatos são `Dockerfile`, `docker-compose.yml` e
+  `deploy/`.
+
+  ⚠️ **O `.dockerignore` não é opcional.** Sem ele o contexto de build engole
+  `assets-fonte/`, quase 1 GB de material de gráfica que não tem nada que fazer numa
+  imagem.
 - **O Astro 7 rejeita POSTs sem `Origin` próprio** (proteção CSRF por padrão). Do
   navegador funciona sozinho; do `curl` é preciso mandar
   `-H "Origin: http://localhost:4321"` ou você recebe um **403**, não um erro de
@@ -140,20 +152,39 @@ Light, Regular, SemiBold, Bold, Heavy) convertidos para `.woff2`.
 - **`/api/feedback` NÃO serve aqui:** pertence à documentação interna do projeto central,
   exige `pageId` + `content` e devolve **400** com o payload de inscrição.
 
-**Persistência do endpoint:** hoje grava com `fs` em `uploads/`. Na Vercel isso era um
-bloqueio duro —sistema de arquivos somente leitura fora de `/tmp`, efêmero e por
-instância: `fs.mkdir` falha, responde **500**, e a deduplicação por tutor+pet não tem como
-funcionar porque cada instância vê o seu próprio arquivo—. **Num VPS com Docker e um
-volume montado deixa de ser:** gravável, persistente e com uma instância só. Ou seja, já
-não impede o deploy; continua sendo o caminho errado a médio prazo. **Destino decidido: a
-ficha vai para o Supabase**; o storage da foto (MinIO ou Supabase Storage) segue sem
-decisão e não bloqueia, porque o banco guarda a `key` e não a URL. É o próximo trabalho
-depois do saneamento. Na migração, o formulário passa a ser uma **ilha React** —por isso
-o `@astrojs/react` continua instalado mesmo sem nenhuma ilha hoje— e deve ser montado com
-`client:visible`: ele vive bem abaixo da dobra, então os ~60 KB de React não têm por que
-entrar na primeira tela. E a ilha é renderizada no servidor: o `<form>` conserva `action`
-e `method` reais, de modo que continua funcionando sem JavaScript. Se montar vazia no
-cliente, isso se perde. Ver `docs/PLATAFORMA.md`.
+**Persistência do endpoint:** nada toca o sistema de arquivos. O caminho completo de uma
+inscrição, em ordem:
+
+```
+1. valida os 11 campos                        src/pages/api/inscricao.ts
+2. reprocessa a foto com sharp                src/lib/foto.ts       → WebP 1600 px q82, sem EXIF
+3. sobe ao bucket privado                     src/lib/storage.ts    → key 2026/<uuid>.webp
+4. grava a ficha                              rpc criar_inscricao   → tabela cao_inscricao
+5. empurra a planilha do júri, sem await      src/lib/planilha.ts   → Web App do Apps Script
+```
+
+Cada peça tem o seu módulo, e isso é de propósito: **`src/lib/storage.ts` é o único
+arquivo que sabe onde vivem as fotos.** Trocar de provedor é reescrever esse arquivo e
+mais nada — o banco guarda a `key`, nunca a URL.
+
+O passo 4 é uma **função do Postgres**, não um `insert` solto. Ela toma um advisory lock
+antes de contar as vagas, de modo que dez pessoas disputando a última não podem virar
+duas inscrições. Ver `supabase/migrations/0002_cao_campanha_e_vagas.sql`, e a lista de
+códigos de erro em `src/lib/supabase.ts`.
+
+O passo 5 é deliberadamente **fire-and-forget**: a ficha já está salva quando ele dispara.
+Se a Google estiver fora do ar, o erro vai para o log e ninguém que preencheu onze campos
+recebe uma tela de falha por causa da planilha.
+
+> **O formulário NÃO é uma ilha React.** É Astro puro, e continua sendo. O
+> `@astrojs/react` segue instalado sem nenhuma ilha; a ideia de migrá-lo era da época em
+> que a persistência ainda não existia e não sobreviveu ao contato com o problema real —
+> o que o formulário precisava era do servidor, não do cliente. O JavaScript que ele tem
+> —abrir e fechar o modal com foco e Escape, as máscaras de CPF, telefone e data, o envio
+> por `fetch` e a redução da imagem— são ~390 linhas de script simples, sem framework.
+
+Ver [`docs/PLATAFORMA.md`](docs/PLATAFORMA.md) para o modelo de dados e a LGPD, e o
+[`README.md`](README.md) para operar.
 
 ### Os 11 blocos da página
 
@@ -195,7 +226,7 @@ antes da faixa Cãocurso e depois dela.
 
 ### Assets — nunca sirva os originais de gráfica
 
-O KV 2026 chega em resolução de gráfica: hoje `assets-fonte/` está em **920 MB**, com PNG
+O KV 2026 chega em resolução de gráfica: hoje `assets-fonte/` está em **~997 MB**, com PNG
 de 17717×7087 px (`Textura_Halftone.png` pesa 229 MB sozinho). Servido a partir de
 `public/` isso estoura o deploy. O fluxo é:
 
@@ -210,7 +241,7 @@ public/assets/galeria/   WebP a 960 px. 236 MB → 660 KB.
 ```
 
 ⚠️ **O `.gitignore` não impede que um arquivo seja publicado.** Tudo o que estiver sob
-`public/` é copiado tal e qual para `.vercel/output/static/` e fica servido numa URL,
+`public/` é copiado tal e qual para `dist/client/` e fica servido numa URL,
 esteja ou não no git. São dois filtros distintos: o git decide o que é versionado,
 `public/` decide o que é publicado. Material de origem que não deva ir para a internet
 tem de estar **fora de `public/`**, não só fora do git.
@@ -261,23 +292,36 @@ tomada, não um desvio.
 O `InscricaoModal.jsx`, a peça de 8 campos de 2025, segue removido: este modal é outra
 coisa, em Astro e sem React.
 
-#### O botão tem três estados, e quem decide é o servidor
+#### O botão tem quatro estados, e quem decide é o servidor
 
-`src/lib/inscricao.ts` compara a hora atual com a janela de inscrição e devolve
-`em-breve`, `aberta` ou `finalizada`. Daí saem os três rótulos —«Em breve»,
-«Inscreva-se», «Finalizado»— e só o do meio é clicável.
+`src/lib/inscricao.ts` cruza a hora atual com a janela de inscrição **e com as vagas
+restantes**, e devolve `em-breve`, `aberta`, `esgotada` ou `finalizada`. Daí saem os
+quatro rótulos —«Em breve», «Inscreva-se», «Esgotado», «Finalizado»— e só o segundo é
+clicável.
 
-Três coisas que não dá para mexer separadamente:
+Quatro coisas que não dá para mexer separadamente:
 
 - **A mesma função é usada pelo `POST /api/inscricao`**, e ali não é decorativa: um botão
   que não aparece não impede um POST com `curl` no dia seguinte ao fechamento. Se você
-  tirar essa checagem, «Finalizado» deixa de significar alguma coisa.
-- **Falha fechado.** Se as datas não puderem ser lidas, devolve `em-breve`, nunca
-  `aberta`. Vale também para quando as datas vierem do Supabase e o Supabase não
-  responder: ver «Inscreva-se» e o envio estourar depois de preencher onze campos e subir
-  uma foto é pior do que ver «Em breve» a mais.
-- **As datas levam offset `-03:00` escrito à mão** em `site.ts`. `new Date('2026-08-21')`
-  é lido como UTC e o período teria fechado às 21:00 do dia 20 — um dia antes.
+  tirar essa checagem, «Finalizado» deixa de significar alguma coisa. O mesmo vale para
+  «Esgotado» — e ali a última linha de defesa nem sequer é essa: é o advisory lock dentro
+  de `criar_inscricao()`, porque entre ler o estado e gravar a ficha cabe outra pessoa.
+- **Falha fechado — mas só na primeira leitura.** Se a campanha nunca pôde ser lida —o
+  Supabase fora do ar desde o arranque, a tabela vazia— devolve `em-breve`, nunca
+  `aberta`: ver «Inscreva-se» e o envio estourar depois de preencher onze campos e subir
+  uma foto é pior do que ver «Em breve» a mais. **Se já houve uma leitura boa, um erro
+  posterior devolve o último valor conhecido** em vez de fechar a página — um soluço de
+  rede de dez segundos não tem por que apagar o botão no meio da campanha. Quem garante
+  que isso não vira uma inscrição indevida é `criar_inscricao()`, que confere a janela e
+  as vagas no banco a cada envio.
+- **As datas e o limite de vagas vivem na tabela `cao_campanha` do Supabase**, não no
+  código. É uma linha só, e mudar a data de fechamento ou subir o teto de 50 é um `update`
+  — sem rebuild, sem redeploy. `src/lib/inscricao.ts` a lê pela vista
+  `cao_estado_inscricao`, com **cache de 10 segundos**: sem ele, cada visita à home seria
+  uma consulta. Em `site.ts` só ficaram os rótulos do botão.
+- **As datas levam offset `-03:00` escrito à mão**, tanto na migração quanto em qualquer
+  `update` que se faça depois. `'2026-08-21 23:59:59'` sem fuso é lido como UTC e o
+  período fecharia às 20:59 do dia 21, horário de Brasília.
 
 #### Sem JavaScript o formulário continua funcionando
 
@@ -289,7 +333,7 @@ ela, `.modal` é um cartão lavanda no fim da página e o botão —um
 Por isso **não é um `<dialog>`**: sem JS um `<dialog>` é `display:none` e não há como
 abri-lo, então o formulário deixaria de existir para quem não executa scripts.
 
-E por isso **o componente é sempre renderizado**, nos três estados: tirá-lo do HTML
+E por isso **o componente é sempre renderizado**, nos quatro estados: tirá-lo do HTML
 quando o período está fechado deixaria a âncora apontando para o nada.
 
 `role="dialog"` e `aria-modal` são colocados pelo script ao abrir, não pelo HTML:
@@ -301,12 +345,24 @@ Campos, conforme o briefing (`docs/LP Cão Curso.docx`):
 
 - **Tutor:** `tutorNome`*, `tutorNascimento`, `tutorCpf` (o do Clube Condor),
   `tutorEmail`*, `tutorTelefone`*
-- **Pet:** `petNome`*, `petRaca`, `petSexo`, `petDescricao`, **`petFoto`*** (máx. 2 MB)
+- **Pet:** `petNome`*, `petRaca`, `petSexo`, `petDescricao`, **`petFoto`*** (máx. **25 MB**)
 - `aceiteRegulamento`* — regulamento + autorização de uso de imagem. **Não está na
   arte**; foi acrescentado a pedido do cliente porque um concurso com foto precisa disso
   (LGPD).
 
 (*) obrigatório. `petEspecie` ficou **opcional**: o formulário de 2026 não o pede.
+
+**Os 25 MB não são generosidade, são o mínimo que funciona.** O limite era 2 MB e um
+iPhone recente manda 4-6 MB numa foto normal: metade dos celulares seria rejeitada na
+cara do usuário. Hoje o caminho é outro — o navegador **reduz a imagem antes de subir**
+(canvas, lado maior 1600 px, WebP 0,85) e o servidor a reprocessa igual com sharp, de modo
+que ao bucket chega sempre algo em torno de 100-250 KB, venha o que vier. Os 25 MB só
+existem para o caso de o JavaScript do cliente falhar; o Nginx acompanha com
+`client_max_body_size 30M`.
+
+O reprocessamento no servidor **não é opcional nem é sobre peso**: é o que apaga o EXIF.
+Uma foto de pet é tirada em casa, e o arquivo cru do celular leva as coordenadas de GPS
+dentro. Essa foto acaba numa planilha compartilhada com o júri e com o CRM.
 
 - **Proibido** pedir endereço, quintal, "você tem pets?" ou documento de identidade: eram
   do formulário de adoção que a documentação de 2025 imaginou.
@@ -320,12 +376,25 @@ Campos, conforme o briefing (`docs/LP Cão Curso.docx`):
 **O projeto já está montado e funcionando.** Não é preciso criá-lo do zero.
 
 ```bash
-npm install          # só na primeira vez
-npm run dev          # http://localhost:4321
-npm run build        # build de produção → .vercel/output
-vercel dev           # preview do build (astro preview NÃO serve .vercel/output)
-npx astro check      # 0 erros esperados
+npm install                      # só na primeira vez
+cp .env.example .env             # e preencher — sem isto o formulário não grava
+npm run dev                      # http://localhost:4321
+npm run build                    # build de produção → dist/
+node ./dist/server/entry.mjs     # rodar o build
+npx astro check                  # 0 erros esperados
 ```
+
+Ou, do jeito que produção vai rodar:
+
+```bash
+docker compose up -d --build
+curl -s localhost:4321/healthz   # 200 = o Supabase responde. 503 = não.
+```
+
+> ⚠️ **A validação do `.env` é preguiçosa.** O `astro:env` só confere as variáveis quando
+> o módulo que as usa é importado pela primeira vez. Um contêiner com o `.env` incompleto
+> **sobe, serve a home e sai `healthy`** — e só quebra na primeira inscrição. Quem detecta
+> isso é `/healthz`, que existe exatamente por esse motivo e é o alvo do `HEALTHCHECK`.
 
 ---
 
@@ -339,38 +408,61 @@ npx astro check      # 0 erros esperados
 | 4 | Transições, scroll reveal com fallback sem JS, `prefers-reduced-motion` | ✅ feito |
 | 5 | **Realinhado ao KV 2026**: paleta, assets otimizados, copy do briefing | ✅ feito |
 | 6 | **Saneamento**: ponto base no git (`v2026-base`), nav retirado, caminhos quebrados fechados | ✅ feito |
+| 7 | **Persistência**: Supabase (tabela + bucket privado), foto reprocessada, deploy em Docker | ✅ feito |
+| 8 | **Vagas e planilha**: 4º estado «Esgotado», teto de 50, espelho automático na planilha do júri | ✅ feito |
+| 9 | **Fechamento do fluxo**: CPF obrigatório por interruptor, limite de tentativas, exclusão LGPD que apaga de verdade | ✅ feito |
 
-**Verificado (2026-08-04):** `astro check` 0/0/0 · `npm run build` limpo · os 34 caminhos
-de `/assets/` referenciados a partir de `src/` existem em `public/` · árvore do git
-limpa, rebuild 2026 commitado e marcado com `v2026-base` · endpoint testado em 5 casos
-(201 válido, 400 sem aceite, 409 duplicado, 400 CPF inválido, 400 menor de idade).
+**Verificado (2026-08-06):** `astro check` 0/0/0 · `npm run build` limpo · endpoint testado
+em 5 casos (201 válido, 400 sem aceite, 409 duplicado, 400 CPF inválido, 400 menor de
+idade) · 10 requisições simultâneas disputando 1 vaga → exatamente 1 × 201 e 9 × 409 ·
+planilha testada de ponta a ponta contra uma hoja real (inscrição → `{"ok":true}` do Apps
+Script → linha na aba → link da foto abrindo a imagem).
 
-`.vercel/output/static` = **7,8 MB** (eram 86 antes de tirar os kits de marca de
-`public/`). Nenhum `.zip`, `.ai` nem `Thumbs.db` fica publicado.
+`dist/client` = **7,8 MB** (eram 86 antes de tirar os kits de marca de `public/`). Nenhum
+`.zip`, `.ai` nem `Thumbs.db` fica publicado. A imagem Docker ronda os 480 MB.
 
-⚠️ A função serverless pesa **41 MB, dos quais 36 são os binários nativos do sharp**
-(`node_modules/@img`). `imageService: false` desativa o serviço de imagens da Vercel, mas
-deixa o próprio do Astro, que é o sharp. Como aqui todas as imagens são `<img>` com
-caminhos de `/assets/` já otimizados e não se usa `astro:assets`, o sharp nunca chega a
-ser executado: são 36 MB mortos que só alongam o cold start. Saem colocando
-`image: { service: passthroughImageService() }`.
+> O `sharp` **é dependência viva**, não peso morto: `src/lib/foto.ts` o usa para
+> reprocessar cada foto que entra. O que está desativado é o *serviço de imagens do
+> Astro* (`image: { service: passthroughImageService() }`), porque nenhuma imagem da LP
+> passa por `astro:assets` — são `<img>` com caminhos de `/assets/` já otimizados. São
+> dois usos distintos da mesma biblioteca; tirar o sharp quebra o formulário.
+
+**Pendente — e nenhum é arquitetura:**
+
+1. **Consentimento agrupado (LGPD).** Uma casilla só cobre regulamento, uso de imagem e
+   uso dos dados pelo CRM. Se o CRM vai mesmo usar esses contatos, precisa de aceite
+   próprio e separado. **É decisão do cliente, e é irreversível uma vez que os dados
+   comecem a entrar** — pedir de novo a 50 pessoas depois não é viável. Ver
+   `docs/PLATAFORMA.md` §5.
+2. **~~Limite de tentativas~~** — feito: 8 por IP a cada 10 minutos, em `src/lib/limite.ts`.
+   Vale a pena saber que **mora em memória e conta por processo**: no dia em que houver duas
+   instâncias atrás de um balanceador, o limite real dobra.
+2b. **O CPF é obrigatório, por interruptor.** Decisão do cliente em 2026-08-06. Mas
+   obrigatório **não é verificado**: o briefing pede «cadastrado no Clube Condor» e não há
+   acesso à base de sócios, então o que se confere é só o dígito verificador. O que se
+   ganha é que todas as fichas tenham o dado para o cruzamento, que é humano. Liga-se e
+   desliga-se com um `UPDATE` em `cao_campanha.cpf_obrigatorio`, sem deploy. Ver
+   `docs/PLATAFORMA.md` §6.
+3. **Deploy no VPS.** Os artefatos estão prontos (`Dockerfile`, `docker-compose.yml`,
+   `deploy/nginx.conf.example`) e quem os executa é a equipe de infra, não este repositório.
+   As duas linhas inegociáveis do Nginx estão no `README.md`.
 
 **Pendente de o cliente fornecer material** (não é trabalho de código):
 
 1. **1 logo que não existe:** Fancy Feast — a pasta que o marketing mandou está vazia. É
    escrito como texto azul. Atenção: `WHISKAS-LOGO.png` **não** é Fancy Feast. MARS
    Petcare, Caats e Doguitos **já têm material** em
-   `public/assets/patrocinadores/Apoio/`; falta tirar de cada pasta o arquivo web e
+   `assets-fonte/patrocinadores/Apoio/`; falta tirar de cada pasta o arquivo web e
    repontar o `site.ts`. `Logo-Purina-One-Caes.png` **não** é Doguitos.
-2. **Regulamento 2026:** não há PDF. O botão está visível e desabilitado. Quando o
-   arquivo chegar: `regulamentoDisponivel: true` em `src/data/site.ts` e o ramo `<a href>`
-   já está escrito.
-3. **Protetoras / ONGs:** *«em definição»* segundo o briefing. Os 3 cartões estão vazios,
-   com o link do Instagram pronto para ser ativado quando os dados chegarem.
-4. **Fotos da galeria:** a arte mostra 13 fotos e no repositório há 12, que além disso não
+2. **Regulamento 2026:** o botão já está **ativo**, mas apontando para o PDF **de 2025**
+   (`regulamentoPdf` em `site.json`, hospedado no MinIO). Quando o de 2026 chegar é trocar
+   essa URL — o interruptor `regulamentoDisponivel` já está em `true` e o ramo que mostra
+   «disponível em breve» segue escrito para o caso de precisar voltar atrás.
+3. **Fotos da galeria:** a arte mostra 13 fotos e no repositório há 12, que além disso não
    são a mesma seleção que o designer usou.
 
-O que vem depois está em `docs/PLATAFORMA.md` §6.
+> **As protetoras já não estão pendentes.** As três chegaram e estão renderizadas com logo
+> e Instagram: Instituto Seres & Vidas, Marcia Santos e Instituto SOS 4 Patas Paraná.
 
 ---
 
@@ -420,22 +512,38 @@ Esta pasta é **isolada e autossuficiente**:
 
 ```
 /home/diego/armando/Sites/petcondor/
-├── astro.config.mjs           (output: 'server' + @astrojs/vercel, imageService: false)
-├── vercel.json                (framework astro, região gru1 São Paulo)
+├── astro.config.mjs           (output: 'server' + @astrojs/node standalone,
+│                               passthroughImageService, env.schema com 7 variáveis)
+├── Dockerfile                 (multi-stage node:22-slim, USER node, HEALTHCHECK /healthz)
+├── docker-compose.yml         (127.0.0.1:4321, init: true, env_file: .env)
+├── .env.example               (a planta das 7 variáveis; o .env NÃO é versionado)
+├── deploy/
+│   ├── nginx.conf.example     (proxy reverso — leia o `map` do Origin antes de tocar)
+│   └── planilha.gs            (o Apps Script que recebe e reescreve a aba do júri)
+├── supabase/
+│   └── migrations/
+│       ├── 0001_cao_inscricao.sql        (tabela, índices únicos, RLS, bucket privado)
+│       ├── 0002_cao_campanha_e_vagas.sql (cao_campanha, vista, criar_inscricao())
+│       └── 0003_cao_cpf_obrigatorio.sql  (o interruptor do CPF)
 ├── scripts/
-│   └── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
-├── assets-fonte/              ⚠️ 920 MB de gráfica + fotos. NO GITIGNORE.
+│   ├── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
+│   └── limpar-inscricoes.mjs  (apagar sem deixar fotos órfãs · --excluir da LGPD ·
+│                               --sincronizar reescreve a planilha)
+├── assets-fonte/              ⚠️ ~997 MB de gráfica + fotos. NO GITIGNORE.
 ├── src/
 │   ├── pages/
 │   │   ├── index.astro        (MAIN — os 11 blocos + 4 Faixa)
+│   │   ├── healthz.ts         (200 se o Supabase responde, 503 se não. Alvo do HEALTHCHECK)
+│   │   ├── foto/[id].ts       (302 para uma URL assinada de 300 s. O bucket segue privado)
 │   │   └── api/
-│   │       └── inscricao.ts   (POST multipart/form-data)
+│   │       ├── inscricao.ts   (POST multipart/form-data)
+│   │       └── exportar.ts    (GET com token — o conserto manual da planilha)
 │   ├── components/
 │   │   ├── Hero.astro                (bloco 1)
 │   │   ├── AdoteAumigo.astro         (bloco 2)
 │   │   ├── Eventos.astro             (bloco 3 — 2 cards + 1 centralizado)
 │   │   ├── Requisitos.astro          (bloco 4 — painel + 6 bullets, NÃO cards)
-│   │   ├── Protetoras.astro          (bloco 5 — 3 cartões vazios, ONGs sem definir)
+│   │   ├── Protetoras.astro          (bloco 5 — 3 ONGs, com logo e Instagram)
 │   │   ├── Caocurso.astro            (bloco 6 — faixa sangrada)
 │   │   ├── Evento30Agosto.astro      (bloco 7 — é o 29 de agosto; nome herdado)
 │   │   ├── Atracoes.astro            (bloco 8 — 4 cards, ícones SVG inline)
@@ -446,8 +554,13 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   ├── Faixa.astro               (faixa separadora = pattern-horizontal.svg)
 │   │   └── icons/IconeSocial.astro   (selos de redes, em cor de marca)
 │   ├── lib/
-│   │   └── inscricao.ts       (estado do período: em-breve / aberta / finalizada.
-│   │                           Consumido pelo botão E pelo endpoint)
+│   │   ├── inscricao.ts       (estado da campanha: em-breve / aberta / esgotada /
+│   │   │                       finalizada. Consumido pelo botão E pelo endpoint)
+│   │   ├── supabase.ts        (o cliente service_role. SÓ servidor)
+│   │   ├── storage.ts         (o ÚNICO módulo que sabe onde vivem as fotos)
+│   │   ├── foto.ts            (sharp: valida os magic bytes, gira, apaga o EXIF, WebP)
+│   │   ├── planilha.ts        (monta e empurra a lista ao Web App do júri)
+│   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
 │   ├── data/
 │   │   ├── site.json          (TODO o conteúdo visível: 179 strings, 15 blocos)
 │   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)
@@ -460,16 +573,18 @@ Esta pasta é **isolada e autossuficiente**:
 ├── public/
 │   ├── fonts/                 (Torus .woff2 ×6, self-hosted)
 │   └── assets/
-│       ├── 2026/              (KV 2026 otimizado — 3,5 MB)
+│       ├── 2026/              (KV 2026 otimizado — 3,7 MB)
 │       ├── images/            (assets 2025 ainda válidos: AuMigo, Dog.png)
 │       ├── galeria/           (12 fotos da edição 2025, WebP gerados)
 │       ├── patrocinadores/    (logos reaproveitados de 2025)
 │       └── docs/2025_Regulamento_Caocurso.pdf
 │
-└── docs/
-    ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre tudo (não versionado)
-    ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda em conteúdo (não versionado)
-    └── PLATAFORMA.md           (Supabase + planilha do Google, modelo de dados, LGPD)
+├── docs/
+│   ├── Desktop - CãoCurso.png  🎯 ARTE 2026 — manda sobre tudo (não versionado)
+│   ├── LP Cão Curso.docx       🎯 BRIEFING 2026 — manda em conteúdo (não versionado)
+│   └── PLATAFORMA.md           (modelo de dados, a planilha, LGPD)
+│
+└── README.md                   (o manual de operação: subir, variáveis, consertar)
 ```
 
 ---
@@ -490,10 +605,11 @@ Esta pasta é **isolada e autossuficiente**:
 |---------|-------|-----------|
 | **Arte 2026** | `docs/Desktop - CãoCurso.png` | **Manda sobre tudo** |
 | **Briefing 2026** | `docs/LP Cão Curso.docx` | Manda em dados de conteúdo |
-| Assets 2026 (web) | `public/assets/2026/` | 3,5 MB, prontos para servir |
-| Assets 2026 (origem) | `assets-fonte/` | 920 MB de gráfica, no gitignore |
+| Assets 2026 (web) | `public/assets/2026/` | 3,7 MB, prontos para servir |
+| Assets 2026 (origem) | `assets-fonte/` | ~997 MB de gráfica, no gitignore |
 | Conversor de assets | `scripts/optimizar-assets.mjs` | origem → WebP web |
-| Plataforma e persistência | `docs/PLATAFORMA.md` | Supabase + planilha do Google, modelo de dados, LGPD |
+| Operar o serviço | `README.md` | Subir, variáveis, consertar a planilha, o que fazer quando quebra |
+| Modelo de dados e LGPD | `docs/PLATAFORMA.md` | Tabelas, a planilha, o que ainda está errado |
 | Animações | `src/styles/animations.css` | 8 keyframes, comentados no próprio arquivo |
 | Fontes Torus | `public/fonts/` (origem em `…/petCondor/assets/fonts/`) | 6 pesos woff2 |
 | 📕 Docs de **2025** | histórico do git, até `1796aa1` | Removidos do repositório: a sua paleta, assets e campos já não se aplicam |
@@ -528,8 +644,13 @@ npm run dev           # Start server (localhost:4321)
 npm run astro check   # TypeScript check
 
 # Build
-npm run build         # Build de produção → .vercel/output (adapter Vercel)
-vercel dev            # Preview do build (astro preview NÃO serve .vercel/output)
+npm run build                  # Build de produção → dist/
+node ./dist/server/entry.mjs   # Rodar o build
+
+# Como produção vai rodar
+docker compose up -d --build
+curl -s localhost:4321/healthz # 200 = o Supabase responde. 503 = não.
+docker logs petcondor-lp -f    # aqui aparecem os erros de envio à planilha
 
 # Reconverter o KV quando o marketing entregar arte nova
 node scripts/optimizar-assets.mjs   # assets-fonte/ → public/assets/2026/
@@ -542,10 +663,22 @@ curl -H "Origin: http://localhost:4321" \
   http://localhost:4321/api/inscricao
 
 # Limpeza
-rm -rf .astro dist .vercel   # Limpar cache/build
-rm -rf uploads               # Fichas de teste do formulário
+rm -rf .astro dist           # Limpar cache/build
 npm install                  # Reinstalar deps
 ```
+
+As fichas de teste **não se apagam com `rm`** nem pelo painel: vivem no Supabase, e cada
+uma tem uma foto num bucket à parte que o Table Editor não toca. Apagar a linha por ali
+deixa a foto órfã — sem nada apontando para ela e impossível de achar depois.
+
+```bash
+node scripts/limpar-inscricoes.mjs --tudo            # mostra
+node scripts/limpar-inscricoes.mjs --tudo --apagar   # faz, ficha e foto
+node scripts/limpar-inscricoes.mjs --orfas --apagar  # recolhe o que já sobrou
+```
+
+Para uma exclusão de LGPD é outra coisa: preenche-se `excluido_em`, e aí a ficha some da
+planilha e devolve a vaga, mas fica o registro de quando foi atendida.
 
 ---
 
@@ -557,7 +690,10 @@ npm install                  # Reinstalar deps
 4. **Como converto arte nova?** → `scripts/optimizar-assets.mjs`
 5. **Campos do formulário?** → `src/components/FormularioInscricao.astro` + `src/pages/api/inscricao.ts`
 5b. **Por que o botão diz o que diz?** → `src/lib/inscricao.ts`
-6. **Onde isto vai viver de verdade?** → `docs/PLATAFORMA.md`
+6. **Como subo isto / como conserto?** → `README.md`
+6b. **Onde estão os dados e o que a LGPD ainda cobra?** → `docs/PLATAFORMA.md`
+6c. **A planilha não atualiza?** → `README.md`, tabela de sintomas. Comece pela aba: os
+    dados caem em «Inscrições», não em «Página1»
 7. **Animações?** → `src/styles/animations.css`, comentado no próprio arquivo
 8. **Como era em 2025?** → histórico do git, até `1796aa1`
 
@@ -569,14 +705,18 @@ npm install                  # Reinstalar deps
 
 👉 **Depois:** `npm run dev` — a LP está construída e alinhada ao KV 2026.
 
-👉 **O que falta não é código:** o logo da Fancy Feast, o PDF do regulamento, as ONGs e a
-13ª foto da galeria. E, antes de abrir o formulário ao público, mover a persistência para
-fora do sistema de arquivos (ver o aviso do endpoint).
+👉 **De código falta pouco:** apontar o regulamento de 2026 quando ele chegar, e servir o
+regulamento e os logos a partir do MinIO para poder trocá-los sem rebuild.
+
+👉 **O que falta de verdade não é código:** a decisão do cliente sobre o consentimento do
+CRM —e essa é irreversível assim que a primeira ficha entrar— e o deploy no VPS, que faz a
+equipe de infra. O logo da Fancy Feast e a 13ª foto da galeria seguem esperando material.
 
 ---
 
-**Estado:** ✅ LP alinhada ao KV 2026, build limpo, render verificado contra a arte.
+**Estado:** ✅ LP alinhada ao KV 2026 · inscrição no Supabase · planilha do júri automática
+· testado de ponta a ponta contra uma planilha real.
 
-**Versão:** 4.1 (saneada — ponto base `v2026-base`)
+**Versão:** 5.0 (persistência e planilha — a base visual segue em `v2026-base`)
 
-**Última atualização:** 2026-08-04
+**Última atualização:** 2026-08-06

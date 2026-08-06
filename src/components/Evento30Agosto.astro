@@ -1,6 +1,6 @@
 ---
 import { caocurso, SITE } from '../data/site';
-import { estadoInscricao, ROTULO_INSCRICAO } from '../lib/inscricao';
+import { estadoInscricao, periodoInscricao, ROTULO_INSCRICAO } from '../lib/inscricao';
 
 /**
  * Bloque «29 de agosto» — cabecera del evento Cãocurso 2026.
@@ -28,11 +28,13 @@ import { estadoInscricao, ROTULO_INSCRICAO } from '../lib/inscricao';
 const [horarioPrefixo = '', ...horarioResto] = caocurso.horario.split(' ');
 const horarioValor = horarioResto.join(' ');
 
-/* El PDF del regulamento 2026 todavía no existe (SITE.regulamentoPdf === null).
-   Mientras el flag esté en false el botón se pinta igual pero deshabilitado: un
-   <a href={null}> sería un enlace roto. Cuando llegue el PDF basta con poner su
-   ruta y `regulamentoDisponivel: true` en src/data/site.ts y esta misma rama
-   vuelve a emitir el <a>.
+/* El regulamento de 2026 todavía no ha llegado: `regulamentoPdf` apunta hoy al
+   PDF de 2025 y `regulamentoDisponivel` está en true, así que el botón enlaza.
+   Cuando llegue el de 2026 se cambia esa URL en src/data/site.json y ya está.
+
+   La rama del botón deshabilitado se mantiene por si hay que volver atrás:
+   con el flag en false se pinta igual pero sin enlace, porque un
+   <a href={null}> sería un enlace roto.
    Los tipos se ensanchan a propósito: SITE es `as const`, así que sin las
    anotaciones TypeScript daría la rama del enlace por muerta. */
 const regulamentoUrl: string | null = SITE.regulamentoPdf;
@@ -44,13 +46,24 @@ const pilulaRegulamento =
 
 /* Estado del período de inscripción. Se calcula en el servidor, así que el HTML
    ya sale con el rótulo correcto: sin parpadeo y sin depender de JavaScript.
-   El endpoint comprueba lo mismo por su cuenta — ver src/lib/inscricao.ts. */
-const estado = estadoInscricao();
+
+   El `await` va a Supabase —de donde salen las fechas y el límite de plazas—
+   con una caché de unos segundos dentro de `lib/inscricao.ts`. Que esto sea
+   SSR es justo lo que hace que cambiar el número de vacantes en el panel se
+   vea en la carga siguiente, sin desplegar.
+
+   El endpoint comprueba lo mismo por su cuenta, y la función `criar_inscricao`
+   del banco otra vez: un botón que no aparece no impide un POST con `curl`. */
+const estado = await estadoInscricao();
 const rotulo = ROTULO_INSCRICAO[estado];
 
-/* Un solo aspecto para los tres estados: el rectángulo redondeado 352×88 de la
-   referencia. Sólo cambia el elemento, y eso sí importa: con la inscripción
-   cerrada no hay nada que pulsar, así que va como <p> y no como control. Un
+/* Mismo origen que el estado del botón, con el texto del JSON de reserva.
+   Ver el comentario de `periodoInscricao()`. */
+const periodo = (await periodoInscricao()) ?? caocurso.inscricaoPeriodo;
+
+/* Un solo aspecto para los cuatro estados: el rectángulo redondeado 352×88 de
+   la referencia. Sólo cambia el elemento, y eso sí importa: sin inscripción
+   posible no hay nada que pulsar, así que va como <p> y no como control. Un
    <button disabled> anunciaría a un lector de pantalla un botón que nunca hará
    nada, y un <p> comunica exactamente lo que es: una insignia de estado. */
 const caixaEstado =
@@ -89,7 +102,8 @@ const caixaEstado =
         <!-- Columna derecha: estado, período de inscripción y regulamento -->
         <div class="flex flex-col items-center text-center">
           {/*
-            Tres estados, decididos en el servidor por las fechas del período.
+            Cuatro estados, decididos en el servidor: las fechas del período y
+            el límite de plazas, ambos leídos de `cao_campanha` en Supabase.
 
             Con la inscripción abierta es un <a> al formulario, no un <button>:
             sin JavaScript el enlace salta al formulario —que en ese caso se
@@ -118,7 +132,7 @@ const caixaEstado =
           }
 
           <p class="mt-7 text-lg leading-tight text-brand-blue lg:text-xl">
-            {caocurso.inscricaoRotulo}<br />{caocurso.inscricaoPeriodo}
+            {caocurso.inscricaoRotulo}<br />{periodo}
           </p>
 
           {

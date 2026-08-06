@@ -61,6 +61,16 @@ const ANCHO_MAX = 190;
    al de un logo real para que la fila no se descuadre donde falta uno. */
 const CAJA_TEXTO = { w: 132, h: 60 };
 
+/* Um lockup muito comprido não cabe numa célula estreita sem ficar reduzido a
+   um fio: a 320px o da Nestlé Purina (9,38:1) ficava em 13px de altura ao lado
+   de selos de 72, e a desproporção óptica subia a 4,7×. Quando é assim, ocupa a
+   linha inteira em vez de uma célula. */
+const PROPORCAO_LARGA = 4;
+
+function eLarga(m: Marca) {
+  return !!m.largura && !!m.altura && m.largura / m.altura > PROPORCAO_LARGA;
+}
+
 function caixa(m: Marca) {
   if (!m.largura || !m.altura) return CAJA_TEXTO;
   const proporcao = m.largura / m.altura;
@@ -95,7 +105,10 @@ function caixa(m: Marca) {
             {grupo.marcas.map((marca) => {
               const { w, h } = caixa(marca);
               return (
-                <li class="marca" style={`--w:${w}px;--h:${h}px`}>
+                <li
+                  class:list={['marca', eLarga(marca) && 'marca--larga']}
+                  style={`--w:${w}px;--h:${h}px`}
+                >
                   {marca.logo ? (
                     <img
                       src={marca.logo}
@@ -126,9 +139,14 @@ function caixa(m: Marca) {
      caja, y aquí sólo se cambia de talla. */
   .marcas {
     --esc: 0.78;
+    /* Altura da caixa mais alta possível (um selo quadrado). Fixá-la aqui faz
+       com que os dois cartões meçam exactamente o mesmo, em vez de 164 e 148px
+       conforme o logótipo mais alto que cada um calhasse a ter. */
+    --alto-fila: calc(92px * var(--esc));
     display: grid;
     width: 100%;
     grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(var(--alto-fila), auto);
     align-items: center;
     justify-items: center;
     gap: 1.75rem 1.25rem;
@@ -153,13 +171,35 @@ function caixa(m: Marca) {
     }
   }
 
+  /* A célula ajusta-se ao CONTEÚDO, não à caixa calculada. A largura vinha de
+     `--w` e sobrava ar sempre que o conteúdo não a enchia: «Caats» são 61px de
+     texto numa célula de 132, e o Keldog são 66px de imagem numa de 101. Esse
+     ar somava-se ao intervalo da grelha e os espaços reais entre logótipos
+     saíam a 24, 59, 60, 24, 44 — é o que se lê como disperso.
+
+     A altura continua a vir de `--h`, que é onde vive o peso óptico; a largura
+     resolve-se sozinha pela proporção da imagem. */
   .marca {
     display: flex;
     height: calc(var(--h) * var(--esc));
-    width: calc(var(--w) * var(--esc));
     max-width: 100%;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Só até tablet: a partir de 3 colunas já tem espaço para si.
+
+     O `max-width` não é arbitrário: 1,5 × a largura da caixa é o que faz com que
+     a ÁREA do lockup iguale a de um selo quadrado. Sem esse tecto o logótipo
+     esticava-se até à linha toda e passava a ser o mais pesado da fila — a 540px
+     a desproporção disparava a 5,6× pelo lado contrário. */
+  @media (max-width: 639px) {
+    .marca--larga {
+      grid-column: 1 / -1;
+      width: 100%;
+      max-width: calc(var(--w) * var(--esc) * 1.5);
+      height: auto;
+    }
   }
 
   .marca img {
@@ -170,12 +210,13 @@ function caixa(m: Marca) {
     object-fit: contain;
   }
 
-  /* El nombre tiene que pesar como un logo, no como un pie de foto. */
+  /* O nome tem de pesar como um logótipo, não como uma legenda: 24px de altura
+     ao lado de selos de 92 lia-se como um espaço por preencher. */
   .marca__texto {
     color: var(--c-blue);
     font-weight: 800;
-    font-size: clamp(1.0625rem, 1.6vw, 1.375rem);
-    line-height: 1.1;
+    font-size: clamp(1.125rem, 1.8vw, 1.5rem);
+    line-height: 1.15;
     text-align: center;
     text-wrap: balance;
   }

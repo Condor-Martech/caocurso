@@ -29,6 +29,11 @@ import { protetoras, protetorasTitulo, protetorasAviso, type Protetora } from '.
  * (0,5). Va en PORCENTAJE del ancho de la tarjeta, no en px: la tarjeta escala
  * con la rejilla y un tamaño fijo se descolgaría en cuanto cambia el ancho.
  *
+ * En celular el porcentaje se multiplica por 1,12 (el `calc()` sobre
+ * `--largura`): la tarjeta empilhada es bastante más chica que la de la fila de
+ * tres, y con el mismo porcentaje el logo quedaba perdido dentro del blanco. De
+ * `md` para arriba vuelve al valor exacto, que es el medido en el arte.
+ *
  * Medidas tomadas de la referencia a 1366 px de ancho:
  *   · rejilla 926 px = 3 × 290 + 2 × 28 de hueco
  *   · tarjeta 290 × 253 px (razón 290/253) · radio de esquina 18 px
@@ -38,6 +43,19 @@ import { protetoras, protetorasTitulo, protetorasAviso, type Protetora } from '.
  * Nota: la sección NO lleva padding superior a propósito. El aire entre el
  * panel de Requisitos y las tarjetas (51 px en la referencia) lo pone el
  * padding inferior de la sección Requisitos; duplicarlo aquí lo doblaría.
+ *
+ * ── Celular: uma coluna ──────────────────────────────────────────────────────
+ *
+ * A arte é de 1366 px e desenha as três em fila. Manter essa fila no celular
+ * dava cartões de ~90 px: o logo saía com uns 40 px de largura e o ícone com
+ * 24 px. A fila de três só entra a partir de `md`, onde o cartão volta a medir
+ * ~220 px; abaixo disso empilha (como todo o resto da página) com um teto de
+ * 14 rem, para o cartão não virar uma laje branca de ponta a ponta.
+ *
+ * Por isso o padding do cartão e o tamanho do ícone vão em PORCENTAGEM da
+ * largura do cartão, e não em px por breakpoint: são as proporções medidas na
+ * arte (padding 16/28/19 px e ícone 43 px sobre um cartão de 290) e agora se
+ * mantêm iguais em qualquer largura, empilhado ou em fila.
  */
 
 /* BASE en % del ancho de la tarjeta. Sale del caso más alargado: SOS 4 Patas,
@@ -66,12 +84,12 @@ const semDados = protetoras.every((p) => !p.logo && !p.instagram);
     {semDados && <p class="sr-only">{protetorasAviso}</p>}
 
     <div
-      class="mx-auto grid max-w-231.5 grid-cols-3 gap-3 sm:gap-5 lg:gap-7"
+      class="mx-auto grid max-w-56 grid-cols-1 gap-4 md:max-w-231.5 md:grid-cols-3 md:gap-5 lg:gap-7"
       aria-hidden={semDados ? 'true' : undefined}
     >
       {
         protetoras.map((p) => (
-          <div class="tarjeta relative flex aspect-290/253 flex-col items-center justify-between rounded-[18px] bg-brand-white px-3 pt-4 pb-2 sm:px-4 sm:pt-5 sm:pb-3 lg:pt-7 lg:pb-5">
+          <div class="tarjeta relative flex aspect-290/253 flex-col items-center justify-between rounded-[18px] bg-brand-white px-[5.5%] pt-[9.5%] pb-[6.5%]">
             {/* Zona del logo: ocupa lo que sobra por encima del icono y lo
                 centra ahí, para que las tres marcas caigan a la misma altura
                 aunque tengan proporciones distintas. */}
@@ -82,25 +100,26 @@ const semDados = protetoras.every((p) => !p.logo && !p.instagram);
                   alt={p.nome ?? ''}
                   width={p.largura}
                   height={p.altura}
-                  style={`width:${largura(p).toFixed(1)}%`}
-                  class="h-auto max-h-full object-contain"
+                  style={`--largura:${largura(p).toFixed(1)}%`}
+                  class="h-auto max-h-full w-[calc(var(--largura)*1.12)] object-contain md:w-(--largura)"
                   loading="lazy"
                   decoding="async"
                 />
               )}
             </div>
 
-            <span class="relative inline-flex shrink-0 text-brand-blue">
+            <span class="relative flex w-full shrink-0 justify-center text-brand-blue">
               {/* Icono de Instagram en contorno, sin círculo de fondo.
                   Va inline y no con `IconeInstagram.astro`, que es la variante
                   MACIZA (cuadrado sólido con el anillo calado) y no coincide
                   con la referencia. Grosor y geometría muestreados del mockup
-                  (icono de 43 px: trazo 3,75 px = 2,1/24; anillo de diámetro
+                  (icono de 43 px sobre un cartão de 290 = 16,7 % de la caja de
+                  contenido: trazo 3,75 px = 2,1/24; anillo de diámetro
                   exterior 21 px → r≈4,85; punto de 2,4 px en (17,8 · 5,6)).
                   El rectángulo va a 1,05 y no a 1 para que el trazo quepa
                   entero dentro del viewBox y no lo recorte el borde. */}
               <svg
-                class="h-6 w-6 sm:h-8 sm:w-8 lg:h-11 lg:w-11"
+                class="aspect-square w-[16.7%]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -119,8 +138,8 @@ const semDados = protetoras.every((p) => !p.logo && !p.instagram);
 
             {/* Enlace estirado sobre la TARJETA ENTERA, no sólo sobre el icono:
                 con el logo dentro, lo que la gente va a pulsar es la tarjeta, y
-                en móvil el icono mide 24 px, menos de la mitad del objetivo
-                táctil recomendado. El icono se queda como la señal visual de a
+                el icono nunca llega a los 44 px del objetivo táctil
+                recomendado. El icono se queda como la señal visual de a
                 dónde lleva.
                 Sólo existe cuando hay perfil que enlazar: un <a> sin destino
                 sería un enlace roto. */}

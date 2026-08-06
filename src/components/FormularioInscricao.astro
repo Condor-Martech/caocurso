@@ -50,8 +50,18 @@
  * funcionando (el usuario acaba en la respuesta JSON, feo pero no roto).
  */
 import { formulario } from '../data/site';
+import { cpfObrigatorio } from '../lib/inscricao';
 
 const { campos: c } = formulario;
+
+/* El CPF es obligatorio o no según `cao_campanha.cpf_obrigatorio`, no según una
+   constante de aquí: la campaña ya está abierta y esa es una decisión de
+   negocio que tiene que poder cambiarse con un UPDATE, sin build ni despliegue.
+
+   Esto es sólo la mitad amable —el navegador avisa antes de enviar—. La regla
+   de verdad la aplica `POST /api/inscricao` leyendo lo mismo, porque un
+   `required` se quita desde las herramientas de desarrollo en dos clics. */
+const exigirCpf = await cpfObrigatorio();
 ---
 
 <div id="modal-inscricao" class="modal" data-modal>
@@ -90,7 +100,23 @@ const { campos: c } = formulario;
       {/* ------------------------------------------------ Dados do Tutor */}
       <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
 
-      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+      {/* Los datos del tutor se emparejan a partir de `sm`, y no de los 380 px
+          que usa el bloque del pet, porque aquí los placeholders son frases y no
+          palabras.
+
+          A media columna en un móvil quedan ~81 px útiles —descontando los
+          20 px de padding y los 2 de borde a cada lado—, y ahí caben «Raça» y
+          «Sexo» pero no una fecha ni una frase. Los dos placeholders de esta
+          fila se estaban cortando, y el del CPF perdía justo lo que importa:
+          que es el del Clube Condor, no uno cualquiera. Apilados hay 188 px ya
+          en la pantalla más estrecha.
+
+          El punto más apretado de todo el rango NO es el móvil, es 768 px:
+          ahí entra `md:grid-cols-[5fr_6fr]` con un hueco de 4rem, y la columna
+          estrecha se queda en 181 px útiles. Cualquier placeholder de esta
+          rejilla tiene que caber ahí, y con margen: hasta que carga la Torus
+          el texto se pinta con la fuente del sistema, que es más ancha. */}
+      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 sm:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
         <div class="col-span-full">
           <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
           <input
@@ -107,7 +133,25 @@ const { campos: c } = formulario;
         </div>
 
         <div>
-          <!-- type="text" y no type="date" a propósito: ver el <script>. -->
+          <!-- type="text" y no type="date", a propósito, por tres motivos:
+
+               · `type="date"` IGNORA el placeholder y pinta siempre el formato
+                 del sistema. Aquí las etiquetas son sr-only, así que el
+                 placeholder ES el nombre del campo: el usuario dejaría de leer
+                 «Nascimento» para leer sólo «dd/mm/aaaa». Se cambia una
+                 ambigüedad por otra.
+               · Ese formato lo decide el idioma del SISTEMA OPERATIVO, no el
+                 `lang="pt-BR"` de la página. Un brasileño con el móvil en
+                 inglés vería mm/dd/aaaa, que es justo lo que se quiere evitar.
+               · Una fecha de nacimiento es el peor caso para un calendario:
+                 abre en el mes actual y hay que retroceder cuarenta años.
+
+               El formato se comunica por tres vías: el placeholder lo lleva
+               escrito, la máscara del <script> pone las barras al teclear, y
+               si aun así falla el `pattern`, el navegador enseña el `title`
+               dentro del globo de validación —también en móvil—. El endpoint
+               acepta dd/mm/aaaa y aaaa-mm-dd, así que cambiar de idea más
+               adelante no obliga a tocar el servidor. -->
           <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
           <input
             class="campo"
@@ -133,6 +177,7 @@ const { campos: c } = formulario;
             placeholder={c.tutorCpf.placeholder}
             inputmode="numeric"
             maxlength="14"
+            required={exigirCpf}
           />
         </div>
 
@@ -802,7 +847,87 @@ const { campos: c } = formulario;
    * por si algún día se cambia de idea.
    */
 
-  const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+  /* Techo del servidor. Ya no es una restricción real de uso: `reduzirImagem`
+     encoge la foto antes de subirla, así que lo habitual es enviar ~300 KB
+     venga el original de donde venga. Queda como tope contra abusos y para el
+     camino sin JavaScript, donde sí sube el fichero original.
+
+     Eran 2 MB, y eso rechazaba a casi todo el mundo: prácticamente ningún
+     móvil actual hace fotos de menos de 2 MB. */
+  const MAX_FOTO_BYTES = 25 * 1024 * 1024;
+
+  /* El mismo lado máximo que aplica el servidor. Reducir más aquí sería tirar
+     calidad que allí ya no se recupera. */
+  const LADO_MAXIMO = 1600;
+
+  /**
+   * Reduce la foto en el navegador antes de subirla.
+   *
+   * Es la mejora que de verdad se nota: una foto de móvil son 3-8 MB —hasta 40
+   * en un Samsung de 200MP— y por datos móviles eso es un minuto largo de
+   * espera con el formulario bloqueado. Reducida son ~300 KB y un par de
+   * segundos.
+   *
+   * Devuelve `null` si no se puede: formato que el navegador no decodifica,
+   * canvas no disponible, o un resultado que no es más pequeño que el original.
+   * En ese caso se sube el fichero tal cual y el servidor lo reprocesa igual.
+   * **Esto nunca debe impedir un envío**: es una optimización, no una
+   * validación.
+   *
+   * `imageOrientation: 'from-image'` aplica la orientación del EXIF al dibujar.
+   * Sin eso las fotos verticales llegan tumbadas, porque el canvas descarta los
+   * metadatos y con ellos la rotación.
+   *
+   * Que el canvas se lleve por delante el EXIF es un efecto agradable —ahí van
+   * las coordenadas GPS de la casa del tutor— pero no es la defensa: el cliente
+   * se puede saltar. Quien lo garantiza es `lib/foto.ts`, en el servidor.
+   */
+  async function reduzirImagem(arquivo: File): Promise<File | null> {
+    if (!arquivo.type.startsWith('image/')) return null;
+    if (typeof createImageBitmap !== 'function') return null;
+
+    try {
+      const bitmap = await createImageBitmap(arquivo, { imageOrientation: 'from-image' });
+      const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
+      const largura = Math.round(bitmap.width * escala);
+      const altura = Math.round(bitmap.height * escala);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = largura;
+      canvas.height = altura;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        bitmap.close();
+        return null;
+      }
+      ctx.drawImage(bitmap, 0, 0, largura, altura);
+      bitmap.close();
+
+      const blob = await new Promise<Blob | null>((resolver) =>
+        canvas.toBlob(resolver, 'image/webp', 0.85)
+      );
+      if (!blob || blob.size >= arquivo.size) return null;
+
+      return new File([blob], 'pet.webp', { type: 'image/webp' });
+    } catch {
+      return null;
+    }
+  }
+
+  /* Dos cosas que el envío y el modal tienen que compartir.
+   *
+   * `enviando` vive aquí, y no dentro de `iniciar()`, porque también manda sobre
+   * el cierre: mientras una inscripción está en vuelo no se puede cerrar el
+   * modal. Cerrarlo no cancelaría nada —la petición ya salió— pero dejaría a la
+   * persona sin saber si su pet quedó inscrito, y lo más probable es que
+   * volviera a enviarlo todo otra vez.
+   *
+   * `fecharModal` es la única forma que tiene el envío de cerrar. Se queda en
+   * `null` cuando no hay modal —sin JavaScript el formulario es una sección
+   * normal— y entonces no se cierra nada, que es lo correcto. */
+  let enviando = false;
+  let fecharModal: (() => void) | null = null;
 
   const form = document.querySelector<HTMLFormElement>('#form-inscricao');
   if (form) iniciar(form);
@@ -860,6 +985,13 @@ const { campos: c } = formulario;
 
     function fechar() {
       if (!modal!.classList.contains('aberto')) return;
+
+      /* Mientras la inscripción está en vuelo, no se cierra: ni con Escape, ni
+         con la X, ni tocando el velo. La petición ya salió y cerrar no la
+         cancela; lo único que consigue es que la persona no vea si quedó
+         inscrita, y que lo intente otra vez. El estado «Enviando…» sigue a la
+         vista, que es la respuesta a por qué no se cierra. */
+      if (enviando) return;
 
       modal!.classList.remove('aberto');
       modal!.removeAttribute('role');
@@ -929,6 +1061,8 @@ const { campos: c } = formulario;
     /* Un enlace compartido con la ancla puesta abre el formulario directamente,
        en vez de dejar al visitante mirando una página donde no pasa nada. */
     if (window.location.hash === '#modal-inscricao') abrir();
+
+    fecharModal = fechar;
   }
 
   function iniciar(form: HTMLFormElement) {
@@ -937,7 +1071,25 @@ const { campos: c } = formulario;
     const inputFoto = form.querySelector<HTMLInputElement>('#petFoto');
     const nomeArquivo = form.querySelector<HTMLElement>('[data-arquivo]');
     const rotuloBotao = botao ? botao.textContent : '';
-    let enviando = false;
+
+    /* Cuánto se deja el «Inscrição enviada!» a la vista antes de cerrar.
+       Cerrar de golpe se lleva por delante la única confirmación que la persona
+       va a recibir; dejarlo abierto la obliga a cerrar algo que ya terminó.
+       Tres segundos dan para leer una línea sin que parezca colgado, y la X
+       sigue funcionando por si quiere cerrar antes. */
+    const ESPERA_ANTES_DE_FECHAR = 3000;
+
+    /* Los campos se bloquean mientras se envía. Un `disabled` NO viaja en el
+       FormData, así que se pone DESPUÉS de construirlo — al revés se enviaría
+       una ficha vacía. */
+    const campos = Array.from(
+      form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'input, select, textarea'
+      )
+    );
+    const bloquearCampos = (bloquear: boolean) => {
+      for (const campo of campos) campo.disabled = bloquear;
+    };
 
     /* ---------------------------------------------------------- máscaras */
 
@@ -1015,11 +1167,10 @@ const { campos: c } = formulario;
           nomeArquivo.textContent = arquivo ? arquivo.name : '';
           nomeArquivo.hidden = !arquivo;
         }
-        // Se avisa del tamaño aquí y no tras subir 8 MB por una red móvil.
-        if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
-          inputFoto.setAttribute('aria-invalid', 'true');
-          mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
-        }
+        /* Ya no se comprueba el tamaño aquí. Lo que cuenta es cuánto pesa
+           DESPUÉS de reducir, y eso no se sabe hasta el envío. Avisar ahora de
+           un original de 8 MB que va a viajar como 300 KB sería asustar sin
+           motivo, y es justo lo que hacía el aviso de 2 MB. */
       });
     }
 
@@ -1039,11 +1190,6 @@ const { campos: c } = formulario;
       if (enviando) return;
 
       const arquivo = inputFoto && inputFoto.files && inputFoto.files[0];
-      if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
-        marcar('petFoto');
-        mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
-        return;
-      }
 
       enviando = true;
       limparTudo();
@@ -1051,24 +1197,74 @@ const { campos: c } = formulario;
         botao.disabled = true;
         botao.textContent = 'Enviando…';
       }
-      mostrar('Enviando sua inscrição…', 'enviando');
 
+      /* Todo lo que sigue va dentro del try para que el `finally` devuelva el
+         botón a su sitio, incluidos los `return` por foto rechazada. */
       try {
+        /* El FormData PRIMERO y el bloqueo después: un campo `disabled` no
+           viaja en el envío, así que hacerlo al revés mandaría la ficha vacía. */
+        const envio = new FormData(form);
+        bloquearCampos(true);
+
+        if (arquivo) {
+          mostrar('Preparando a foto…', 'enviando');
+          const reduzida = await reduzirImagem(arquivo);
+          if (reduzida) envio.set('petFoto', reduzida, reduzida.name);
+
+          /* Se comprueba lo que se va a enviar de verdad, no el original: si la
+             reducción funcionó, un original de 40 MB pasa sin problema. */
+          if ((reduzida ?? arquivo).size > MAX_FOTO_BYTES) {
+            /* Desbloquear ANTES de marcar: `marcar()` enfoca el campo, y un
+               campo `disabled` no acepta el foco. El `finally` lo haría igual,
+               pero después — y para entonces el foco ya se habría perdido. */
+            bloquearCampos(false);
+            marcar('petFoto');
+            mostrar('A foto é grande demais. Escolha outra imagem.', 'erro');
+            return;
+          }
+        }
+
+        mostrar('Enviando sua inscrição…', 'enviando');
+
         const resposta = await fetch(form.action, {
           method: 'POST',
-          body: new FormData(form),
+          body: envio,
           headers: { Accept: 'application/json' },
         });
         const dados = await resposta.json().catch(() => null);
 
         if (resposta.ok && dados && dados.success) {
           mostrar(dados.message || 'Inscrição enviada com sucesso!', 'ok');
+
+          /* El formulario se limpia pero los campos siguen bloqueados hasta que
+             el modal cierre: ya no hay nada que hacer aquí, y un formulario
+             vacío y editable justo después de enviar invita a rellenarlo otra
+             vez — que acabaría en un 409 por duplicado. */
           form.reset();
           if (nomeArquivo) {
             nomeArquivo.textContent = '';
             nomeArquivo.hidden = true;
           }
+          if (botao) botao.textContent = 'Enviado ✓';
+
+          /* Cerrar deja de estar bloqueado ANTES del temporizador: a partir de
+             aquí la persona puede cerrar con la X o con Escape si no quiere
+             esperar los tres segundos. */
+          enviando = false;
+          window.setTimeout(() => {
+            bloquearCampos(false);
+            if (botao) {
+              botao.disabled = false;
+              botao.textContent = rotuloBotao;
+            }
+            if (status) status.hidden = true;
+            fecharModal?.();
+          }, ESPERA_ANTES_DE_FECHAR);
+          return;
         } else {
+          /* Mismo motivo que arriba: primero se devuelven los campos, y sólo
+             entonces se marca y se enfoca el que el servidor señaló. */
+          bloquearCampos(false);
           mostrar(
             (dados && dados.message) ||
               'Não foi possível enviar a inscrição. Tente novamente.',
@@ -1079,10 +1275,16 @@ const { campos: c } = formulario;
       } catch {
         mostrar('Falha de conexão. Verifique sua internet e tente de novo.', 'erro');
       } finally {
-        enviando = false;
-        if (botao) {
-          botao.disabled = false;
-          botao.textContent = rotuloBotao;
+        /* El camino de éxito ya devolvió `enviando` a false y programó su propia
+           limpieza para cuando cierre; aquí sólo se recupera el formulario
+           cuando algo salió mal y la persona tiene que poder corregir. */
+        if (enviando) {
+          enviando = false;
+          bloquearCampos(false);
+          if (botao) {
+            botao.disabled = false;
+            botao.textContent = rotuloBotao;
+          }
         }
       }
     });
