@@ -241,8 +241,8 @@
         "title": "Use o formato dd/mm/aaaa."
       },
       "tutorCpf": {
-        "label": "CPF cadastrado no Clube Condor",
-        "placeholder": "CPF do Clube Condor"
+        "label": "CPF",
+        "placeholder": "CPF"
       },
       "tutorEmail": { "label": "E-mail", "placeholder": "E-mail" },
       "tutorTelefone": { "label": "Telefone com DDD", "placeholder": "Telefone" },
@@ -257,9 +257,15 @@
     "aceite": "Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a imagem do meu pet e os dados enviados na divulgação da campanha.",
     "arquivo": {
       "rotulo": "Anexar foto do pet",
-      "ajuda": "JPG, PNG ou WebP. Pode enviar a foto direto do celular."
+      "ajuda": "JPG, PNG ou WebP — direto do celular."
     },
-    "enviar": "Enviar inscrição"
+    "enviar": "Enviar inscrição",
+    "sucesso": {
+      "titulo": "Inscrição realizada com sucesso!",
+      "detalhe": "{pet} já está concorrendo no Cãocurso 2026.",
+      "semNome": "Seu pet já está concorrendo no Cãocurso 2026.",
+      "fechar": "Fechar"
+    }
   },
 
   "footer": {

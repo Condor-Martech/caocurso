@@ -4,6 +4,9 @@ import {
   SITE_URL,
 } from 'astro:env/server';
 import { supabase } from './supabase';
+import { COLUNAS, SELECT_FICHAS, montarLinhas } from './planilha-colunas.mjs';
+
+export { COLUNAS };
 
 /**
  * A PLANILHA DO JÚRI E DO CRM.
@@ -29,24 +32,28 @@ import { supabase } from './supabase';
  * exercer o direito de exclusão (LGPD art. 18). Reescrevendo tudo, o próximo
  * envio corrige as três coisas sozinho.
  *
- * ── O CPF não vai ───────────────────────────────────────────────────────────
+ * ── O CPF VAI, e por quê ────────────────────────────────────────────────────
  *
- * Para premiar e para contatar não acrescenta nada, e é o dado que transforma
- * um vazamento chato num vazamento grave. Fica no Supabase.
+ * Durante um tempo não ia. O raciocínio era o de sempre — é o dado que
+ * transforma um vazamento chato num vazamento grave — e estava errado **para
+ * esta campanha**: o briefing pede «CPF cadastrado no Clube Condor», o cliente
+ * o tornou obrigatório em 2026-08-06, e o cruzamento com a base de sócios é
+ * MANUAL, feito por uma pessoa em cima desta planilha. Sem a coluna, a única
+ * razão pela qual o formulário exige um CPF deixa de existir.
+ *
+ * Nada se perdeu enquanto a coluna faltou: o CPF sempre foi gravado em
+ * `cao_inscricao.tutor_cpf`, e como aqui se reescreve a aba INTEIRA a cada
+ * envio, as fichas antigas ganham a coluna no primeiro `--sincronizar`.
+ *
+ * ⚠️ **O que isto exige da planilha.** Deixa de ser uma lista de nomes de pets
+ * e passa a ser um cadastro com CPF. Não pode ficar em «qualquer pessoa com o
+ * link»: o compartilhamento tem de ser por conta nomeada, e só para quem
+ * precisa. Está anotado em `docs/PLATAFORMA.md` §3.
+ *
+ * As colunas e o formato de cada campo vivem em `planilha-colunas.mjs`, e não
+ * aqui: `scripts/limpar-inscricoes.mjs` monta a mesma planilha e precisa
+ * importar exatamente a mesma lista. Tê-la duplicada já custou o CPF.
  */
-
-/** Nomes das colunas, na ordem em que a planilha as escreve. */
-export const COLUNAS = [
-  'Nome do tutor',
-  'E-mail',
-  'Telefone',
-  'Nome do pet',
-  'Raça',
-  'Sexo',
-  'Descrição',
-  'Data da inscrição',
-  'Foto',
-] as const;
 
 export interface Planilha {
   atualizadoEm: string;
@@ -67,27 +74,14 @@ export async function montarPlanilha(origem: string): Promise<Planilha> {
      metade é reescrever a aba inteira em vez de acrescentar linhas. */
   const { data, error } = await supabase
     .from('cao_inscricao')
-    .select(
-      'id, tutor_nome, tutor_email, tutor_telefone, pet_nome, pet_raca, pet_sexo, pet_descricao, criado_em'
-    )
+    .select(SELECT_FICHAS)
     .is('excluido_em', null)
     .order('criado_em', { ascending: true });
 
   if (error) throw new Error(error.message);
 
   const base = (SITE_URL || origem).replace(/\/+$/, '');
-
-  const linhas = (data ?? []).map((r) => [
-    r.tutor_nome,
-    r.tutor_email,
-    r.tutor_telefone,
-    r.pet_nome,
-    r.pet_raca ?? '',
-    r.pet_sexo ?? '',
-    r.pet_descricao ?? '',
-    r.criado_em,
-    `${base}/foto/${r.id}`,
-  ]);
+  const linhas = montarLinhas(data, base);
 
   return {
     atualizadoEm: new Date().toISOString(),

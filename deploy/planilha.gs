@@ -256,6 +256,29 @@ function escrever(dados) {
   }
 
   if (linhas.length) {
+    /* Estas columnas son TEXTO aunque parezcan números, y hay que decírselo al
+       Sheets ANTES de escribirlas o se las come:
+
+         CPF          «048.123.456-78» sobrevive por los puntos, pero si algún
+                      día llegara en crudo, once dígitos son un número y el cero
+                      de delante desaparece sin avisar. Y ese CPF es justo el que
+                      alguien va a cruzar a mano con la base del Clube.
+         Telefone     «41999998888» se guarda en crudo: como número pierde
+                      cualquier cero inicial y a partir de cierto largo el Sheets
+                      lo enseña en notación científica.
+         Nascimento   va como «12/05/1984» y se deja en texto a propósito: como
+                      fecha real, la conversión desde UTC la mueve un día.
+
+       Se hace por NOMBRE de columna, no por posición: así añadir o mover
+       columnas en `COLUNAS` no rompe esto en silencio. */
+    var TEXTO = ['CPF', 'Telefone', 'Nascimento'];
+    for (var t = 0; t < TEXTO.length; t++) {
+      var iTexto = colunas.indexOf(TEXTO[t]);
+      if (iTexto >= 0) {
+        aba.getRange(2, iTexto + 1, linhas.length, 1).setNumberFormat('@');
+      }
+    }
+
     aba.getRange(2, 1, linhas.length, colunas.length).setValues(linhas);
     if (iData >= 0) {
       aba.getRange(2, iData + 1, linhas.length, 1).setNumberFormat(CONFIG.FORMATO_DATA);

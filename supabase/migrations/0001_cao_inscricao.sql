@@ -88,6 +88,16 @@ REVOKE ALL ON public.cao_inscricao FROM anon, authenticated;
 -- reprocessamento do servidor e pesa ~250 KB. É um teto contra abuso, não uma
 -- restrição de uso.
 
+-- ⚠️ ESTE BUCKET FICOU MORTO EM 2026-08-06.
+--
+-- Por ordem do cliente, as fotos passaram para o MinIO da Condor, bucket
+-- privado `caocursantes` em `s3.cndr.me`. Ver `src/lib/storage.ts` e
+-- `docs/PLATAFORMA.md` §4.
+--
+-- O bloco fica aqui e NÃO se apaga: uma migração já aplicada se reescreve com
+-- muito cuidado, e este trecho é o histórico de por onde as fotos passaram.
+-- Rodá-lo de novo apenas recria um bucket vazio que ninguém consulta.
+
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'fotos-caocurso',

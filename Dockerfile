@@ -44,8 +44,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 # `dist/` ya incluye el cliente y todo lo que había en public/.
 COPY --from=builder /app/dist ./dist
 
-# El servidor no escribe en disco —la foto va a Supabase Storage— así que no
-# hay motivo para que corra como root.
+# El servidor no escribe en disco —la foto va al MinIO— así que no hay motivo
+# para que corra como root.
 USER node
 
 EXPOSE 4321

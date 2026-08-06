@@ -22,7 +22,10 @@ LP (Astro, contêiner Docker atrás de Nginx)
 Supabase ◀───────────────── fonte de verdade
    ├─ cao_inscricao         uma linha por participante
    ├─ cao_campanha          uma linha só: janela de datas + teto de vagas
-   └─ fotos-caocurso        bucket PRIVADO, WebP já reprocessado
+   └─ (as fotos NÃO ficam aqui — ver abaixo)
+   │
+MinIO  s3.cndr.me
+   └─ caocursantes          bucket PRIVADO, WebP já reprocessado
    │
    └──▶ e, logo depois de gravar e sem esperar por isso,
         a LP empurra a lista inteira ──▶ Web App do Apps Script
@@ -44,23 +47,29 @@ Todas tomadas. Nenhuma pendente.
 | | Valor | Por quê |
 |---|---|---|
 | Banco de dados | **Supabase** (Postgres) | `sa-east-1` São Paulo: o dado não sai do Brasil |
-| Storage da foto | **Supabase Storage**, bucket privado `fotos-caocurso` | Ver §4 |
+| Storage da foto | **MinIO**, bucket privado `caocursantes` | Ordem do cliente em 2026-08-06. Ver §4 |
 | Espelho para o júri | **Planilha do Google**, reescrita inteira a cada envio | Ver §3 |
 | Quem empurra | **A própria LP**, sem worker | Ver §3 |
 | Deploy | **VPS com Docker**, `@astrojs/node` standalone | Build em `dist/`, contêiner atrás de Nginx |
 | Seleção dos vencedores | **Júri presencial** | Sem software no meio |
-| CPF na planilha | **Não vai** | Ver §3, «Acesso» |
+| CPF na planilha | **Vai** — é ali que se cruza com o Clube | Obriga acesso por conta nomeada. Ver §3, «Acesso» |
 
-> **O MinIO ficou de fora, e vale saber por quê.** A ideia era poupar a cota gratuita do
-> Supabase com fotos pesadas. Quando saiu o número real —**50 inscrições**— a conta virou
-> outra: medido com fotos reais depois do reprocessamento, a média é **113 KB** e o pior
-> caso **228 KB**, então as 50 ocupam entre **6 e 12 MB de 1 GB**. O MinIO não poupava
-> nada e acrescentava uma peça a mais que pode falhar. (O teto real desse plano são umas
-> **4.500 inscrições** — ver `README.md`.)
+> **O MinIO entrou por ordem, não por cálculo — e vale saber por quê.** Este bloco dizia o
+> contrário até 2026-08-06: que o MinIO ficara de fora porque não poupava nada. O
+> raciocínio técnico continua correto e é o que segue abaixo; o que mudou é que **deixou de
+> ser a pergunta**.
 >
-> O MinIO **segue em uso para outra coisa**: o PDF do regulamento e os logos dos
-> patrocinadores, que são arquivos que se querem trocar sem rebuild. São dois problemas
-> diferentes com a mesma palavra no meio.
+> O cálculo era este: com **50 inscrições** e fotos reprocessadas —média **113 KB**, pior
+> caso **228 KB**— o total são **6 a 12 MB de 1 GB**. O storage do Supabase sobrava, e o
+> MinIO acrescentava uma peça a mais que pode falhar.
+>
+> Em 2026-08-06 o cliente mandou tirar as fotos do Supabase. É uma decisão de quem é dono
+> dos dados, não uma otimização, e a resposta certa a isso não é rediscutir a conta. **O que
+> importa é que custou um arquivo** (`src/lib/storage.ts`) porque o banco guarda a `key` e
+> nunca a URL — ver §4.
+>
+> ⚠️ O preço real é o que ficou no §4: **são dois serviços em vez de um**, e o Supabase
+> dava uma rede por baixo do código (`allowed_mime_types`) que o MinIO não dá.
 
 ---
 
@@ -263,10 +272,28 @@ simultâneas são dois `doPost`, e sem trava uma limpa enquanto a outra escreve.
 - Compartilhada **por conta nominal** dentro do workspace da Condor. **Nunca «qualquer
   pessoa com o link»**: é o vetor de vazamento número um e o Google não registra quem
   baixou.
-- Colunas: nome, e-mail, telefone, nome do pet, raça, sexo, descrição, data e o link da
-  foto. **O CPF não** — é o dado que transforma um vazamento chato num vazamento grave, e
-  para premiar ou contatar não acrescenta nada. Se o CRM precisar dele como chave de
-  cruzamento, é uma linha em `src/lib/planilha.ts`; que seja decisão consciente.
+- Colunas: nome, **nascimento**, **CPF**, e-mail, telefone, nome do pet, raça, sexo,
+  descrição, data e o link da foto.
+- **O CPF vai, e vai de propósito.** Houve uma versão sem ele —o raciocínio era que é o
+  dado que transforma um vazamento chato num vazamento grave— e estava errado para esta
+  campanha: o briefing pede «CPF cadastrado no Clube Condor», o cliente o tornou
+  obrigatório, e o cruzamento com a base de sócios é **manual, feito nesta aba**. Sem a
+  coluna, exigia-se um dado que ninguém podia usar.
+- ⚠️ **A consequência é esta lista de acesso, não a coluna.** Com CPF dentro, «qualquer
+  pessoa com o link» passa de má prática a incidente à espera de acontecer. Conta nominal,
+  e só a quem precisa.
+- **Três campos saem formatados, e nenhum por estética.** O CPF vai mascarado
+  (`048.123.456-78`), o telefone legível (`(41) 98888-7777`) e o nascimento como texto
+  `12/05/1984`. Onze dígitos seguidos são um *número* para o Sheets e um número não guarda
+  zeros à esquerda; e uma data-só convertida com `new Date()` chega **um dia atrasada**,
+  porque é meia-noite em UTC. O Apps Script ainda força as três colunas a formato de texto,
+  que é a segunda rede.
+- ⚠️ **No telefone, um `55` na frente de 11 dígitos não se recorta**: `55` também é o DDD de
+  Santa Maria (RS). Só a partir de 12 dígitos há espaço para país e DDD.
+- Tudo isto vive em `src/lib/planilha-colunas.mjs`, que o servidor **e** o script de
+  manutenção importam. É `.mjs` por isso: `planilha.ts` importa `astro:env` e um script de
+  node puro não pode carregá-lo. Antes eram duas cópias à mão, e a cópia ficou para trás
+  justamente quando o CPF entrou na lista.
 - O token do Web App **não é a `service_role`**. Ele acaba guardado nas propriedades de um
   script da Google, legível por quem edite a planilha: se vazar, o que se perde é a
   capacidade de reescrever essa aba. A `service_role` perderia o banco inteiro.
@@ -275,9 +302,38 @@ simultâneas são dois `doPost`, e sem trava uma limpa enquanto a outra escreve.
 
 ## 4. A foto
 
-**Decidido: Supabase Storage, bucket `fotos-caocurso`, privado**, com
-`file_size_limit` de 5 MB e `allowed_mime_types` restrito a `image/webp` — o bucket
-recusa qualquer outra coisa mesmo que o código erre.
+**MinIO da Condor, bucket `caocursantes`, privado.** Em `s3.cndr.me`, com key
+`2026/<uuid>.webp`.
+
+Esteve no Supabase Storage até 2026-08-06, quando o cliente mandou tirá-lo de lá. **O custo
+dessa mudança foi um arquivo**: `src/lib/storage.ts`. O endpoint da inscrição, `/foto/<id>`,
+a planilha e os links que já estavam escritos nela continuaram funcionando sem tocar em
+nada, porque **o banco guarda a key e nunca a URL** (§2). É o único momento em que essa
+decisão se cobra sozinha.
+
+### Por que um bucket próprio e não o `lp-content`
+
+O `lp-content`, onde já estão o regulamento e os logos, **deixa listar o seu índice sem
+credenciais**:
+
+```
+curl "https://s3.cndr.me/lp-content?list-type=2"   →  200, a lista inteira
+```
+
+Uma key de UUID protege contra **adivinhar**, não contra **listar**. Ali dentro, a lista de
+todas as fotos dos pets estaria a um comando de distância, e são dados pessoais que também
+vão para uma planilha compartilhada. Além disso há ~34 arquivos de outros projetos da
+Condor: uma credencial acotada a `caocursantes` não alcança nenhum deles se vazar.
+
+### O que se perdeu ao sair do Supabase
+
+O bucket do Supabase validava por conta própria: `file_size_limit` de 5 MB e
+`allowed_mime_types` restrito a `image/webp`. Era uma rede POR BAIXO do código. O MinIO não
+tem equivalente — se um dia o código subir o que não deve, já não há quem o pare. O que
+resta é `lib/foto.ts`, que só produz WebP, e a validação dos magic bytes.
+
+E agora são **dois serviços em vez de um**: se o Supabase OU o MinIO estiverem fora do ar,
+não há inscrição. A foto sobe antes de inserir a ficha.
 
 O caminho de uma foto, do celular ao bucket:
 
@@ -316,12 +372,13 @@ mortos.
 |---|---|---|
 | 1 | **Consentimento agrupado** | ⛔ **Pendente, e é o único bloqueio real.** Ver abaixo |
 | 2 | EXIF com GPS | ✅ Resolvido: `lib/foto.ts` recodifica e descarta metadados |
-| 3 | Bucket privado | ✅ Resolvido: `fotos-caocurso` não é público, URLs assinadas de 300 s |
+| 3 | Bucket privado | ✅ Resolvido: `caocursantes` responde 403 sem assinatura, verificado de fora |
 | 4 | Direito de exclusão | ✅ Resolvido de verdade — ver abaixo |
 | 5 | Base legal | consentimento — falta documentá-la no regulamento |
 | 6 | Retenção | ⚠️ sem definir. Prazo pós-campanha + expurgo, **também da planilha** |
 | 7 | Menores | ⚠️ o endpoint exige +18 pela data de nascimento quando ela é informada, mas o campo é opcional. O simples é exigir +18 no regulamento |
 | 8 | Transferência internacional | ⚠️ o Supabase é Brasil, a planilha não. Cláusulas + acesso nominal |
+| 9 | **CPF fora do banco** | ⚠️ desde 2026-08-06 o CPF **vai à planilha** (§3), porque o cruzamento com o Clube Condor é manual e se faz ali. É a decisão certa para a campanha e **sobe o nível de exposição**: a aba deixou de ser uma lista de pets e é um cadastro. Compartilhamento por conta nomeada, e o ponto 6 —retenção— passa a valer também para o CPF |
 
 ### O ponto 4 esteve resolvido pela metade, e vale saber por quê
 
@@ -425,9 +482,13 @@ um o tira pelas ferramentas de desenvolvimento—; a regra é a do servidor.
 ⚠️ Mexer no interruptor não é retroativo em nenhuma direção: desligá-lo não apaga os CPFs
 já gravados, e ligá-lo depois não preenche as fichas que entraram sem ele.
 
-⚠️ **O CPF não vai à planilha** (§3), então o cruzamento não se faz a partir dela: teria de
-ser no painel do Supabase, por quem tenha acesso. Se a Condor quiser cruzar pela planilha,
-é preciso incluir a coluna — e aí a planilha passa a ser um documento bem mais sensível.
+✅ **O CPF vai à planilha** (§3), que é onde o cruzamento com a base do Clube acontece — é
+manual, e é feito por uma pessoa em cima daquela aba. Durante um tempo a coluna não existia
+e isso deixava a obrigatoriedade sem sentido: exigia-se um dado que ninguém conseguia usar.
+
+⚠️ **Em troca, a planilha passou a ser um documento sensível.** Deixou de ser uma lista de
+nomes de pets e é um cadastro com CPF: o compartilhamento tem de ser por conta nomeada, e
+só a quem precisa. «Qualquer pessoa com o link» deixa de ser aceitável.
 
 ### O que fica desprotegido enquanto isso
 
@@ -480,8 +541,10 @@ descrevia um projeto maior do que o que existe. Foi removido, e o motivo importa
   `client_max_body_size` do Nginx, que está em 30 MB.
 - **O outbox `cao_evento_integracao` e o worker que o consumiria** — ver §3. Com 50 fichas
   é infraestrutura para um problema que não se tem.
-- **O MinIO para as fotos** — ver §1. Segue em uso para o regulamento e os logos, que é
-  outro problema.
+- ~~**O MinIO para as fotos**~~ — **deixou de estar descartado em 2026-08-06**, por ordem
+  do cliente, e é o que está implementado hoje. Fica riscado e não apagado justamente
+  porque esta lista existe para que ninguém reproponha o já discutido: quem a leia tem de
+  ver que esta mudou de lado, e por quê. Ver §1 e §4.
 - **O n8n como intermediário até a planilha** — um contêiner a mais para fazer um `POST`
   que o próprio servidor faz em quinze linhas.
 - **Migrar o formulário para ilha React com `client:visible`** — era da época em que a

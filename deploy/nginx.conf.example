@@ -71,6 +71,17 @@ server {
         # Lo que evita el 403 del formulario. Ver el `map` de arriba.
         proxy_set_header Origin            $origin_para_astro;
 
+        # ⚠️ ESTAS DOS NO SON INTERCAMBIABLES, y el límite de intentos depende
+        # de la diferencia.
+        #
+        # `X-Real-IP` SOBRESCRIBE: lo que llega al contenedor es lo que vio
+        # nginx. Es la que la aplicación lee (`src/lib/limite.ts`).
+        #
+        # `X-Forwarded-For` con $proxy_add_x_forwarded_for CONCATENA: nginx la
+        # construye como «$http_x_forwarded_for, $remote_addr», así que el
+        # PRIMER valor de esa lista es lo que escribió el cliente. Leer ese
+        # primer valor —como se hacía— dejaba saltarse el límite mandando una
+        # cabecera distinta en cada petición.
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         # Astro no lo lee para construir su origen —de ahí el `map`— pero se

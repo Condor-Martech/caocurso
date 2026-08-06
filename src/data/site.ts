@@ -299,10 +299,15 @@ export const gruposMarcas: { titulo: string; marcas: Marca[] }[] = [
 
 /**
  * Cada campo lleva `label` y `placeholder` por separado, y no es redundancia:
- * el `label` va en `sr-only` y **conserva el texto completo** cuando el
- * placeholder se recorta con elipsis en pantallas estrechas. «CPF cadastrado no
- * Clube Condor» son 30 caracteres y no entra en una píldora por debajo de
- * 1024 px; quien use lector de pantalla sigue oyendo el texto entero.
+ * el `label` va en `sr-only` y sigue siendo el nombre accesible del campo aunque
+ * el placeholder se recorte en una pantalla estrecha.
+ *
+ * ⚠️ **Los placeholders tienen un techo de ancho, y no es holgado.** El punto más
+ * apretado de todo el rango no es el móvil: es 768 px, donde entra
+ * `md:grid-cols-[5fr_6fr]` con un hueco de 4rem y la columna estrecha se queda
+ * en 181 px útiles. Además, hasta que carga la Torus el texto se pinta con la
+ * fuente del sistema, que es más ancha, así que hace falta margen. Un
+ * placeholder de más de ~170 px se corta en algún ancho. Ya pasó dos veces.
  *
  * El `aceite` NO está en el mockup: lo pidió el cliente y es obligatorio por
  * LGPD. ⚠️ Hoy agrupa tres finalidades distintas —participar, ceder la imagen del
