@@ -48,7 +48,18 @@ const cliente = criarClienteS3({
   secretKey: MINIO_SECRET_KEY,
 });
 
-/** Quanto vale uma URL assinada. Só precisa sobreviver ao redirecionamento. */
+/**
+ * Quanto vale uma URL assinada. Só precisa sobreviver ao redirecionamento.
+ *
+ * ⚠️ **Na prática dura um pouco mais.** O MinIO —como o S3— aceita uma folga de
+ * relógio de cerca de um a dois minutos sobre o `X-Amz-Expires` nominal, para
+ * absorver a diferença de hora entre quem assina e quem verifica. Medido contra
+ * o servidor real: uma URL de 30 s ainda abria aos 90 e já não aos 150.
+ *
+ * Não muda nada aqui —esta URL só precisa viver o suficiente para um redirect—
+ * mas convém saber ao testar: assinar por 5 segundos e ver que ainda abre não
+ * significa que a expiração esteja quebrada.
+ */
 const VALIDADE_SEGUNDOS = 300;
 
 export class FalhaNoStorage extends Error {}
