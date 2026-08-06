@@ -29,7 +29,8 @@ export const prerender = false;
  *     tutorEmail          formato de e-mail
  *     tutorTelefone       10 a 13 dígitos (fijo con DDD … móvil con +55)
  *     petNome             texto
- *     petFoto             JPG / PNG / WebP, máximo 2 MB
+ *     petFoto             JPG / PNG / WebP, máximo 25 MB (el navegador la reduce
+ *                         antes de subir; el servidor la reprocesa igual)
  *     aceiteRegulamento   checkbox: llega como 'on' (también se aceptan 'true' y '1')
  *
  *   Opcionales
@@ -195,7 +196,7 @@ export const POST: APIRoute = async ({ request, url }) => {
      «Finalizado» no significa nada.
 
      Va lo primero, antes incluso de leer el cuerpo: si el plazo está cerrado no
-     hay motivo para bufferizar una foto de 2 MB. */
+     hay motivo para bufferizar la foto entera. */
   const estado = await estadoInscricao();
   if (estado === 'em-breve') {
     return erro('As inscrições ainda não estão abertas.', 403);
@@ -205,7 +206,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
   /* Rechazo temprano por cupo lleno. No es la comprobación que cuenta —esa la
      hace `criar_inscricao()` bajo bloqueo, y es la única sin carrera— pero
-     evita subir una foto de 2 MB para nada cuando ya se sabe que no hay sitio. */
+     evita subir la foto para nada cuando ya se sabe que no hay sitio. */
   if (estado === 'esgotada') {
     return erro('As vagas para o Cãocurso já estão esgotadas.', 409);
   }

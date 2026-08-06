@@ -1,26 +1,34 @@
 # Persistência das inscrições — Cãocurso 2026
 
 > **Escopo:** o que acontece depois de alguém clicar em «Inscreva-se». Nada além disso.
-> **Atualizado:** 2026-08-04.
+> **Estado:** construído e verificado de ponta a ponta. **Atualizado:** 2026-08-06.
+>
+> Para *operar* isto —subir, variáveis, consertar quando quebra— o documento é o
+> [`README.md`](../README.md). Este aqui é **por que está assim** e **o que continua
+> errado**.
 
-**O fluxo, numa frase:** o tutor se inscreve com o seu pet, a ficha é gravada no
-Supabase, e um worker mantém uma planilha do Google atualizada para que o time de
-marketing —que não é técnico— possa consultá-la.
+**O fluxo, numa frase:** o tutor se inscreve com o seu pet, a ficha vai para o Supabase, e
+o próprio servidor empurra a lista inteira para uma planilha do Google onde o júri e o CRM
+a consultam.
 
-**O Supabase é o banco de dados. A planilha é uma janela somente leitura.** Se for
-preciso corrigir um dado, corrige-se na origem.
+**O Supabase é o banco de dados. A planilha é uma janela somente leitura.** Se for preciso
+corrigir um dado, corrige-se na origem — a planilha é reescrita por cima no envio
+seguinte, então qualquer edição feita nela se perde.
 
 ```
-LP (Astro)
+LP (Astro, contêiner Docker atrás de Nginx)
    │ POST /api/inscricao   (multipart: a foto é um arquivo)
    ▼
 Supabase ◀───────────────── fonte de verdade
    ├─ cao_inscricao         uma linha por participante
-   ├─ foto → storage        (provedor a decidir, ver §4)
-   └─ cao_evento_integracao outbox
-                │
-                ▼ worker
-        Planilha do Google ◀── janela para o marketing, somente leitura
+   ├─ cao_campanha          uma linha só: janela de datas + teto de vagas
+   └─ fotos-caocurso        bucket PRIVADO, WebP já reprocessado
+   │
+   └──▶ e, logo depois de gravar e sem esperar por isso,
+        a LP empurra a lista inteira ──▶ Web App do Apps Script
+                                             ▼
+                                     Planilha do Google
+                                     (júri + CRM, conta nominal)
 ```
 
 **Não há votação, nem feed público, nem ranking.** O júri escolhe presencialmente no dia
@@ -31,110 +39,193 @@ backoffice: não são necessários.
 
 ## 1. Decisões
 
-**Tomadas:**
+Todas tomadas. Nenhuma pendente.
 
-| | Valor | Nota |
+| | Valor | Por quê |
 |---|---|---|
 | Banco de dados | **Supabase** (Postgres) | `sa-east-1` São Paulo: o dado não sai do Brasil |
-| Espelho para marketing | **Planilha do Google**, somente leitura | Uma aba, reescrita a cada sync |
-| Deploy | **VPS com Docker** | O adapter ainda é o da Vercel; migração adiada de propósito |
+| Storage da foto | **Supabase Storage**, bucket privado `fotos-caocurso` | Ver §4 |
+| Espelho para o júri | **Planilha do Google**, reescrita inteira a cada envio | Ver §3 |
+| Quem empurra | **A própria LP**, sem worker | Ver §3 |
+| Deploy | **VPS com Docker**, `@astrojs/node` standalone | Build em `dist/`, contêiner atrás de Nginx |
 | Seleção dos vencedores | **Júri presencial** | Sem software no meio |
+| CPF na planilha | **Não vai** | Ver §3, «Acesso» |
 
-**Pendentes, sem bloquear nada:**
-
-| | Pergunta | Por que não bloqueia |
-|---|---|---|
-| **Storage da foto** | MinIO ou Supabase Storage? | Isolado atrás de um módulo, ver §4 |
-| **CPF na planilha** | O marketing precisa dele ali? | Por padrão **não**: fica no Supabase |
+> **O MinIO ficou de fora, e vale saber por quê.** A ideia era poupar a cota gratuita do
+> Supabase com fotos pesadas. Quando saiu o número real —**50 inscrições**— a conta virou
+> outra: medido com fotos reais depois do reprocessamento, a média é **113 KB** e o pior
+> caso **228 KB**, então as 50 ocupam entre **6 e 12 MB de 1 GB**. O MinIO não poupava
+> nada e acrescentava uma peça a mais que pode falhar. (O teto real desse plano são umas
+> **4.500 inscrições** — ver `README.md`.)
+>
+> O MinIO **segue em uso para outra coisa**: o PDF do regulamento e os logos dos
+> patrocinadores, que são arquivos que se querem trocar sem rebuild. São dois problemas
+> diferentes com a mesma palavra no meio.
 
 ---
 
 ## 2. Modelo de dados
 
-Uma tabela e o outbox. Os campos são os onze do formulário atual, ✅ verificados em
-`src/components/FormularioInscricao.astro`.
+Duas tabelas, uma vista e uma função. Os campos são os onze do formulário, ✅ verificados
+contra `src/components/FormularioInscricao.astro`.
+
+O SQL real vive em `supabase/migrations/` — o que segue é o essencial e o porquê.
+
+### `cao_inscricao` — uma linha por participante
 
 ```sql
-CREATE TABLE cao_inscricao (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+id                uuid PRIMARY KEY DEFAULT gen_random_uuid()
 
-  -- tutor
-  tutor_nome        text NOT NULL CHECK (length(tutor_nome) >= 3),
-  tutor_nascimento  date,
-  tutor_cpf         text,                    -- só dígitos, já validado no endpoint
-  tutor_email       citext NOT NULL,
-  tutor_telefone    text NOT NULL,
+tutor_nome        text NOT NULL CHECK (length(trim(tutor_nome)) >= 3)
+tutor_nascimento  date
+tutor_cpf         text CHECK (tutor_cpf IS NULL OR tutor_cpf ~ '^[0-9]{11}$')
+tutor_email       text NOT NULL
+tutor_telefone    text NOT NULL
 
-  -- pet
-  pet_nome          text NOT NULL,
-  pet_raca          text,                    -- texto livre, como no formulário
-  pet_sexo          text,
-  pet_descricao     text,
-  foto_key          text NOT NULL,           -- key no storage, NUNCA a URL
+pet_nome          text NOT NULL
+pet_raca          text                      -- texto livre, como no formulário
+pet_sexo          text
+pet_especie       text                      -- opcional: o formulário de 2026 não o pede
+pet_descricao     text
+foto_key          text NOT NULL             -- a KEY no storage, NUNCA a URL
 
-  -- consentimento
-  consentimentos    jsonb NOT NULL,          -- [{tipo, versao, texto_sha256, em}]
-
-  criado_em         timestamptz NOT NULL DEFAULT now(),
-  excluido_em       timestamptz              -- exclusão lógica: LGPD art. 18
-);
-
--- Uma inscrição por CPF. Índice parcial, não uma checagem em código:
--- dois envios simultâneos se atropelam e o segundo tem de falhar no banco.
-CREATE UNIQUE INDEX cao_inscricao_cpf_unica
-  ON cao_inscricao (tutor_cpf) WHERE excluido_em IS NULL;
-
-CREATE TABLE cao_evento_integracao (
-  id         bigserial PRIMARY KEY,
-  tipo       text NOT NULL,
-  payload    jsonb NOT NULL,
-  status     text NOT NULL DEFAULT 'pendente'
-             CHECK (status IN ('pendente','enviado','falhou')),
-  tentativas smallint NOT NULL DEFAULT 0,
-  erro       text,
-  criado_em  timestamptz NOT NULL DEFAULT now(),
-  enviado_em timestamptz
-);
-CREATE INDEX ON cao_evento_integracao (criado_em) WHERE status = 'pendente';
+consentimentos    jsonb NOT NULL DEFAULT '[]'
+criado_em         timestamptz NOT NULL DEFAULT now()
+excluido_em       timestamptz               -- exclusão lógica: LGPD art. 18
 ```
 
-> **`foto_key` e não `foto_url`.** Com a URL no banco, trocar de storage obriga a
-> reescrever a tabela. Com a key, a URL é construída na leitura e trocar de provedor é
-> mudar uma variável de ambiente. É o que permite adiar a decisão da §4.
+Dois índices únicos **parciais**, e são parciais de propósito: uma ficha excluída não pode
+impedir que a mesma pessoa se inscreva de novo.
+
+```sql
+cao_inscricao_cpf_unica        (tutor_cpf)              WHERE excluido_em IS NULL
+                                                          AND tutor_cpf IS NOT NULL
+cao_inscricao_email_pet_unica  (lower(tutor_email),
+                                lower(pet_nome))        WHERE excluido_em IS NULL
+```
+
+> **Índice, não checagem em código.** Dois envios simultâneos se atropelam: entre o
+> `SELECT` que não encontra nada e o `INSERT` cabe outra requisição. O banco é o único
+> lugar onde isso não acontece. O endpoint traduz o `23505` num **409** com mensagem
+> humana.
 >
-> **`excluido_em` e não `DELETE`.** Quando alguém exerce o seu direito de exclusão é
-> preciso poder demonstrar *quando* aquilo foi atendido. Um `DELETE` não deixa rastro de
-> ter cumprido.
+> **`tutor_email` é `text`, não `citext`.** A comparação sem maiúsculas vem do índice
+> sobre `lower(tutor_email)`, que não exige extensão nenhuma.
+>
+> **`foto_key` e não `foto_url`.** Com a URL gravada, trocar de storage obrigaria a
+> reescrever a tabela. Com a key, a URL se constrói na leitura — e é o que faz de
+> `src/lib/storage.ts` o único arquivo que precisa saber onde as fotos vivem.
+>
+> **`excluido_em` e não `DELETE`.** Quando alguém exerce o direito de exclusão é preciso
+> poder demonstrar *quando* aquilo foi atendido. Um `DELETE` não deixa rastro de ter
+> cumprido.
 >
 > **`consentimentos` é um array, não um booleano.** Ver §5.
+
+**RLS ligado e nenhuma política**, mais `REVOKE ALL … FROM anon, authenticated`. Não é
+descuido: é o desenho. Só a `service_role` enxerga a tabela, e ela vive exclusivamente no
+servidor. Não existe caminho desde o navegador.
 
 `pet_raca` é texto livre porque o formulário é. Consequência: na planilha vão conviver
 «SRD», «srd» e «vira-lata» como valores distintos. Com o júri escolhendo presencialmente
 dá no mesmo; se um dia for preciso agrupar por raça, o campo tem de virar seletor — não
 normalizar depois o que já foi coletado.
 
+### `cao_campanha` — a janela e o teto, fora do código
+
+Uma linha só, garantida por `CREATE UNIQUE INDEX ON cao_campanha ((true))`.
+
+```sql
+id            text PRIMARY KEY   -- 'caocurso-2026'
+abre_em       timestamptz        -- '2026-08-03 00:00:00-03'
+fecha_em      timestamptz        -- '2026-08-21 23:59:59-03'
+limite_vagas  integer            -- 50
+atualizado_em timestamptz NOT NULL DEFAULT now()
+```
+
+**Isto está no banco e não no `site.ts` por um motivo prático:** mudar a data de
+fechamento ou subir o teto de 50 é um `update` de dez segundos, sem rebuild e sem
+redeploy. É a diferença entre resolver um pedido do cliente na hora ou em meia manhã.
+
+⚠️ **As datas levam offset `-03` escrito à mão**, na migração e em qualquer `update`.
+`'2026-08-21 23:59:59'` sem fuso é lido como UTC, e o período fecharia às 20:59 do dia 21
+em Brasília.
+
+A vista `cao_estado_inscricao` junta **numa consulta só** a janela, o limite e a contagem
+de fichas vivas — cinco colunas cruas (`id, abre_em, fecha_em, limite_vagas, inscritos`).
+Ela não decide nada: quem transforma isso em `em-breve` / `aberta` / `esgotada` /
+`finalizada` é `estadoInscricao()`, em `src/lib/inscricao.ts`, que a lê com **cache de 10
+segundos** — sem ele, cada visita à home seria uma consulta ao banco.
+
+A contagem já filtra `excluido_em IS NULL`: **quem exerce o direito de exclusão devolve a
+sua vaga ao concurso.**
+
+### `criar_inscricao(dados jsonb)` — por que não é um `INSERT`
+
+```
+lê a campanha                                      → P0100 se não existe
+confere a janela                                   → P0101 antes de abrir
+                                                   → P0102 depois de fechar
+PERFORM pg_advisory_xact_lock('cao_inscricao_vagas')   ← só a partir daqui há fila
+  conta as fichas vivas                            → P0103 se não há mais vagas
+  INSERT
+```
+
+**A trava vem depois das checagens de data, e é de propósito.** Quem chega fora do prazo é
+rejeitado sem entrar na fila: não faz sentido serializar requisições que vão ser recusadas
+de qualquer jeito. O que precisa ser serializado é só o trecho entre contar e inserir.
+
+O advisory lock é o que faz o teto de 50 significar alguma coisa. Sem ele, dez pessoas
+disputando a última vaga leem «49 ocupadas» ao mesmo tempo e entram todas. Com ele, nove
+recebem **409** e a tabela fecha exatamente em 50.
+
+**Verificado:** 10 requisições simultâneas disputando 1 vaga → exatamente 1 × 201 e
+9 × 409.
+
+Os erros são **SQLSTATE próprios** (`P0100`–`P0103`, listados em `src/lib/supabase.ts`) e
+não comparações com o texto da mensagem: a mensagem é humana e alguém a vai reescrever um
+dia; o código é contrato.
+
 ---
 
 ## 3. O envio para a planilha
 
-### Nunca dentro do request do usuário
+### A LP empurra; não há worker
 
-Se a escrita na planilha acontecer enquanto o tutor espera, qualquer soluço da API do
-Google —cota, latência, um 503— vira um erro de inscrição: alguém preencheu onze campos
-e subiu uma foto, e vê «não foi possível concluir» porque o Google estava lento.
+O desenho anterior deste documento previa uma tabela `outbox` e um processo separado que a
+consumisse. **Não se construiu, e não porque tenha ficado pendente:** com 50 fichas, um
+worker é uma peça a mais para instalar, monitorar e reiniciar, resolvendo um problema que
+não existe nessa escala.
+
+O que existe:
 
 ```
 POST /api/inscricao
-  ├─ BEGIN
-  ├─ INSERT cao_inscricao
-  ├─ INSERT cao_evento_integracao (pendente)   ← mesma transação
-  └─ COMMIT                                    → 201, a pessoa já está inscrita
-Worker
-  └─ lê pendentes → reescreve a planilha → marca enviado / repete com backoff
+  ├─ sobe a foto ao bucket
+  ├─ criar_inscricao()  →  201, a pessoa já está inscrita
+  └─ sincronizarPlanilha()   ← SEM await
+         └─ monta a lista inteira → POST ao Web App → a aba é reescrita
 ```
 
-A inscrição é confirmada com o commit local. A planilha se atualiza um segundo depois,
-ou um minuto depois se o Google estiver fora. O usuário nunca fica sabendo.
+**O `sincronizarPlanilha()` não é esperado de propósito.** A ficha já está salva quando ele
+dispara: se a Google estiver fora do ar, o erro vai para o log e ninguém que preencheu onze
+campos recebe uma tela de falha por causa da planilha. É a mesma garantia que o outbox
+dava, sem o worker.
+
+### Por que empurrar e não a planilha puxar
+
+A primeira versão fazia o contrário: um gatilho de 15 minutos dentro da planilha chamava
+`GET /api/exportar`. Trocou-se porque **não dava para testar**. Quem executa o script é uma
+máquina da Google, de fora; enquanto `pet.condor.com.br` não estivesse no ar não havia nada
+que ela pudesse chamar — a alternativa era abrir um túnel para a máquina de trabalho só
+para ver se a coisa funcionava. Empurrando, o único endereço público é o do Web App, e esse
+a Google já publica.
+
+De brinde, a linha aparece **na hora** em vez de até um quarto de hora depois.
+
+`GET /api/exportar` continua existindo, agora como **conserto**: a aba apagada sem querer,
+uma exclusão LGPD sem inscrições novas depois, um envio que se perdeu. Exige o domínio no
+ar e um token próprio.
 
 ### Reescrever a aba inteira, não acrescentar linhas
 
@@ -143,95 +234,118 @@ Parece mais caro e é o correto, por um motivo que não é de desempenho:
 **O direito de exclusão.** Quando alguém pede que os seus dados sejam apagados, marca-se
 `excluido_em` no Supabase. Com um sync que só acrescenta, essa pessoa **continua na
 planilha para sempre** — e acabou-se de descumprir justamente o que se acreditava ter
-cumprido. Com reescrita completa, ela some sozinha no próximo sync.
+cumprido. Com reescrita completa, ela some sozinha no envio seguinte.
 
-De brinde: as correções se propagam sem fazer nada, é idempotente, e não deixa estados
-pela metade se falhar no meio. Com milhares de linhas é trivial.
+De brinde: as correções se propagam sem fazer nada, é idempotente —o mesmo envio chegando
+duas vezes dá no mesmo— e não deixa estados pela metade se falhar no meio.
+
+O script (`deploy/planilha.gs`) toma um `LockService` antes de escrever: duas inscrições
+simultâneas são dois `doPost`, e sem trava uma limpa enquanto a outra escreve.
+
+> ⚠️ **A aba se chama `Inscrições` e o script a cria sozinho.** `Página1` fica vazia para
+> sempre. Ao recarregar, a Google deixa você na aba em que estava — é o motivo número um
+> de alguém achar que «não chegou nada».
 
 ### Acesso
 
 - Compartilhada **por conta nominal** dentro do workspace da Condor. **Nunca «qualquer
   pessoa com o link»**: é o vetor de vazamento número um e o Google não registra quem
   baixou.
-- Colunas: nome, e-mail, telefone, nome do pet, raça, sexo, descrição, data. **O CPF
-  não**, a menos que o marketing peça para algo concreto — é o dado que transforma um
-  vazamento chato num vazamento grave, e para contatar vencedores não acrescenta nada.
+- Colunas: nome, e-mail, telefone, nome do pet, raça, sexo, descrição, data e o link da
+  foto. **O CPF não** — é o dado que transforma um vazamento chato num vazamento grave, e
+  para premiar ou contatar não acrescenta nada. Se o CRM precisar dele como chave de
+  cruzamento, é uma linha em `src/lib/planilha.ts`; que seja decisão consciente.
+- O token do Web App **não é a `service_role`**. Ele acaba guardado nas propriedades de um
+  script da Google, legível por quem edite a planilha: se vazar, o que se perde é a
+  capacidade de reescrever essa aba. A `service_role` perderia o banco inteiro.
 
 ---
 
-## 4. A foto — decisão adiada, sem custo
+## 4. A foto
 
-MinIO ou Supabase Storage segue sem decisão. Dá para adiar **se e somente se** duas
-regras forem respeitadas desde a primeira linha:
+**Decidido: Supabase Storage, bucket `fotos-caocurso`, privado**, com
+`file_size_limit` de 5 MB e `allowed_mime_types` restrito a `image/webp` — o bucket
+recusa qualquer outra coisa mesmo que o código erre.
 
-1. **O banco guarda a key, nunca a URL** (§2).
-2. **O upload vive num módulo só:** uma função que recebe o arquivo e devolve a key. O
-   endpoint, o worker e a planilha falam com essa função e não sabem o que há atrás.
-   Quando houver decisão, muda-se ali e em nenhum outro lugar.
+O caminho de uma foto, do celular ao bucket:
 
-**O que é preciso fazer seja qual for o provedor:**
+```
+celular  →  navegador reduz (canvas, 1600 px, WebP 0,85)   FormularioInscricao.astro
+         →  servidor confere os magic bytes                lib/foto.ts
+         →  .rotate() aplica a orientação do EXIF
+         →  redimensiona a 1600 px e recodifica WebP q82   ← e aqui o EXIF morre
+         →  sobe como 2026/<uuid>.webp                     lib/storage.ts
+```
 
-- **Recodificar no servidor.** Resolve três coisas de uma vez: remove o EXIF (§5), valida
-  que o arquivo é mesmo uma imagem —conferindo os primeiros bytes, não a extensão— e
-  normaliza o peso.
-- **Bucket privado.** A foto não tem por que ser acessível pela internet: só a vê quem
-  olha o cadastro.
+**O `.rotate()` tem de vir antes do resto.** Ele aplica a orientação que o EXIF declara
+*antes* de o EXIF ser descartado; sem isso, metade das fotos de celular ficam deitadas.
 
-**E para que o link da planilha não envelheça:** a planilha não deve guardar uma URL
-assinada —elas expiram, e uma planilha cheia de links mortos não serve— e sim um endereço
-estável próprio (`/foto/<id>`) que confira quem é no clique e só então redirecione para
-uma URL assinada. A permissão é avaliada no clique, não quando a célula foi escrita. De
-quebra, fica registro de quem viu qual foto.
+**A redução no navegador não substitui o reprocessamento no servidor.** Ela existe para que
+um iPhone não precise subir 6 MB por uma rede móvel; o servidor reprocessa igual, porque o
+cliente pode falhar, ser desligado ou mentir.
 
-Essa coluna entra na planilha quando a decisão de storage for fechada.
+**O que entra na planilha é `/foto/<id>`, não uma URL do storage.** Um endereço estável
+próprio que consulta a key, assina na hora (300 s) e redireciona. As duas alternativas eram
+piores: bucket público deixa qualquer um listar e baixar as fotos de todos os pets, e uma
+URL assinada gravada na célula morre em cinco minutos e deixa a planilha cheia de links
+mortos.
 
----
-
-## 5. LGPD — o que está errado hoje
-
-Dois pontos são código atual, ✅ verificados.
-
-| # | Ponto | Estado | Ação |
-|---|---|---|---|
-| 1 | **Consentimento agrupado** | ⛔ Um único checkbox mistura três finalidades | Separar, ver abaixo |
-| 2 | **EXIF com GPS** | ⛔ `inscricao.ts` grava os bytes crus do navegador | Recodificar no servidor (§4) |
-| 3 | Base legal | consentimento | Documentá-la no regulamento |
-| 4 | Retenção | sem definir | Prazo pós-campanha + expurgo, **também da planilha** |
-| 5 | Direito de exclusão | sem implementar | `excluido_em` + o sync por reescrita (§3) |
-| 6 | Menores | sem contemplar | ⚠️ Um concurso de pets atrai adolescentes. O art. 14 tem regime reforçado. **O simples é exigir +18 no regulamento** |
-| 7 | Transferência internacional | ⚠️ a planilha está no Google | O Supabase é Brasil, mas o espelho não. Cláusulas + acesso nominal |
-
-**Sobre o ponto 1.** O checkbox único diz hoje:
-
-> *«Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a imagem
-> do meu pet e os dados enviados na divulgação da campanha.»*
-
-Agrupa **participar**, **ceder a imagem do pet** e **ceder os dados para divulgação**.
-Sob a LGPD são finalidades distintas e não podem ser juntadas num único consentimento.
-São necessários registros separados e nenhum pré-marcado — por isso `consentimentos` é um
-array de `{tipo, versao, texto_sha256, em}` e não um booleano: é preciso poder demonstrar
-qual texto exato cada pessoa aceitou.
-
-**Sobre o ponto 2.** As fotos de celular levam coordenadas de GPS por padrão. Uma foto de
-pet é feita em casa, então o arquivo contém o endereço do tutor. Hoje
-`src/pages/api/inscricao.ts` grava `Buffer.from(await foto.arrayBuffer())` tal e qual:
-sem recodificar, sem mexer em nada. O pipeline da galeria limpa —o sharp descarta
-metadados a menos que se peça o contrário— mas o do formulário não existe.
+> `/foto/<id>` **não confere identidade nem deixa registro de quem viu o quê.** A versão
+> anterior deste documento previa isso; não se construiu. A fronteira de acesso real é a
+> planilha compartilhada por conta nominal — quem tem o link tem a foto. Para 50 fotos de
+> pets num concurso é proporcional; se um dia houver dado sensível atrás dessa rota, é aí
+> que entra a checagem.
 
 ---
 
-## 6. Ordem de trabalho
+## 5. LGPD — o que já está e o que continua errado
 
-| | O quê | Depende de |
+| # | Ponto | Estado |
 |---|---|---|
-| 1 | Schema no Supabase: `cao_inscricao` + outbox | — |
-| 2 | Repontar o `POST /api/inscricao` de `fs` para o Supabase, com o upload isolado no seu módulo | — |
-| 3 | Separar os consentimentos (§5.1) | — |
-| 4 | Worker: outbox → reescrita da planilha | 1 |
-| 5 | Recodificar a foto no servidor + bucket privado | decisão de storage |
-| 6 | `/foto/<id>` com permissão no clique, e a sua coluna na planilha | 5 |
+| 1 | **Consentimento agrupado** | ⛔ **Pendente, e é o único bloqueio real.** Ver abaixo |
+| 2 | EXIF com GPS | ✅ Resolvido: `lib/foto.ts` recodifica e descarta metadados |
+| 3 | Bucket privado | ✅ Resolvido: `fotos-caocurso` não é público, URLs assinadas de 300 s |
+| 4 | Direito de exclusão | ✅ Resolvido: `excluido_em` + a reescrita completa da aba (§3) |
+| 5 | Base legal | consentimento — falta documentá-la no regulamento |
+| 6 | Retenção | ⚠️ sem definir. Prazo pós-campanha + expurgo, **também da planilha** |
+| 7 | Menores | ⚠️ o endpoint exige +18 pela data de nascimento quando ela é informada, mas o campo é opcional. O simples é exigir +18 no regulamento |
+| 8 | Transferência internacional | ⚠️ o Supabase é Brasil, a planilha não. Cláusulas + acesso nominal |
 
-Os quatro primeiros não dependem da decisão de storage.
+### O ponto 1, em detalhe — e por que tem prazo
+
+O checkbox único diz hoje:
+
+> *«Li e aceito o regulamento do Cãocurso 2026 e autorizo a Rede Condor a usar a imagem do
+> meu pet e os dados enviados na divulgação da campanha.»*
+
+Agrupa **participar**, **ceder a imagem do pet** e **ceder os dados**. Sob a LGPD são
+finalidades distintas e não podem ser juntadas num consentimento só. E há uma quarta que o
+texto nem menciona: **o time de CRM vai usar esses contatos**, o que é uma finalidade
+comercial e não «divulgação da campanha».
+
+A estrutura para fazer certo já está pronta: `consentimentos` é um array de
+`{tipo, versao, texto_sha256, em}` justamente para registrar cada aceite em separado, com o
+hash do texto exato que a pessoa leu. O que falta é a decisão do cliente sobre **quais
+finalidades declarar**.
+
+⚠️ **Isto é irreversível assim que a primeira ficha real entrar.** Não se conserta depois:
+voltar a pedir consentimento separado a 50 pessoas que já se inscreveram não é viável, e
+usar para CRM dados coletados sob um texto que falava de «divulgação da campanha» é
+exatamente o que a lei não permite. **É a única coisa nesta lista que precisa estar
+resolvida antes de abrir o formulário ao público.**
+
+---
+
+## 6. O que falta
+
+| | O quê | Tamanho |
+|---|---|---|
+| 1 | **Separar os consentimentos** (§5.1) — depende de decisão do cliente | 1 dia depois da resposta |
+| 2 | **Limite de tentativas em `POST /api/inscricao`** — hoje nada impede queimar as 50 vagas num script | ~30 min |
+| 3 | Definir retenção e o expurgo pós-campanha, incluindo a planilha | decisão + 1 h |
+| 4 | Deploy no VPS — artefatos prontos, executa a equipe de infra | fora deste repositório |
+
+Tudo o mais desta lista, nas versões anteriores deste documento, está construído.
 
 ---
 
@@ -252,8 +366,17 @@ descrevia um projeto maior do que o que existe. Foi removido, e o motivo importa
   `@condor/forms-core`** — continua sendo boa ideia para a saída do WordPress, mas é
   outro projeto e não é este.
 - **A avaliação InsForge vs Supabase** — decidido.
-- **Toda a análise do limite de 4,5 MB das funções da Vercel** — num VPS com Docker esse
-  limite não existe. O que continuava obrigatório por outros motivos (EXIF, validação de
-  conteúdo) está na §4.
+- **Toda a análise do limite de 4,5 MB de payload em funções serverless** — o site roda
+  num contêiner de vida longa; esse limite não existe aqui. O teto real é o
+  `client_max_body_size` do Nginx, que está em 30 MB.
+- **O outbox `cao_evento_integracao` e o worker que o consumiria** — ver §3. Com 50 fichas
+  é infraestrutura para um problema que não se tem.
+- **O MinIO para as fotos** — ver §1. Segue em uso para o regulamento e os logos, que é
+  outro problema.
+- **O n8n como intermediário até a planilha** — um contêiner a mais para fazer um `POST`
+  que o próprio servidor faz em quinze linhas.
+- **Migrar o formulário para ilha React com `client:visible`** — era da época em que a
+  persistência não existia. O que o formulário precisava era do servidor; o
+  `@astrojs/react` segue instalado sem nenhuma ilha.
 
 Está tudo no histórico do git até `98d1b95`.

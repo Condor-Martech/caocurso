@@ -17,7 +17,6 @@ node_modules/
 # Salidas de build: se regeneran dentro.
 dist/
 .astro/
-.vercel/
 
 # ⚠️ Las credenciales NUNCA se hornean en la imagen. Se inyectan en tiempo de
 # ejecución (env_file en el compose). Una imagen con el .env dentro filtra la
@@ -34,9 +33,6 @@ dist/
 
 # Arte y briefing de campaña: material interno, no se publica.
 docs/
-
-# Fichas de prueba del formulario antiguo.
-uploads/
 
 npm-debug.log*
 *.log

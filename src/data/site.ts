@@ -79,7 +79,7 @@ export const copyright = dados.site.copyright;
  * segundos para no ir a São Paulo en cada visita.
  *
  * ⚠️ Al escribirlas en la base, siempre con offset. `'2026-08-21 23:59:59'` sin
- * zona se interpreta como UTC y el período cerraría a las 20:59 del día 20 —un
+ * zona se interpreta como UTC y el período cerraría a las 20:59 del día 21 —tres
  * día antes— sin que nadie se entere hasta que lleguen las quejas. Brasil no
  * aplica horario de verano desde 2019, así que `-03:00` vale todo el año. Y el
  * cierre va a las 23:59:59 del 21, no a las 00:00: «de 03/08 a 21/08» incluye

@@ -28,11 +28,13 @@ import { estadoInscricao, periodoInscricao, ROTULO_INSCRICAO } from '../lib/insc
 const [horarioPrefixo = '', ...horarioResto] = caocurso.horario.split(' ');
 const horarioValor = horarioResto.join(' ');
 
-/* El PDF del regulamento 2026 todavía no existe (SITE.regulamentoPdf === null).
-   Mientras el flag esté en false el botón se pinta igual pero deshabilitado: un
-   <a href={null}> sería un enlace roto. Cuando llegue el PDF basta con poner su
-   ruta y `regulamentoDisponivel: true` en src/data/site.ts y esta misma rama
-   vuelve a emitir el <a>.
+/* El regulamento de 2026 todavía no ha llegado: `regulamentoPdf` apunta hoy al
+   PDF de 2025 y `regulamentoDisponivel` está en true, así que el botón enlaza.
+   Cuando llegue el de 2026 se cambia esa URL en src/data/site.json y ya está.
+
+   La rama del botón deshabilitado se mantiene por si hay que volver atrás:
+   con el flag en false se pinta igual pero sin enlace, porque un
+   <a href={null}> sería un enlace roto.
    Los tipos se ensanchan a propósito: SITE es `as const`, así que sin las
    anotaciones TypeScript daría la rama del enlace por muerta. */
 const regulamentoUrl: string | null = SITE.regulamentoPdf;

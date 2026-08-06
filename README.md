@@ -66,7 +66,7 @@ não podem discordar: o botão e o endpoint.
 
 | Estado | Rótulo | Quando |
 |---|---|---|
-| `em-breve` | Em breve | Antes de `abre_em` — **ou** se a campanha não puder ser lida |
+| `em-breve` | Em breve | Antes de `abre_em` — **ou** se a campanha nunca pôde ser lida |
 | `aberta` | Inscreva-se | Dentro do período e com vaga |
 | `esgotada` | Esgotado | Dentro do período, mas `inscritos >= limite_vagas` |
 | `finalizada` | Finalizado | Depois de `fecha_em` |
@@ -74,12 +74,16 @@ não podem discordar: o botão e o endpoint.
 A data manda sobre a vaga: passado o fechamento diz «Finalizado» mesmo que também estivesse
 cheio.
 
-**Falha fechado.** Sem dados legíveis devolve `em-breve`, nunca `aberta`. Ver «Em breve» a
-mais é chato e se resolve recarregando; ver «Inscreva-se» e o envio estourar depois de onze
-campos e uma foto é pior.
+**Falha fechado — na primeira leitura.** Sem nunca ter conseguido ler a campanha devolve
+`em-breve`, nunca `aberta`. Se já leu bem alguma vez, um erro posterior devolve o último
+valor conhecido: um soluço de rede não apaga o botão no meio da campanha, e quem impede
+uma inscrição indevida é `criar_inscricao()`, que confere no banco a cada envio.
+
+Ver «Em breve» a mais é chato e se resolve recarregando; ver «Inscreva-se» e o envio
+estourar depois de onze campos e uma foto é pior.
 
 **A vaga quem decide é o banco.** O endpoint também confere antes, mas só para não fazer
-alguém subir 2 MB à toa. A resposta que vale é a de `criar_inscricao()`, que trava, conta e
+alguém subir a foto à toa. A resposta que vale é a de `criar_inscricao()`, que trava, conta e
 insere na mesma transação — sem isso, dois envios simultâneos com uma vaga sobrando entram
 os dois.
 
@@ -162,7 +166,8 @@ O texto «de 03/08 a 21/08/2026» que aparece no hero e no bloco 7 **também sai
 não fica desalinhado.
 
 > ⚠️ Sempre escreva as datas **com fuso**: `2026-08-21 23:59:59-03`. Sem o offset, o Postgres
-> lê como UTC e o período fecharia às 20:59 do dia 20 — um dia antes.
+> lê como UTC e o período fecharia às 20:59 do dia 21, horário de Brasília — três horas
+> antes do previsto. Em `abre_em` o desvio é o mesmo e abre três horas mais cedo.
 
 ### Ver a foto de uma inscrição
 
@@ -389,7 +394,6 @@ reprocessamento (média 113 KB, pior caso 228 KB). Bem acima do previsto.
 - **MARS Petcare, Caats e Doguitos** — têm material em `assets-fonte/patrocinadores/Apoio/`,
   falta tirar o arquivo web. O de MARS é JPEG com fundo cinza e precisa de recorte
 - **Regulamento 2026** — não há PDF
-- **Protetoras / ONGs** — «em definição» segundo o briefing. Os 3 cartões estão vazios
 - **13ª foto da galeria** — a arte mostra 13, o repositório tem 12
 
 **Decisões:**

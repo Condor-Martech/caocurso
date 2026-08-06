@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.cao_campanha (
   id            text PRIMARY KEY,
 
   -- ⚠️ Sempre com fuso. '2026-08-21 23:59:59' sem offset é lido como UTC e o
-  -- período fecharia às 20:59 do dia 20 no Brasil — um dia antes, e ninguém
+  -- período fecharia às 20:59 do dia 21 no Brasil — três horas antes, e ninguém
   -- percebe até chegarem as reclamações.
   abre_em       timestamptz NOT NULL,
   fecha_em      timestamptz NOT NULL,
