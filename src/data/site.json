@@ -241,8 +241,8 @@
         "title": "Use o formato dd/mm/aaaa."
       },
       "tutorCpf": {
-        "label": "CPF cadastrado no Clube Condor",
-        "placeholder": "CPF do Clube Condor"
+        "label": "CPF",
+        "placeholder": "CPF"
       },
       "tutorEmail": { "label": "E-mail", "placeholder": "E-mail" },
       "tutorTelefone": { "label": "Telefone com DDD", "placeholder": "Telefone" },

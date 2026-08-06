@@ -289,7 +289,7 @@ export const POST: APIRoute = async ({ request, url }) => {
      `cao_campanha.cpf_obrigatorio`, la misma fuente que lee el formulario, así
      que encender o apagar el interruptor mueve las dos mitades a la vez. */
   if (!tutorCpf && (await cpfObrigatorio())) {
-    return erro('Informe o CPF cadastrado no Clube Condor.', 400, 'tutorCpf');
+    return erro('Informe o seu CPF.', 400, 'tutorCpf');
   }
 
   if (tutorCpf) {

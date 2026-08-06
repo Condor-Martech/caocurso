@@ -106,10 +106,12 @@ const exigirCpf = await cpfObrigatorio();
 
           A media columna en un móvil quedan ~81 px útiles —descontando los
           20 px de padding y los 2 de borde a cada lado—, y ahí caben «Raça» y
-          «Sexo» pero no una fecha ni una frase. Los dos placeholders de esta
-          fila se estaban cortando, y el del CPF perdía justo lo que importa:
-          que es el del Clube Condor, no uno cualquiera. Apilados hay 188 px ya
-          en la pantalla más estrecha.
+          «Sexo» pero no una fecha. «Nasc. dd/mm/aaaa» son 142 px: emparejado se
+          cortaba justo por el formato, que es lo único que ese placeholder
+          añade. Apilados hay 188 px ya en la pantalla más estrecha.
+
+          El CPF ya no lo necesita —su placeholder es «CPF», 28 px— pero comparte
+          fila con el nacimiento, así que va donde vaya él.
 
           El punto más apretado de todo el rango NO es el móvil, es 768 px:
           ahí entra `md:grid-cols-[5fr_6fr]` con un hueco de 4rem, y la columna
@@ -581,9 +583,11 @@ const exigirCpf = await cpfObrigatorio();
     font-size: 1rem;
     line-height: 1.5;
     padding: 0.5rem 1.25rem;
-    /* «CPF cadastrado no Clube Condor» no cabe en una píldora de 360 px, y
-       bajar el cuerpo por debajo de 16 px dispararía el zoom de iOS. Con esto
-       el recorte se lee como recorte y no como un corte a mitad de letra. */
+    /* Red de seguridad. Hoy ningún placeholder se corta —están medidos contra
+       el hueco más estrecho, ver el comentario de la rejilla del tutor— pero
+       bajar el cuerpo por debajo de 16 px para ganar sitio dispararía el zoom
+       de iOS al enfocar, así que si algún día uno se pasa, esto hace que el
+       recorte se lea como recorte y no como un corte a mitad de letra. */
     text-overflow: ellipsis;
     transition: border-color 0.15s ease;
   }
