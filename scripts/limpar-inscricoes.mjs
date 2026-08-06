@@ -35,6 +35,11 @@
 import { readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
 import { criarClienteS3 } from '../src/lib/s3.mjs';
+/* Las columnas de la hoja se IMPORTAN, no se copian. Estuvieron duplicadas aquí
+   —con un comentario que las llamaba «la única costura frágil de este script»—
+   y la costura se rompió: cuando el CPF entró en la lista de `planilha.ts`,
+   esta copia se quedó atrás y el script seguía reescribiendo la hoja sin él. */
+import { COLUNAS, SELECT_FICHAS, montarLinhas } from '../src/lib/planilha-colunas.mjs';
 
 /* El .env se lee a mano: este script corre fuera de Astro, así que no existe
    `astro:env`. Sólo nos interesan tres variables y ninguna lleva comillas. */
@@ -97,25 +102,6 @@ const caminhoDe = (key) => `${BUCKET}/${key}`;
 /* ─────────────────────────────────────────────────────────── la planilla ── */
 
 /**
- * Las columnas, EN EL MISMO ORDEN que `src/lib/planilha.ts`.
- *
- * Están duplicadas y no se puede evitar: aquel módulo importa `astro:env`, que
- * fuera de Astro no existe. Si se cambian allí, hay que cambiarlas aquí — es la
- * única costura frágil de este script.
- */
-const COLUNAS = [
-  'Nome do tutor',
-  'E-mail',
-  'Telefone',
-  'Nome do pet',
-  'Raça',
-  'Sexo',
-  'Descrição',
-  'Data da inscrição',
-  'Foto',
-];
-
-/**
  * Reescribe la planilla con lo que quede.
  *
  * Sin esto, borrar dejaba la hoja mostrando fichas que ya no existen hasta que
@@ -134,7 +120,7 @@ async function sincronizarPlanilha() {
 
   const { data, error } = await sb
     .from('cao_inscricao')
-    .select('id, tutor_nome, tutor_email, tutor_telefone, pet_nome, pet_raca, pet_sexo, pet_descricao, criado_em')
+    .select(SELECT_FICHAS)
     .is('excluido_em', null)
     .order('criado_em', { ascending: true });
   if (error) {
@@ -146,12 +132,7 @@ async function sincronizarPlanilha() {
      la petición; aquí no hay petición, así que se usa SITE_URL y, si está
      vacía, el mismo localhost que el servidor produce hoy. */
   const base = (env.SITE_URL || 'http://localhost:4321').replace(/\/+$/, '');
-
-  const linhas = (data ?? []).map((r) => [
-    r.tutor_nome, r.tutor_email, r.tutor_telefone, r.pet_nome,
-    r.pet_raca ?? '', r.pet_sexo ?? '', r.pet_descricao ?? '',
-    r.criado_em, `${base}/foto/${r.id}`,
-  ]);
+  const linhas = montarLinhas(data, base);
 
   try {
     const resposta = await fetch(env.PLANILHA_WEBHOOK_URL, {

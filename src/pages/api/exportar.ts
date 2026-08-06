@@ -30,12 +30,18 @@ export const prerender = false;
  * rota existe e convida a tentar. Enquanto ninguém usa a planilha, o melhor é
  * que a rota simplesmente não pareça existir.
  *
- * ── O CPF não vai ───────────────────────────────────────────────────────────
+ * ── O CPF VAI nesta lista ───────────────────────────────────────────────────
  *
- * Para premiar e para contatar não acrescenta nada, e é o dado que transforma
- * um vazamento chato num vazamento grave. Fica no Supabase, onde só a
- * service_role o enxerga. Se o CRM precisar dele como chave de cruzamento, é
- * uma linha — mas que seja decisão consciente.
+ * Durante um tempo não ia, e era um erro: o cruzamento com a base do Clube
+ * Condor é manual e se faz em cima desta planilha, então sem a coluna a
+ * obrigatoriedade do CPF no formulário não servia para nada. O porquê completo
+ * está em `src/lib/planilha.ts`, que é quem monta as colunas — este endpoint
+ * devolve exatamente a mesma lista.
+ *
+ * ⚠️ O que isto muda **aqui**: esta rota passa a devolver CPFs. O token deixa de
+ * proteger uma lista de nomes de pets e passa a proteger um cadastro. Continua
+ * sendo `EXPORTACAO_TOKEN` e nunca a service_role, mas convém tratá-lo como o
+ * segredo que é.
  */
 
 /**
