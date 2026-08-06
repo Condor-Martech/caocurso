@@ -11,6 +11,7 @@ import {
 } from '../../lib/supabase';
 import { processarFoto, FotoInvalida } from '../../lib/foto';
 import { guardarFoto, removerFoto } from '../../lib/storage';
+import { sincronizarPlanilha } from '../../lib/planilha';
 
 export const prerender = false;
 
@@ -187,7 +188,7 @@ function idadeEmAnos(nascimento: Date, hoje = new Date()): number {
   return idade;
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, url }) => {
   /* El período de inscripción se comprueba AQUÍ, y no sólo al pintar el botón.
      Un botón que no aparece es cosmética: la ruta sigue existiendo y acepta un
      POST de `curl` el día después del cierre. Sin esta comprobación
@@ -405,6 +406,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     /* La función devuelve el uuid directamente, no una fila. */
     const id = data as unknown as string;
+
+    /* La planilla del jurado, en marcha. Deliberadamente SIN await: la ficha
+       ya está guardada, y si Google tarda o falla eso no puede convertirse en
+       un error para quien acaba de rellenar once campos. Se corrige sola en el
+       envío siguiente. Ver src/lib/planilha.ts. */
+    sincronizarPlanilha(url.origin);
 
     return json(
       {

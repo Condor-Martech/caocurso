@@ -95,8 +95,18 @@ Copie `.env.example` para `.env`. **O `.env` não é versionado e não entra na 
 | `SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | A chave **secreta**, não a anônima. Ignora o RLS |
 | `SUPABASE_BUCKET_FOTOS` | Bucket das fotos. Padrão: `fotos-caocurso` |
+| `PLANILHA_WEBHOOK_URL` | O Web App do Apps Script, terminado em `/exec`. Vazio = não sincroniza |
+| `PLANILHA_WEBHOOK_TOKEN` | O mesmo segredo que se cola no menu «Cãocurso» da planilha |
+| `SITE_URL` | Endereço público, só para o link da foto. Em produção: `https://pet.condor.com.br` |
+| `EXPORTACAO_TOKEN` | Segredo de `GET /api/exportar`, o conserto manual. Vazio = rota desativada |
 
-Onde achar: Dashboard do Supabase → Project Settings → API.
+Onde achar as do Supabase: Dashboard → Project Settings → API. As da planilha saem do
+Apps Script, e estão explicadas no cabeçalho de [`deploy/planilha.gs`](deploy/planilha.gs).
+
+> Nenhum desses segredos é a `service_role`, e isso é de propósito. O token da planilha
+> acaba guardado num script da Google que qualquer editor da planilha consegue ler: se
+> vazar, o que se perde é essa aba. A `service_role` perderia o banco inteiro, CPFs
+> incluídos.
 
 > ⚠️ **A validação é preguiçosa.** `astro:env` só confere as variáveis quando o módulo que as
 > usa é importado pela primeira vez. Um contêiner com o `.env` incompleto **sobe, serve a
@@ -159,11 +169,39 @@ não fica desalinhado.
 `https://pet.condor.com.br/foto/<id>`, onde `<id>` é o `id` da linha. O endereço é estável e
 não expira; ele consulta a key, assina na hora e redireciona. O bucket continua privado.
 
-### Exportar as inscrições
+### A planilha do júri e do CRM
 
-Dashboard do Supabase → Table Editor → `cao_inscricao` → exportar CSV. Não há sincronização
-automática com planilha: a campanha tem data de fechamento e duas ou três exportações cobrem
-todo o ciclo.
+Sincroniza sozinha. Depois de **cada** inscrição salva, o servidor manda a lista inteira
+para um Web App do Google Apps Script, que reescreve a aba. Ver [`deploy/planilha.gs`](deploy/planilha.gs)
+— as instruções de instalação estão no cabeçalho do próprio arquivo.
+
+Três coisas que explicam o desenho:
+
+- **Empurra, não puxa.** Quem executa o script é uma máquina da Google, de fora: para
+  puxar, este servidor teria de ser alcançável desde a internet. Empurrando, o único
+  endereço público que existe é o do Web App, e esse a Google já publica. É também o que
+  permite testar tudo antes de o domínio estar no ar.
+- **Manda a lista inteira, não a linha nova.** São 50 fichas, uns poucos KB. Em troca é
+  idempotente: um envio repetido não duplica nada, um envio perdido se conserta no
+  seguinte, e — o que mais importa — quem exercer o direito de exclusão (LGPD art. 18)
+  **some da planilha** no próximo envio. Um append o deixaria lá para sempre.
+- **O envio não bloqueia o formulário.** A ficha já está no Supabase quando isto dispara.
+  Se a Google estiver fora do ar, o erro vai para o log e ninguém que preencheu onze
+  campos recebe uma tela de falha por causa disso.
+
+O envio precisa de `PLANILHA_WEBHOOK_URL` e `PLANILHA_WEBHOOK_TOKEN`. Vazias, não faz nada.
+
+**Quando a planilha ficar para trás** — a Google fora do ar num envio, alguém que apagou a
+aba, uma exclusão LGPD sem inscrições novas depois — o conserto é `GET /api/exportar`, o
+item «Atualizar agora» do menu «Cãocurso». Esse sim exige o domínio no ar, e a `URL_EXPORTACAO`
+preenchida no script.
+
+> ⚠️ **`SITE_URL`.** É o que monta o link da foto que vai à planilha. Sem ela se usa a origem
+> da requisição, que atrás do nginx chega como `http://` — o júri clicaria num endereço que
+> redireciona. Em produção: `SITE_URL=https://pet.condor.com.br`.
+
+Para uma cópia crua e pontual, sem passar por nada disto: Dashboard do Supabase → Table
+Editor → `cao_inscricao` → exportar CSV.
 
 ### Testar o endpoint pela linha de comando
 

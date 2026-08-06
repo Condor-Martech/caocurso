@@ -62,6 +62,31 @@ export default defineConfig({
         access: 'secret',
         default: '',
       }),
+
+      // La planilla del jurado, por empuje: tras cada inscripción el servidor
+      // manda la lista entera a un Web App de Apps Script que reescribe la
+      // pestaña. Ver src/lib/planilha.ts.
+      //
+      // Es el camino que funciona hoy: la URL del Web App ya es pública, así
+      // que sale desde aquí sin necesidad de que este servidor sea alcanzable
+      // desde fuera. Vacías las dos = no se sincroniza nada, que es lo
+      // correcto mientras la planilla no exista.
+      PLANILHA_WEBHOOK_URL: envField.string({
+        context: 'server',
+        access: 'secret',
+        default: '',
+      }),
+      PLANILHA_WEBHOOK_TOKEN: envField.string({
+        context: 'server',
+        access: 'secret',
+        default: '',
+      }),
+
+      // Dirección pública del sitio, sólo para construir el enlace de la foto
+      // que va a la planilla. Sin esto se usa el origen de la petición, que en
+      // local es http://localhost:4321 — sirve para probar, pero esos enlaces
+      // no le valen al jurado. En producción: https://pet.condor.com.br
+      SITE_URL: envField.string({ context: 'server', access: 'secret', default: '' }),
     },
   },
 

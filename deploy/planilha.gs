@@ -1,5 +1,8 @@
 /**
- * Cãocurso 2026 — sincronização da planilha do júri e do CRM.
+ * Cãocurso 2026 — a planilha do júri e do CRM.
+ *
+ * O servidor da LP manda a lista inteira para cá depois de cada inscrição, e
+ * este script reescreve a aba. A planilha RECEBE; não precisa alcançar nada.
  *
  * ── Como instalar ───────────────────────────────────────────────────────────
  *
@@ -7,10 +10,20 @@
  *     Nunca «qualquer pessoa com o link»: é o vetor de vazamento número um, e
  *     a planilha leva nome, e-mail e telefone de gente real.
  *  2. Extensões → Apps Script. Cole este arquivo por cima do que houver lá.
- *  3. Ajuste `URL` logo abaixo para o domínio de produção.
- *  4. Salve e recarregue a planilha. Vai aparecer o menu «Cãocurso».
- *  5. Menu → «Configurar token…» e cole o valor de EXPORTACAO_TOKEN.
- *  6. Menu → «Ativar atualização automática».
+ *  3. Salvar (💾).
+ *  4. Implantar → Nova implantação → engrenagem → **App da Web**.
+ *       · Executar como: **Eu**
+ *       · Quem tem acesso: **Qualquer pessoa**   ← sem isto o servidor recebe
+ *         a tela de login em vez de gravar. Não é a planilha que fica pública:
+ *         é só esta função, e ela exige o token.
+ *  5. Copie a URL que termina em `/exec` e mande para quem cuida do servidor.
+ *  6. Volte à planilha, recarregue (F5) e use o menu «Cãocurso» →
+ *     «Configurar token…» com o mesmo valor de PLANILHA_WEBHOOK_TOKEN.
+ *
+ * ⚠️ Cada vez que mudar este arquivo é preciso **Implantar → Gerenciar
+ *    implantações → editar → Nova versão**. Salvar não basta: a URL `/exec`
+ *    continua servindo a versão implantada, e é o erro que faz perder meia
+ *    hora achando que a mudança não pegou.
  *
  * ── Por que reescrever a aba inteira ────────────────────────────────────────
  *
@@ -18,27 +31,79 @@
  * 18), a linha some da consulta — mas com um sync que só acrescenta, essa
  * pessoa **fica na planilha para sempre**, e acabou-se de descumprir justamente
  * o que se acreditava ter cumprido. Reescrevendo tudo, ela some sozinha no
- * ciclo seguinte. De brinde, as correções se propagam e é idempotente.
+ * envio seguinte. De brinde, as correções se propagam e é idempotente: se o
+ * mesmo envio chegar duas vezes, o resultado é o mesmo.
  */
 
 var CONFIG = {
-  // ⚠️ Trocar pelo domínio de produção. Contra localhost não funciona: quem
-  // chama é um servidor da Google, de fora.
-  URL: 'https://pet.condor.com.br/api/exportar',
   ABA: 'Inscrições',
-  MINUTOS: 15,
+
+  // Só para o «Atualizar agora» do menu, que é o conserto manual. Trocar pelo
+  // domínio de produção quando ele existir. Vazio = o item do menu avisa e não
+  // faz nada. O caminho normal —o servidor empurrando— não usa isto.
+  URL_EXPORTACAO: '',
 };
 
-/* ─────────────────────────────────────────────────────────────── menu ──── */
+/* ─────────────────────────────────────────────────── o que recebe ──────── */
+
+/**
+ * Recebe a planilha inteira do servidor da LP.
+ *
+ * Responde sempre JSON, inclusive no erro: quem chama olha o corpo para saber
+ * se deu certo. O Apps Script não deixa escolher o código HTTP — um erro sai
+ * como 200 —, por isso o `ok` no corpo é o que vale, e é o que o servidor
+ * verifica.
+ */
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return responder({ ok: false, erro: 'sem corpo' });
+    }
+
+    var dados = JSON.parse(e.postData.contents);
+
+    var esperado = PropertiesService.getScriptProperties().getProperty('TOKEN');
+    if (!esperado) return responder({ ok: false, erro: 'token não configurado na planilha' });
+    if (dados.token !== esperado) return responder({ ok: false, erro: 'token inválido' });
+
+    if (!dados.colunas || !Array.isArray(dados.linhas)) {
+      return responder({ ok: false, erro: 'formato inesperado' });
+    }
+
+    /* Duas inscrições ao mesmo tempo = dois doPost reescrevendo a mesma aba.
+       Sem trava, uma limpa enquanto a outra escreve e sobra meia planilha. */
+    var trava = LockService.getScriptLock();
+    if (!trava.tryLock(30000)) {
+      return responder({ ok: false, erro: 'ocupado' });
+    }
+
+    try {
+      escrever(dados);
+    } finally {
+      trava.releaseLock();
+    }
+
+    return responder({ ok: true, total: dados.linhas.length });
+  } catch (erro) {
+    Logger.log('doPost: ' + erro);
+    return responder({ ok: false, erro: String(erro) });
+  }
+}
+
+function responder(objeto) {
+  return ContentService.createTextOutput(JSON.stringify(objeto)).setMimeType(
+    ContentService.MimeType.JSON
+  );
+}
+
+/* ────────────────────────────────────────────────────────────── menu ──── */
 
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Cãocurso')
-    .addItem('Atualizar agora', 'atualizar')
-    .addSeparator()
     .addItem('Configurar token…', 'configurarToken')
-    .addItem('Ativar atualização automática', 'instalarGatilho')
-    .addItem('Desativar atualização automática', 'removerGatilho')
+    .addSeparator()
+    .addItem('Atualizar agora (puxar do servidor)', 'atualizar')
     .addToUi();
 }
 
@@ -46,13 +111,17 @@ function onOpen() {
  * O token vai nas propriedades do script, não escrito aqui.
  *
  * Não é grande proteção —quem edita a planilha consegue lê-lo— mas evita o pior
- * caso: que o segredo viaje numa cópia da planilha ou num print. Por isso o
- * token do endpoint NÃO é a service_role do Supabase: se este vazar, expõe esta
- * lista; a outra exporia o banco inteiro.
+ * caso: que o segredo viaje numa cópia da planilha ou num print. Por isso não é
+ * a service_role do Supabase: se este vazar, o que se pode fazer é reescrever
+ * esta aba; a outra exporia o banco inteiro.
  */
 function configurarToken() {
   var ui = SpreadsheetApp.getUi();
-  var r = ui.prompt('Token de exportação', 'Cole o valor de EXPORTACAO_TOKEN:', ui.ButtonSet.OK_CANCEL);
+  var r = ui.prompt(
+    'Token da planilha',
+    'Cole o valor de PLANILHA_WEBHOOK_TOKEN:',
+    ui.ButtonSet.OK_CANCEL
+  );
   if (r.getSelectedButton() !== ui.Button.OK) return;
 
   var token = r.getResponseText().trim();
@@ -61,26 +130,25 @@ function configurarToken() {
     return;
   }
   PropertiesService.getScriptProperties().setProperty('TOKEN', token);
-  ui.alert('Token salvo. Use «Atualizar agora» para testar.');
+  ui.alert('Token salvo. A partir de agora as inscrições chegam sozinhas.');
 }
 
-/* ────────────────────────────────────────────────────────── gatilhos ──── */
+/* ───────────────────────────────────────────── conserto: puxar à mão ──── */
 
-function instalarGatilho() {
-  removerGatilho();
-  ScriptApp.newTrigger('atualizar').timeBased().everyMinutes(CONFIG.MINUTOS).create();
-  SpreadsheetApp.getUi().alert('Atualização automática ativada: a cada ' + CONFIG.MINUTOS + ' minutos.');
-}
-
-function removerGatilho() {
-  ScriptApp.getProjectTriggers().forEach(function (g) {
-    if (g.getHandlerFunction() === 'atualizar') ScriptApp.deleteTrigger(g);
-  });
-}
-
-/* ────────────────────────────────────────────────────── sincronização ──── */
-
+/**
+ * Reconstrói a aba consultando o servidor.
+ *
+ * É o conserto para quando a planilha ficar para trás: a Google fora do ar num
+ * envio, alguém que apagou a aba sem querer, uma exclusão LGPD sem inscrições
+ * novas depois. Exige que o domínio esteja no ar — por isso não serve para os
+ * primeiros testes, e o caminho normal continua sendo o servidor empurrando.
+ */
 function atualizar() {
+  if (!CONFIG.URL_EXPORTACAO) {
+    avisar('Falta preencher URL_EXPORTACAO no script. As inscrições novas chegam sozinhas mesmo assim.');
+    return;
+  }
+
   var token = PropertiesService.getScriptProperties().getProperty('TOKEN');
   if (!token) {
     avisar('Sem token. Menu «Cãocurso» → «Configurar token…».');
@@ -89,7 +157,7 @@ function atualizar() {
 
   var resposta;
   try {
-    resposta = UrlFetchApp.fetch(CONFIG.URL, {
+    resposta = UrlFetchApp.fetch(CONFIG.URL_EXPORTACAO, {
       method: 'get',
       headers: { Authorization: 'Bearer ' + token },
       muteHttpExceptions: true,
@@ -123,7 +191,10 @@ function atualizar() {
   }
 
   escrever(dados);
+  avisar(dados.linhas.length + ' inscrições na planilha.');
 }
+
+/* ──────────────────────────────────────────────────────── a escrita ──── */
 
 /**
  * Escreve a aba do zero.
@@ -155,7 +226,7 @@ function escrever(dados) {
   var iDescricao = colunas.indexOf('Descrição');
   if (iDescricao >= 0) aba.setColumnWidth(iDescricao + 1, 320);
 
-  var carimbo = new Date(dados.atualizadoEm);
+  var carimbo = dados.atualizadoEm ? new Date(dados.atualizadoEm) : new Date();
   aba
     .getRange(1, colunas.length + 2)
     .setValue('Atualizado: ' + Utilities.formatDate(carimbo, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'))
@@ -163,18 +234,17 @@ function escrever(dados) {
 }
 
 /**
- * Avisa sem travar o gatilho.
+ * Avisa sem travar quando não há ninguém olhando.
  *
- * `getUi()` só existe quando alguém abriu a planilha. Nas execuções por
- * temporizador não há interface, e chamá-la lançaria exceção — por isso o
- * try/catch e o registro no log, que é onde se vê o histórico
- * (Apps Script → Execuções).
+ * `getUi()` só existe quando alguém abriu a planilha. Num `doPost` não há
+ * interface, e chamá-la lançaria exceção — por isso o try/catch e o registro no
+ * log, que é onde se vê o histórico (Apps Script → Execuções).
  */
 function avisar(mensagem) {
   Logger.log(mensagem);
   try {
     SpreadsheetApp.getUi().alert(mensagem);
   } catch (e) {
-    // Execução automática: não há interface. O log basta.
+    // Sem interface. O log basta.
   }
 }
