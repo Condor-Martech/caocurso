@@ -69,27 +69,33 @@ const exigirCpf = await cpfObrigatorio();
   <div class="modal__fundo" data-fechar></div>
 
   <div class="modal__caixa">
-    <button class="modal__fechar" type="button" data-fechar aria-label={formulario.fecharAria}>
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        aria-hidden="true"
+    {/* La cabecera es un bloque propio, y no el <h2> suelto de antes, porque en
+        la hoja móvil tiene que quedarse fija mientras el cuerpo se desplaza. En
+        escritorio no cambia nada: el aspa sigue en absoluto sobre la esquina de
+        la tarjeta. */}
+    <div class="topo" data-topo>
+      <h2
+        id="modal-inscricao-titulo"
+        class="text-center text-2xl font-black tracking-tight sm:text-3xl md:text-[2rem]"
       >
-        <path d="M6 6l12 12M18 6L6 18"></path>
-      </svg>
-    </button>
+        {formulario.titulo}
+      </h2>
 
-    <h2
-      id="modal-inscricao-titulo"
-      class="mb-3 text-center text-2xl font-black tracking-tight sm:text-3xl md:mb-4 md:text-[2rem]"
-    >
-      {formulario.titulo}
-    </h2>
+      <button class="modal__fechar" type="button" data-fechar aria-label={formulario.fecharAria}>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
 
     <form
       id="form-inscricao"
@@ -97,194 +103,205 @@ const exigirCpf = await cpfObrigatorio();
       method="POST"
       enctype="multipart/form-data"
     >
-      {/* ------------------------------------------------ Dados do Tutor */}
-      <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
+      {/* `.corpo` es la ÚNICA zona que se desplaza en móvil. Todo lo que quede
+          fuera —la cabecera y el pie— está siempre a la vista. En escritorio es
+          un div transparente que no hace nada. */}
+      <div class="corpo">
+        {/* ------------------------------------------------ Dados do Tutor */}
+        <h3 class="mb-2.5 text-xl font-bold md:text-2xl">{formulario.secoes.tutor}</h3>
 
-      {/* Los datos del tutor se emparejan a partir de `sm`, y no de los 380 px
-          que usa el bloque del pet, porque aquí los placeholders son frases y no
-          palabras.
+        {/* Los datos del tutor se emparejan a partir de `sm`, y no de los 380 px
+            que usa el bloque del pet, porque aquí los placeholders son frases y no
+            palabras.
 
-          A media columna en un móvil quedan ~81 px útiles —descontando los
-          20 px de padding y los 2 de borde a cada lado—, y ahí caben «Raça» y
-          «Sexo» pero no una fecha. «Nasc. dd/mm/aaaa» son 142 px: emparejado se
-          cortaba justo por el formato, que es lo único que ese placeholder
-          añade. Apilados hay 188 px ya en la pantalla más estrecha.
+            A media columna en un móvil quedan ~81 px útiles —descontando los
+            20 px de padding y los 2 de borde a cada lado—, y ahí caben «Raça» y
+            «Sexo» pero no una fecha. «Nasc. dd/mm/aaaa» son 142 px: emparejado se
+            cortaba justo por el formato, que es lo único que ese placeholder
+            añade. Apilados hay 188 px ya en la pantalla más estrecha.
 
-          El CPF ya no lo necesita —su placeholder es «CPF», 28 px— pero comparte
-          fila con el nacimiento, así que va donde vaya él.
+            El CPF ya no lo necesita —su placeholder es «CPF», 28 px— pero comparte
+            fila con el nacimiento, así que va donde vaya él.
 
-          El punto más apretado de todo el rango NO es el móvil, es 768 px:
-          ahí entra `md:grid-cols-[5fr_6fr]` con un hueco de 4rem, y la columna
-          estrecha se queda en 181 px útiles. Cualquier placeholder de esta
-          rejilla tiene que caber ahí, y con margen: hasta que carga la Torus
-          el texto se pinta con la fuente del sistema, que es más ancha. */}
-      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 sm:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
-        <div class="col-span-full">
-          <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
+            El punto más apretado de todo el rango NO es el móvil, es 768 px:
+            ahí entra `md:grid-cols-[5fr_6fr]` con un hueco de 4rem, y la columna
+            estrecha se queda en 181 px útiles. Cualquier placeholder de esta
+            rejilla tiene que caber ahí, y con margen: hasta que carga la Torus
+            el texto se pinta con la fuente del sistema, que es más ancha. */}
+        <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 sm:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+          <div class="col-span-full">
+            <label class="sr-only" for="tutorNome">{c.tutorNome.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="tutorNome"
+              name="tutorNome"
+              placeholder={c.tutorNome.placeholder}
+              autocomplete="name"
+              minlength="3"
+              maxlength="120"
+              required
+            />
+          </div>
+
+          <div>
+            <!-- type="text" y no type="date", a propósito, por tres motivos:
+
+                 · `type="date"` IGNORA el placeholder y pinta siempre el formato
+                   del sistema. Aquí las etiquetas son sr-only, así que el
+                   placeholder ES el nombre del campo: el usuario dejaría de leer
+                   «Nascimento» para leer sólo «dd/mm/aaaa». Se cambia una
+                   ambigüedad por otra.
+                 · Ese formato lo decide el idioma del SISTEMA OPERATIVO, no el
+                   `lang="pt-BR"` de la página. Un brasileño con el móvil en
+                   inglés vería mm/dd/aaaa, que es justo lo que se quiere evitar.
+                 · Una fecha de nacimiento es el peor caso para un calendario:
+                   abre en el mes actual y hay que retroceder cuarenta años.
+
+                 El formato se comunica por tres vías: el placeholder lo lleva
+                 escrito, la máscara del <script> pone las barras al teclear, y
+                 si aun así falla el `pattern`, el navegador enseña el `title`
+                 dentro del globo de validación —también en móvil—. El endpoint
+                 acepta dd/mm/aaaa y aaaa-mm-dd, así que cambiar de idea más
+                 adelante no obliga a tocar el servidor. -->
+            <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="tutorNascimento"
+              name="tutorNascimento"
+              placeholder={c.tutorNascimento.placeholder}
+              inputmode="numeric"
+              pattern="\d{2}/\d{2}/\d{4}"
+              title={c.tutorNascimento.title}
+              maxlength="10"
+              autocomplete="bday"
+            />
+          </div>
+
+          <div>
+            <label class="sr-only" for="tutorCpf">{c.tutorCpf.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="tutorCpf"
+              name="tutorCpf"
+              placeholder={c.tutorCpf.placeholder}
+              inputmode="numeric"
+              maxlength="14"
+              required={exigirCpf}
+            />
+          </div>
+
+          <div>
+            <label class="sr-only" for="tutorEmail">{c.tutorEmail.label}</label>
+            <input
+              class="campo"
+              type="email"
+              id="tutorEmail"
+              name="tutorEmail"
+              placeholder={c.tutorEmail.placeholder}
+              autocomplete="email"
+              maxlength="150"
+              required
+            />
+          </div>
+
+          <div>
+            <label class="sr-only" for="tutorTelefone">{c.tutorTelefone.label}</label>
+            <input
+              class="campo"
+              type="tel"
+              id="tutorTelefone"
+              name="tutorTelefone"
+              placeholder={c.tutorTelefone.placeholder}
+              inputmode="tel"
+              autocomplete="tel"
+              maxlength="16"
+              required
+            />
+          </div>
+        </div>
+
+        {/* -------------------------------------------------- Dados do Pet */}
+        <h3 class="mt-3 mb-2.5 text-xl font-bold md:mt-4 md:text-2xl">{formulario.secoes.pet}</h3>
+
+        <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
+          <div class="col-span-full">
+            <label class="sr-only" for="petNome">{c.petNome.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="petNome"
+              name="petNome"
+              placeholder={c.petNome.placeholder}
+              maxlength="60"
+              required
+            />
+          </div>
+
+          <div>
+            <label class="sr-only" for="petRaca">{c.petRaca.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="petRaca"
+              name="petRaca"
+              placeholder={c.petRaca.placeholder}
+              maxlength="60"
+            />
+          </div>
+
+          <div>
+            <label class="sr-only" for="petSexo">{c.petSexo.label}</label>
+            <input
+              class="campo"
+              type="text"
+              id="petSexo"
+              name="petSexo"
+              placeholder={c.petSexo.placeholder}
+              maxlength="20"
+            />
+          </div>
+
+          <div class="col-span-full">
+            <label class="sr-only" for="petDescricao">{c.petDescricao.label}</label>
+            <textarea
+              class="campo campo--area"
+              id="petDescricao"
+              name="petDescricao"
+              rows="3"
+              maxlength="1000"
+              placeholder={c.petDescricao.placeholder}></textarea>
+          </div>
+        </div>
+
+        {/* ------------------------------------- Aceite (LGPD) — no mockup */}
+        <div class="aceite mt-3">
           <input
-            class="campo"
-            type="text"
-            id="tutorNome"
-            name="tutorNome"
-            placeholder={c.tutorNome.placeholder}
-            autocomplete="name"
-            minlength="3"
-            maxlength="120"
+            class="aceite__box"
+            type="checkbox"
+            id="aceiteRegulamento"
+            name="aceiteRegulamento"
             required
           />
+          <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
+               palabra «regulamento» debe pasar a ser un enlace al documento. -->
+          <label class="aceite__texto" for="aceiteRegulamento">{formulario.aceite}</label>
         </div>
 
-        <div>
-          <!-- type="text" y no type="date", a propósito, por tres motivos:
-
-               · `type="date"` IGNORA el placeholder y pinta siempre el formato
-                 del sistema. Aquí las etiquetas son sr-only, así que el
-                 placeholder ES el nombre del campo: el usuario dejaría de leer
-                 «Nascimento» para leer sólo «dd/mm/aaaa». Se cambia una
-                 ambigüedad por otra.
-               · Ese formato lo decide el idioma del SISTEMA OPERATIVO, no el
-                 `lang="pt-BR"` de la página. Un brasileño con el móvil en
-                 inglés vería mm/dd/aaaa, que es justo lo que se quiere evitar.
-               · Una fecha de nacimiento es el peor caso para un calendario:
-                 abre en el mes actual y hay que retroceder cuarenta años.
-
-               El formato se comunica por tres vías: el placeholder lo lleva
-               escrito, la máscara del <script> pone las barras al teclear, y
-               si aun así falla el `pattern`, el navegador enseña el `title`
-               dentro del globo de validación —también en móvil—. El endpoint
-               acepta dd/mm/aaaa y aaaa-mm-dd, así que cambiar de idea más
-               adelante no obliga a tocar el servidor. -->
-          <label class="sr-only" for="tutorNascimento">{c.tutorNascimento.label}</label>
-          <input
-            class="campo"
-            type="text"
-            id="tutorNascimento"
-            name="tutorNascimento"
-            placeholder={c.tutorNascimento.placeholder}
-            inputmode="numeric"
-            pattern="\d{2}/\d{2}/\d{4}"
-            title={c.tutorNascimento.title}
-            maxlength="10"
-            autocomplete="bday"
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="tutorCpf">{c.tutorCpf.label}</label>
-          <input
-            class="campo"
-            type="text"
-            id="tutorCpf"
-            name="tutorCpf"
-            placeholder={c.tutorCpf.placeholder}
-            inputmode="numeric"
-            maxlength="14"
-            required={exigirCpf}
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="tutorEmail">{c.tutorEmail.label}</label>
-          <input
-            class="campo"
-            type="email"
-            id="tutorEmail"
-            name="tutorEmail"
-            placeholder={c.tutorEmail.placeholder}
-            autocomplete="email"
-            maxlength="150"
-            required
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="tutorTelefone">{c.tutorTelefone.label}</label>
-          <input
-            class="campo"
-            type="tel"
-            id="tutorTelefone"
-            name="tutorTelefone"
-            placeholder={c.tutorTelefone.placeholder}
-            inputmode="tel"
-            autocomplete="tel"
-            maxlength="16"
-            required
-          />
-        </div>
+        {/* ------------------------------------------- Retorno para o usuário */}
+        <div class="status mt-3" data-status role="status" aria-live="polite" hidden></div>
       </div>
 
-      {/* -------------------------------------------------- Dados do Pet */}
-      <h3 class="mt-3 mb-2.5 text-xl font-bold md:mt-4 md:text-2xl">{formulario.secoes.pet}</h3>
+      {/* ------------------------------------------- Foto + envio
 
-      <div class="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[380px]:grid-cols-2 md:grid-cols-[5fr_6fr] md:gap-x-16 md:gap-y-4">
-        <div class="col-span-full">
-          <label class="sr-only" for="petNome">{c.petNome.label}</label>
-          <input
-            class="campo"
-            type="text"
-            id="petNome"
-            name="petNome"
-            placeholder={c.petNome.placeholder}
-            maxlength="60"
-            required
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="petRaca">{c.petRaca.label}</label>
-          <input
-            class="campo"
-            type="text"
-            id="petRaca"
-            name="petRaca"
-            placeholder={c.petRaca.placeholder}
-            maxlength="60"
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="petSexo">{c.petSexo.label}</label>
-          <input
-            class="campo"
-            type="text"
-            id="petSexo"
-            name="petSexo"
-            placeholder={c.petSexo.placeholder}
-            maxlength="20"
-          />
-        </div>
-
-        <div class="col-span-full">
-          <label class="sr-only" for="petDescricao">{c.petDescricao.label}</label>
-          <textarea
-            class="campo campo--area"
-            id="petDescricao"
-            name="petDescricao"
-            rows="3"
-            maxlength="1000"
-            placeholder={c.petDescricao.placeholder}></textarea>
-        </div>
-      </div>
-
-      {/* ------------------------------------- Aceite (LGPD) — no mockup */}
-      <div class="aceite mt-3">
-        <input
-          class="aceite__box"
-          type="checkbox"
-          id="aceiteRegulamento"
-          name="aceiteRegulamento"
-          required
-        />
-        <!-- Cuando exista el PDF de 2026 (SITE.regulamentoDisponivel), la
-             palabra «regulamento» debe pasar a ser un enlace al documento. -->
-        <label class="aceite__texto" for="aceiteRegulamento">{formulario.aceite}</label>
-      </div>
-
-      {/* ------------------------------------------- Retorno para o usuário */}
-      <div class="status mt-3" data-status role="status" aria-live="polite" hidden></div>
-
-      {/* ------------------------------------------- Foto + envio */}
-      <div class="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          En móvil este bloque es el PIE de la hoja: se queda pegado abajo con
+          `position: sticky` mientras el cuerpo se desplaza, de modo que las dos
+          únicas acciones que cierran el formulario —adjuntar y enviar— nunca se
+          pierden de vista. Era el problema de verdad: el botón de enviar vivía
+          al final de una tarjeta que mide 1,4 pantallas. */}
+      <div class="pe mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div class="w-full md:w-auto">
           <div class="arquivo">
             <input
@@ -338,6 +355,54 @@ const exigirCpf = await cpfObrigatorio();
         <button class="btn-enviar" type="submit" data-enviar>{formulario.enviar}</button>
       </div>
     </form>
+
+    {/* ------------------------------------------------ Inscrição concluída
+
+        Sustituye al formulario cuando la ficha ya está guardada, en lugar de la
+        barra azul de antes. No es sólo estética: esa barra vivía a media altura
+        de una tarjeta de 900 px, así que en un móvil la única confirmación que
+        esa persona iba a recibir podía quedarse fuera de pantalla.
+
+        Va aquí y no en un segundo modal encima: dos capas serían dos trampas de
+        foco, y el formulario de detrás seguiría desplazándose. Al ser el mismo
+        modal el que cambia de contenido, además, la tarjeta se encoge de 900 px
+        a poco más de 200 — y eso ya se lee solo como «listo».
+
+        Sin JavaScript esto no se pinta nunca: el POST nativo acaba en el JSON
+        de la API, que es el comportamiento que ya había. */}
+    <div class="sucesso" data-sucesso tabindex="-1" hidden>
+      <div class="sucesso__selo" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 12.5 9.5 18 20 6.5"></path>
+        </svg>
+      </div>
+
+      <p class="sucesso__titulo">{formulario.sucesso.titulo}</p>
+      {/* La frase viaja en `data-modelo` porque el <script> es un módulo y no ve
+          el frontmatter: así el texto sigue viviendo en `site.json` con los
+          otros 179, en vez de incrustado en el JavaScript.
+
+          El nombre del pet lo pone el script con `textContent`, NUNCA con
+          `innerHTML`: es texto que teclea el usuario y vuelve del servidor. */}
+      <p
+        class="sucesso__detalhe"
+        data-sucesso-detalhe
+        data-modelo={formulario.sucesso.detalhe}
+        data-sem-nome={formulario.sucesso.semNome}
+      >
+      </p>
+
+      <button class="sucesso__fechar" type="button" data-fechar>
+        {formulario.sucesso.fechar}
+      </button>
+    </div>
   </div>
 </div>
 
@@ -453,6 +518,19 @@ const exigirCpf = await cpfObrigatorio();
     width: min(100%, 58rem);
   }
 
+  /* El hueco que el <h2> dejaba con `mb-3 md:mb-4` antes de que la cabecera
+     fuera un bloque propio. Vive aquí y no en el h2 porque en la hoja móvil la
+     cabecera lleva su propio borde y su propio padding. */
+  .topo {
+    margin-bottom: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .topo {
+      margin-bottom: 1rem;
+    }
+  }
+
   /* El título va centrado en la tarjeta y el botón de cerrar en su esquina: sin
      este hueco, en móvil «Formulário de inscrição:» pasa por debajo de la aspa.
      Se reserva a los dos lados para que el texto siga centrado respecto a la
@@ -515,7 +593,7 @@ const exigirCpf = await cpfObrigatorio();
       font-size: 1.125rem;
     }
 
-    .modal__caixa h2 {
+    .topo {
       margin-bottom: 0.625rem;
     }
   }
@@ -525,15 +603,15 @@ const exigirCpf = await cpfObrigatorio();
       font-size: 1.25rem;
     }
 
-    .modal__caixa form > div {
+    .modal__caixa .corpo > div {
       row-gap: 0.625rem;
     }
 
-    .modal__caixa form > h3 {
+    .modal__caixa .corpo > h3 {
       margin-bottom: 0.5rem;
     }
 
-    .modal__caixa form > h3 + * {
+    .modal__caixa .corpo > h3 + * {
       margin-top: 0;
     }
   }
@@ -541,18 +619,21 @@ const exigirCpf = await cpfObrigatorio();
   /* Segundo escalón: portátil de 768 px con la barra de marcadores abierta deja
      unos 660 px de ventana, y es de las medidas más frecuentes que hay. */
   @media (max-height: 720px) and (min-width: 768px) {
-    .modal__caixa h2 {
+    .topo {
       margin-bottom: 0.5rem;
+    }
+
+    .modal__caixa h2 {
       font-size: 1.5rem;
     }
 
-    .modal__caixa form > h3 {
+    .modal__caixa .corpo > h3 {
       margin-top: 0.625rem;
       margin-bottom: 0.375rem;
       font-size: 1.25rem;
     }
 
-    .modal__caixa form > div {
+    .modal__caixa .corpo > div {
       row-gap: 0.5rem;
     }
 
@@ -581,6 +662,187 @@ const exigirCpf = await cpfObrigatorio();
        eran los últimos 16 que faltaban. */
     :global(html.js) .modal.aberto {
       padding-block: 0.25rem;
+    }
+  }
+
+  /* ================================================ hoja móvil (< 768 px)
+
+     Debajo de 768 px la tarjeta NO cabe, y no es un problema de maquetación:
+     son once campos. Medido con Chrome sobre ventanas reales de móvil, el
+     cartón pide entre 880 y 1.000 px contra los 553-745 que hay — del 118 % al
+     178 % de la pantalla:
+
+       iPhone SE     553 px de ventana · 984 px de tarjeta
+       Galaxy S23    673 · 997        iPhone 15        659 · 921
+       Pixel 8       731 · 931        iPhone 15 ProMax 745 · 881
+       iPad mini     954 · 810 ✅     Portátil 1366    660 · 628 ✅
+
+     Partirlo en dos pasos tampoco llegaría a cero: el paso del pet mide 695 px
+     contra los 673 de un Galaxy S23. Y con el teclado abierto quedan unos
+     360 px de ventana útil, donde no cabe NINGÚN formulario de once campos —
+     el navegador tiene que desplazar para mantener a la vista el campo
+     enfocado, y eso pasa igual con tres campos que con once.
+
+     Así que el objetivo no es que no haya scroll —no se puede— sino que el
+     scroll deje de esconder lo que importa:
+
+       · la cabecera con el título y el aspa se queda arriba;
+       · SÓLO el cuerpo se desplaza;
+       · el pie con «Anexar foto» y «Enviar inscrição» se queda abajo.
+
+     Es la hoja de cualquier app, y arregla el problema de verdad: hasta ahora
+     el botón de enviar vivía enterrado al final de 1,4 pantallas de tarjeta.
+     -------------------------------------------------------------------- */
+
+  @media (max-width: 767px) {
+    :global(html.js) .modal.aberto {
+      align-items: stretch;
+      padding: 0;
+      /* El desplazamiento se muda al cuerpo. Si se queda aquí, la hoja entera
+         se mueve y ni la cabecera ni el pie se quedan quietos. */
+      overflow: hidden;
+      /* La altura la manda el viewport VISUAL y no el de layout. Al abrir el
+         teclado, iOS encoge el visual y deja el de layout intacto: una capa
+         `fixed` de 100svh se queda con el pie por debajo de las teclas, y hay
+         versiones en las que además se desplaza fuera de pantalla entera.
+         `--folha-h` y `--folha-topo` las publica el script; sin él, o sin
+         soporte de `visualViewport`, se cae a 100svh, que es lo que había. */
+      top: var(--folha-topo, 0px);
+      bottom: auto;
+      height: var(--folha-h, 100svh);
+    }
+
+    :global(html.js) .modal.aberto .modal__caixa {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      flex-direction: column;
+      margin-block: 0;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    /* -------------------------------------------------------- cabecera */
+
+    :global(html.js) .modal.aberto .topo {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0;
+      border-bottom: 2px solid var(--campo-borda);
+      padding: 0.625rem 0.75rem 0.625rem 1.25rem;
+    }
+
+    /* Una sola línea, a la izquierda. Centrado y a 24 px, «Formulário de
+       inscrição:» partía en dos y se comía 30 px del cuerpo; y el hueco de
+       2,75rem a cada lado deja de hacer falta porque el aspa ya no está
+       encima, sino al lado. */
+    :global(html.js) .modal.aberto .topo h2 {
+      flex: 1;
+      padding-inline: 0;
+      text-align: left;
+      font-size: 1.0625rem;
+      line-height: 1.25;
+    }
+
+    :global(html.js) .modal.aberto .modal__fechar {
+      position: static;
+      flex: none;
+      height: 2.5rem;
+      width: 2.5rem;
+    }
+
+    /* ---------------------------------------------------------- cuerpo */
+
+    :global(html.js) .modal.aberto #form-inscricao {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    :global(html.js) .modal.aberto .corpo {
+      /* `min-height: 0` no es opcional: sin él un hijo flexible con overflow no
+         encoge por debajo de su contenido y la hoja se desborda entera. */
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 0.875rem 1.25rem 0.75rem;
+    }
+
+    /* ------------------------------------------------------------- pie */
+
+    :global(html.js) .modal.aberto .pe {
+      flex: none;
+      margin-top: 0;
+      border-top: 2px solid var(--campo-borda);
+      background: var(--c-white);
+      padding: 0.75rem 1.25rem;
+      /* El teléfono con gesto en vez de botones deja una franja abajo que se
+         come el borde del botón. */
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+
+    /* Cada línea del pie sale del alto que le queda al cuerpo, y con el teclado
+       abierto eso son ~190 px. Estas dos se pueden ir: el `accept` del selector
+       ya limita los formatos, y que la foto está puesta lo dice la píldora
+       entera, que se vuelve azul sólida con un tic. */
+    :global(html.js) .modal.aberto .pe .arquivo__ajuda,
+    :global(html.js) .modal.aberto .pe .arquivo__nome {
+      display: none;
+    }
+
+    /* -------------------------------------------- con el teclado abierto
+
+       La clase la pone el script cuando el viewport visual baja de 460 px, que
+       en la práctica es «hay un teclado tapando media pantalla». Ahí el pie se
+       llevaba 134 px de los 360 que quedan —más de un tercio— y sólo cabían dos
+       campos. Compactado son ~100 px y caben tres.
+
+       Lo que NO se toca: el cuerpo de 16 px de los campos (por debajo, iOS hace
+       zoom al enfocar) y los 40 px de alto de los dos objetivos táctiles. */
+    :global(html.js) .modal.aberto.folha-baixa .topo {
+      padding-block: 0.375rem;
+    }
+
+    :global(html.js) .modal.aberto.folha-baixa .pe {
+      gap: 0.5rem;
+      padding-block: 0.5rem;
+    }
+
+    /* El `min-height` no es redundante con el padding: el botón usa
+       `line-height: 1.2` y la píldora 1.5, así que el mismo padding les da
+       alturas distintas y el botón se quedaba en 35 px — por debajo del mínimo
+       táctil. Con el suelo puesto, los dos miden 40. */
+    :global(html.js) .modal.aberto.folha-baixa .arquivo__pill,
+    :global(html.js) .modal.aberto.folha-baixa .btn-enviar {
+      min-height: 2.5rem;
+      padding-block: 0.5rem;
+      font-size: 1rem;
+    }
+
+    :global(html.js) .modal.aberto.folha-baixa .corpo {
+      padding-top: 0.625rem;
+    }
+
+    /* ------------------------------------------------ ya está inscrito
+
+       El panel de éxito es corto, así que deja de tener sentido ocupar la
+       pantalla entera: vuelve a ser una tarjeta centrada. Ese encogimiento de
+       900 px a 250 se lee solo como «listo». */
+    :global(html.js) .modal.aberto.concluido {
+      align-items: center;
+      padding: 1rem;
+    }
+
+    :global(html.js) .modal.aberto.concluido .modal__caixa {
+      height: auto;
+      width: min(100%, 24rem);
+      border-radius: 28px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     }
   }
 
@@ -820,6 +1082,114 @@ const exigirCpf = await cpfObrigatorio();
     color: var(--c-white);
   }
 
+  /* -------------------------------------------------- inscrição concluída
+
+     Reemplaza al formulario cuando la ficha ya está guardada. Antes esto era la
+     barra azul de `.status`, que en escritorio se veía bien y en móvil podía
+     quedar fuera de pantalla: vivía a media altura de una tarjeta de 900 px, y
+     al enviar desde el final ni siquiera aparecía en la ventana. Era la única
+     confirmación que esa persona iba a recibir —no hay correo de aviso— así que
+     no podía depender de dónde estuviera el scroll.
+     -------------------------------------------------------------------- */
+
+  .sucesso {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.25rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+
+  .sucesso__selo {
+    display: flex;
+    height: 4rem;
+    width: 4rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--c-blue);
+    color: var(--c-white);
+  }
+
+  .sucesso__selo svg {
+    height: 2rem;
+    width: 2rem;
+  }
+
+  .sucesso__titulo {
+    color: var(--c-blue);
+    font-size: 1.375rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .sucesso__detalhe {
+    color: var(--c-blue);
+    font-size: 1rem;
+    line-height: 1.45;
+    /* El nombre del pet lo escribe el usuario y admite 60 caracteres: que parta
+       donde sea antes que desbordar la tarjeta. */
+    overflow-wrap: anywhere;
+  }
+
+  .sucesso__fechar {
+    margin-top: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--c-blue);
+    color: var(--c-white);
+    font-family: inherit;
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 0.75rem 3rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .sucesso__fechar:hover {
+    background-color: var(--c-blue-deep);
+  }
+
+  @media (min-width: 768px) {
+    .sucesso__titulo {
+      font-size: 1.625rem;
+    }
+
+    .sucesso__detalhe {
+      font-size: 1.125rem;
+    }
+  }
+
+  /* Con el formulario fuera, la tarjeta de 58rem alrededor de tres líneas de
+     texto se ve vacía. */
+  :global(html.js) .modal.aberto.concluido .modal__caixa {
+    width: min(100%, 26rem);
+  }
+
+  /* Deceleración limpia, sin rebote. Un `cubic-bezier` con sobreimpulso —el
+     típico 1.56— le daba al tic un salto elástico que no pega con nada más de
+     esta tarjeta: el modal entra con `ease-out` y los campos hacen
+     transiciones lisas. */
+  @media (prefers-reduced-motion: no-preference) {
+    .sucesso__selo {
+      animation: selo-entra 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  @keyframes selo-entra {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sucesso__fechar {
+      transition: none;
+    }
+  }
+
   /* ------------------------------------------------------------ enviar */
 
   .btn-enviar {
@@ -992,6 +1362,12 @@ const exigirCpf = await cpfObrigatorio();
   let enviando = false;
   let fecharModal: (() => void) | null = null;
 
+  /* Devolver la tarjeta al estado inicial después de una inscripción: quitar la
+     pantalla de éxito, desbloquear los campos y recuperar el botón. Vive aquí
+     porque quien la dispara es el CIERRE —el aspa, Escape, el botón «Fechar» o
+     el temporizador—, y el cierre lo gestiona el modal, no el envío. */
+  let restaurarFormulario: (() => void) | null = null;
+
   const form = document.querySelector<HTMLFormElement>('#form-inscricao');
   if (form) iniciar(form);
 
@@ -1020,6 +1396,45 @@ const exigirCpf = await cpfObrigatorio();
     const FOCABLES =
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+    /* ------------------------------------------------- alto de la hoja móvil
+
+       Debajo de 768 px el modal es una hoja a pantalla completa con la cabecera
+       y el pie fijos (ver el CSS). Para eso hace falta saber cuánta pantalla
+       hay DE VERDAD, y `100svh` no lo sabe: al abrir el teclado, iOS encoge el
+       viewport visual y deja el de layout intacto, así que una capa `fixed` de
+       100svh se queda con el pie por debajo de las teclas — y en algunas
+       versiones se va entera fuera de pantalla.
+
+       `visualViewport` sí lo sabe. `offsetTop` importa tanto como `height`:
+       cuando iOS desplaza el viewport visual para enseñar el campo enfocado, la
+       hoja tiene que seguirlo o se queda flotando por encima del recorte.
+
+       Sin soporte —o con el modal cerrado— no se publica nada y el CSS se cae a
+       `100svh`, que es exactamente lo que había antes. */
+    const vv = window.visualViewport;
+
+    /* Debajo de esto, la hoja va apretada: es lo que queda al abrir el teclado
+       en un móvil normal (~360 px de los 659 que había). */
+    const FOLHA_BAIXA = 460;
+
+    function medirFolha() {
+      if (!vv) return;
+      modal!.style.setProperty('--folha-h', `${Math.round(vv.height)}px`);
+      modal!.style.setProperty('--folha-topo', `${Math.round(vv.offsetTop)}px`);
+
+      /* Una clase y no una media query de `max-height`: esas se miden contra el
+         viewport de LAYOUT, que con el teclado abierto sigue valiendo 659 px en
+         iOS y por tanto nunca se dispararían. El único que sabe cuánta pantalla
+         queda de verdad es este listener. */
+      modal!.classList.toggle('folha-baixa', vv.height < FOLHA_BAIXA);
+    }
+
+    function soltarFolha() {
+      modal!.style.removeProperty('--folha-h');
+      modal!.style.removeProperty('--folha-topo');
+      modal!.classList.remove('folha-baixa');
+    }
+
     function abrir() {
       if (modal!.classList.contains('aberto')) return;
 
@@ -1038,6 +1453,12 @@ const exigirCpf = await cpfObrigatorio();
       if (barra > 0) document.body.style.paddingRight = `${barra}px`;
 
       document.addEventListener('keydown', aoTeclado);
+
+      medirFolha();
+      if (vv) {
+        vv.addEventListener('resize', medirFolha);
+        vv.addEventListener('scroll', medirFolha);
+      }
 
       /* Al primer campo, no al botón de cerrar: quien abre el formulario quiere
          escribir. `preventScroll` evita que el navegador salte por su cuenta
@@ -1065,6 +1486,17 @@ const exigirCpf = await cpfObrigatorio();
       document.body.style.paddingRight = '';
 
       document.removeEventListener('keydown', aoTeclado);
+      if (vv) {
+        vv.removeEventListener('resize', medirFolha);
+        vv.removeEventListener('scroll', medirFolha);
+      }
+      soltarFolha();
+
+      /* Si se cerró con una inscripción ya hecha, la tarjeta vuelve a ser el
+         formulario. Se hace AL CERRAR y no sólo en el temporizador: quien pulse
+         «Fechar» a los dos segundos no puede reabrir y encontrarse todavía la
+         pantalla de «Inscrição realizada». */
+      restaurarFormulario?.();
 
       /* Devolver el foco a quien lo tenía. Si no lo tenía nadie —el caso real es
          llegar por un enlace con la ancla puesta, donde el modal abre solo al
@@ -1135,12 +1567,19 @@ const exigirCpf = await cpfObrigatorio();
     const nomeArquivo = form.querySelector<HTMLElement>('[data-arquivo]');
     const rotuloBotao = botao ? botao.textContent : '';
 
-    /* Cuánto se deja el «Inscrição enviada!» a la vista antes de cerrar.
-       Cerrar de golpe se lleva por delante la única confirmación que la persona
-       va a recibir; dejarlo abierto la obliga a cerrar algo que ya terminó.
-       Tres segundos dan para leer una línea sin que parezca colgado, y la X
-       sigue funcionando por si quiere cerrar antes. */
-    const ESPERA_ANTES_DE_FECHAR = 3000;
+    const modalEl = document.querySelector<HTMLElement>('[data-modal]');
+    const topo = document.querySelector<HTMLElement>('[data-topo]');
+    const sucesso = document.querySelector<HTMLElement>('[data-sucesso]');
+    const sucessoDetalhe = document.querySelector<HTMLElement>('[data-sucesso-detalhe]');
+
+    /* Cuánto se deja la pantalla de «Inscrição realizada» antes de cerrar sola.
+       Eran 3 s cuando esto era una línea de texto en una barra azul; con el
+       nombre del pet y un mensaje de dos líneas, tres segundos no dan para
+       leerlo. Y ahora hay un botón «Fechar» a la vista, así que quien no quiera
+       esperar no depende de encontrar el aspa de la esquina. */
+    const ESPERA_ANTES_DE_FECHAR = 6000;
+
+    let temporizador = 0;
 
     /* Los campos se bloquean mientras se envía. Un `disabled` NO viaja en el
        FormData, así que se pone DESPUÉS de construirlo — al revés se enviaría
@@ -1246,6 +1685,70 @@ const exigirCpf = await cpfObrigatorio();
       status.hidden = false;
     }
 
+    /* ------------------------------------------------- inscrição concluída */
+
+    /**
+     * Cambia el formulario por la pantalla de «Inscrição realizada».
+     *
+     * El nombre del pet viene del servidor —`dados.petNome`, la ficha tal como
+     * quedó guardada— y se escribe con `textContent`. **Nunca con `innerHTML`**:
+     * es texto que teclea el usuario, admite 60 caracteres y vuelve del
+     * servidor tal cual.
+     */
+    function mostrarSucesso(petNome: string) {
+      if (!sucesso) {
+        /* No debería ocurrir, pero si el panel no está se cae a la barra de
+           antes: la confirmación no puede depender de un nodo. */
+        mostrar('Inscrição enviada com sucesso!', 'ok');
+        return;
+      }
+
+      if (sucessoDetalhe) {
+        const modelo = sucessoDetalhe.dataset.modelo ?? '';
+        sucessoDetalhe.textContent = petNome
+          ? modelo.replace('{pet}', petNome)
+          : (sucessoDetalhe.dataset.semNome ?? '');
+      }
+
+      form.hidden = true;
+      if (topo) topo.hidden = true;
+      sucesso.hidden = false;
+      modalEl?.classList.add('concluido');
+
+      /* El foco tiene que irse del formulario: lo acabamos de ocultar, y quien
+         navegue con teclado o lector de pantalla se quedaría con el foco en un
+         campo que ya no existe. La trampa de foco filtra por `offsetParent`, así
+         que a partir de aquí sólo queda el botón «Fechar». */
+      sucesso.focus({ preventScroll: true });
+    }
+
+    /**
+     * Vuelve al formulario. La llama el CIERRE, no el envío — ver
+     * `restaurarFormulario` arriba.
+     */
+    function restaurar() {
+      if (temporizador) {
+        window.clearTimeout(temporizador);
+        temporizador = 0;
+      }
+
+      if (sucesso && !sucesso.hidden) {
+        sucesso.hidden = true;
+        form.hidden = false;
+        if (topo) topo.hidden = false;
+        modalEl?.classList.remove('concluido');
+      }
+
+      bloquearCampos(false);
+      if (botao) {
+        botao.disabled = false;
+        botao.textContent = rotuloBotao;
+      }
+      if (status) status.hidden = true;
+    }
+
+    restaurarFormulario = restaurar;
+
     /* ----------------------------------------------------------- envio */
 
     form.addEventListener('submit', async (evento) => {
@@ -1297,8 +1800,6 @@ const exigirCpf = await cpfObrigatorio();
         const dados = await resposta.json().catch(() => null);
 
         if (resposta.ok && dados && dados.success) {
-          mostrar(dados.message || 'Inscrição enviada com sucesso!', 'ok');
-
           /* El formulario se limpia pero los campos siguen bloqueados hasta que
              el modal cierre: ya no hay nada que hacer aquí, y un formulario
              vacío y editable justo después de enviar invita a rellenarlo otra
@@ -1308,19 +1809,18 @@ const exigirCpf = await cpfObrigatorio();
             nomeArquivo.textContent = '';
             nomeArquivo.hidden = true;
           }
-          if (botao) botao.textContent = 'Enviado ✓';
+          if (status) status.hidden = true;
 
-          /* Cerrar deja de estar bloqueado ANTES del temporizador: a partir de
-             aquí la persona puede cerrar con la X o con Escape si no quiere
-             esperar los tres segundos. */
+          /* Cerrar deja de estar bloqueado ANTES de enseñar nada: a partir de
+             aquí la persona puede salir con «Fechar», con el aspa o con Escape
+             sin esperar al temporizador. */
           enviando = false;
-          window.setTimeout(() => {
-            bloquearCampos(false);
-            if (botao) {
-              botao.disabled = false;
-              botao.textContent = rotuloBotao;
-            }
-            if (status) status.hidden = true;
+          mostrarSucesso(String((dados && dados.petNome) || ''));
+
+          /* Quien devuelve la tarjeta a su sitio es `restaurar()`, y la dispara
+             el cierre — así da igual si se cierra por aquí o a mano. */
+          temporizador = window.setTimeout(() => {
+            temporizador = 0;
             fecharModal?.();
           }, ESPERA_ANTES_DE_FECHAR);
           return;

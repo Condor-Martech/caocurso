@@ -465,10 +465,15 @@ export const POST: APIRoute = async ({ request, url }) => {
        envío siguiente. Ver src/lib/planilha.ts. */
     sincronizarPlanilha(url.origin);
 
+    /* `petNome` va SUELTO además de dentro de `message`, y no es duplicación: el
+       formulario pinta una pantalla de éxito donde el nombre va en su propia
+       línea, y sacarlo de la frase obligaría a parsearla. `message` se queda
+       para el camino sin JavaScript, donde lo único que se ve es este JSON. */
     return json(
       {
         success: true,
         id,
+        petNome,
         message: `Inscrição enviada! ${petNome} vai concorrer no Cãocurso.`,
       },
       201
