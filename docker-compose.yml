@@ -1,0 +1,35 @@
+services:
+  lp:
+    build: .
+    image: petcondor-lp:latest
+    container_name: petcondor-lp
+    restart: unless-stopped
+
+    # Node arranca como PID 1 y en Linux ese proceso ignora las señales por
+    # defecto salvo que instale un manejador — cosa que el servidor de Astro no
+    # hace. Sin esto, cada `docker compose down` o cada redespliegue espera diez
+    # segundos a que expire el plazo y acaba matando el proceso con SIGKILL, con
+    # las peticiones en vuelo cortadas de golpe. `init: true` mete un init
+    # mínimo delante que reenvía SIGTERM y recoge los procesos huérfanos.
+    init: true
+
+    # Las credenciales se inyectan al arrancar, NO se hornean en la imagen.
+    # El .env vive en el servidor, junto a este fichero, y no se versiona.
+    env_file: .env
+
+    # Sólo accesible desde la propia máquina: quien habla con el exterior es
+    # Nginx. Sin el `127.0.0.1:` esto quedaría publicado en el puerto 4321 de
+    # la IP pública, saltándose el proxy, el TLS y el límite de tamaño de
+    # cuerpo — y sirviendo la LP por HTTP plano a quien conozca el puerto.
+    ports:
+      - '127.0.0.1:4321:4321'
+
+    # Sin volúmenes: el servidor no escribe nada en disco. La ficha va a
+    # Supabase y la foto a Supabase Storage. Si algún día aparece un volumen
+    # aquí, es señal de que algo volvió a guardar estado local.
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

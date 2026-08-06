@@ -1,0 +1,87 @@
+# Pet Condor LP — proxy inverso.
+#
+# Copiar a /etc/nginx/sites-available/pet.condor.com.br y enlazar en
+# sites-enabled. El TLS lo añade certbot solo:
+#
+#   sudo certbot --nginx -d pet.condor.com.br
+#
+# (Ejecutarlo DESPUÉS de que el DNS ya apunte al servidor: certbot valida por
+#  HTTP y falla si el dominio todavía no resuelve aquí.)
+
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ SIN ESTO, EL FORMULARIO DEVUELVE 403 EN CUANTO HAYA HTTPS.                 │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# Astro 7 protege contra CSRF comparando la cabecera `Origin` del navegador con
+# el origen que él mismo calcula. El problema es CÓMO lo calcula el adaptador de
+# Node: deriva el esquema de `req.socket.encrypted` y **no lee X-Forwarded-Proto**
+# (astro/dist/core/app/node.js). El host sí lo toma de la cabecera.
+#
+# Consecuencia con certbot delante: el tramo Nginx→contenedor va en HTTP plano,
+# así que Astro cree ser `http://pet.condor.com.br` mientras el navegador manda
+# `Origin: https://pet.condor.com.br`. No coinciden, y todo POST de formulario
+# muere con 403 «Cross-site POST form submissions are forbidden». La página
+# carga perfecta; sólo revienta el envío, con y sin JavaScript. En el log del
+# contenedor se ven 403 sin más pista.
+#
+# La solución es reescribir el Origin SÓLO cuando es el nuestro. Un
+# `proxy_set_header Origin http://$host` a secas también quitaría el 403, pero
+# reescribiría también los orígenes ajenos y anularía la protección CSRF entera.
+#
+# `security.checkOrigin: false` en astro.config tampoco: desactiva la defensa
+# para todo el sitio. Y `security.allowedDomains` no sirve aquí — sólo lo
+# consulta `createRequest`, que el adaptador de Node no usa.
+#
+# El `map` va en contexto http, fuera del server. Es válido en este fichero
+# porque sites-enabled se incluye dentro del bloque http.
+map $http_origin $origin_para_astro {
+    # Origen ajeno o ausente: pasa tal cual, y Astro lo sigue rechazando.
+    default                     $http_origin;
+    # El nuestro: al esquema que de verdad ve Node.
+    "https://pet.condor.com.br" "http://pet.condor.com.br";
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name pet.condor.com.br;
+
+    # ⚠️ LA LÍNEA QUE MÁS TIEMPO HACE PERDER SI FALTA.
+    #
+    # Por defecto Nginx corta cualquier cuerpo de más de 1 MB y responde 413.
+    # El formulario sube una foto: sin esto, NADIE puede inscribirse, y el
+    # error no aparece en los logs de la aplicación porque la petición nunca
+    # llega a ella. Se depura mirando el log de Nginx, no el del contenedor.
+    #
+    # 30M deja margen sobre los 25 MB que acepta /api/inscricao.
+    client_max_body_size 30M;
+
+    # Una foto de 20 MB por datos móviles tarda. Con los 60 s por defecto, un
+    # usuario con mala cobertura ve la conexión cortada a mitad de la subida.
+    client_body_timeout 300s;
+
+    location / {
+        proxy_pass http://127.0.0.1:4321;
+        proxy_http_version 1.1;
+
+        # Sin este Host, la aplicación se cree en localhost:4321 y su origen no
+        # coincide con nada.
+        proxy_set_header Host              $host;
+
+        # Lo que evita el 403 del formulario. Ver el `map` de arriba.
+        proxy_set_header Origin            $origin_para_astro;
+
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        # Astro no lo lee para construir su origen —de ahí el `map`— pero se
+        # manda igual: es lo que espera cualquier código que mire el esquema.
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        # El servidor de Astro emite la respuesta a medida que renderiza;
+        # con el buffer por defecto se retiene y el TTFB empeora sin motivo.
+        proxy_buffering off;
+    }
+}
