@@ -61,11 +61,13 @@ const PASTA = '2026'; // la única carpeta del bucket; ver lib/storage.ts
 
 function ajuda() {
   console.log(`
+  node scripts/limpar-inscricoes.mjs --sincronizar      reescribe la hoja, sin borrar nada
   node scripts/limpar-inscricoes.mjs --orfas            fotos sin ficha
   node scripts/limpar-inscricoes.mjs --id <uuid>        una inscripción
   node scripts/limpar-inscricoes.mjs --tudo             todas (pruebas)
 
   Añade --apagar para que borre de verdad. Sin eso sólo enseña qué haría.
+  --sincronizar no borra nunca, así que no necesita --apagar.
 `);
 }
 
@@ -74,6 +76,89 @@ const sb = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const BUCKET = env.SUPABASE_BUCKET_FOTOS || 'fotos-caocurso';
+
+/* ─────────────────────────────────────────────────────────── la planilla ── */
+
+/**
+ * Las columnas, EN EL MISMO ORDEN que `src/lib/planilha.ts`.
+ *
+ * Están duplicadas y no se puede evitar: aquel módulo importa `astro:env`, que
+ * fuera de Astro no existe. Si se cambian allí, hay que cambiarlas aquí — es la
+ * única costura frágil de este script.
+ */
+const COLUNAS = [
+  'Nome do tutor',
+  'E-mail',
+  'Telefone',
+  'Nome do pet',
+  'Raça',
+  'Sexo',
+  'Descrição',
+  'Data da inscrição',
+  'Foto',
+];
+
+/**
+ * Reescribe la planilla con lo que quede.
+ *
+ * Sin esto, borrar dejaba la hoja mostrando fichas que ya no existen hasta que
+ * alguien se inscribiera. Para datos de prueba es confuso; para una supresión
+ * de LGPD sería peor — la persona seguiría en una hoja compartida con el jurado
+ * y con el CRM, que es justo lo que se creía haber resuelto.
+ *
+ * Si faltan las variables del webhook no hace nada y lo dice: el borrado ya
+ * ocurrió, y fallar aquí no debe parecer que falló todo.
+ */
+async function sincronizarPlanilha() {
+  if (!env.PLANILHA_WEBHOOK_URL || !env.PLANILHA_WEBHOOK_TOKEN) {
+    console.log('\n  ⚠️  Sin PLANILHA_WEBHOOK_* en el .env: la hoja se queda como está.');
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('cao_inscricao')
+    .select('id, tutor_nome, tutor_email, tutor_telefone, pet_nome, pet_raca, pet_sexo, pet_descricao, criado_em')
+    .is('excluido_em', null)
+    .order('criado_em', { ascending: true });
+  if (error) {
+    console.log(`\n  ⚠️  No pude leer las fichas para la hoja: ${error.message}`);
+    return;
+  }
+
+  /* El enlace de la foto necesita una base. En el servidor sale del origen de
+     la petición; aquí no hay petición, así que se usa SITE_URL y, si está
+     vacía, el mismo localhost que el servidor produce hoy. */
+  const base = (env.SITE_URL || 'http://localhost:4321').replace(/\/+$/, '');
+
+  const linhas = (data ?? []).map((r) => [
+    r.tutor_nome, r.tutor_email, r.tutor_telefone, r.pet_nome,
+    r.pet_raca ?? '', r.pet_sexo ?? '', r.pet_descricao ?? '',
+    r.criado_em, `${base}/foto/${r.id}`,
+  ]);
+
+  try {
+    const resposta = await fetch(env.PLANILHA_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: env.PLANILHA_WEBHOOK_TOKEN,
+        atualizadoEm: new Date().toISOString(),
+        total: linhas.length,
+        colunas: COLUNAS,
+        linhas,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const corpo = (await resposta.text()).slice(0, 200);
+    console.log(
+      corpo.includes('"ok":true')
+        ? `\n  Hoja reescrita: ${linhas.length} fila(s).`
+        : `\n  ⚠️  La hoja respondió algo raro: ${corpo}`
+    );
+  } catch (e) {
+    console.log(`\n  ⚠️  No pude avisar a la hoja: ${e.message}`);
+  }
+}
 
 /** Borra la foto primero y la fila después. Si la foto falla, la fila se queda:
     una ficha sin foto es un problema visible; una foto sin ficha, invisible. */
@@ -93,6 +178,23 @@ async function apagarInscricao({ id, foto_key, tutor_nome, pet_nome }) {
     return;
   }
   console.log('    borrado');
+}
+
+/* Reescribe la hoja con lo que hay, sin tocar nada más.
+ *
+ * Hace falta después de un despliegue: los enlaces de la foto se construyen con
+ * SITE_URL, así que los que quedaron escritos antes apuntan a donde ya no toca.
+ * La hoja se rehace sola en la siguiente inscripción, pero si no llega ninguna
+ * se queda con enlaces muertos hasta que alguien lo note. */
+if (tem('--sincronizar')) {
+  const base = env.SITE_URL || 'http://localhost:4321';
+  console.log(`\n  Enlaces de foto apuntando a: ${base}`);
+  if (!env.SITE_URL) {
+    console.log('  ⚠️  SITE_URL vacía. En producción tiene que valer https://pet.condor.com.br');
+  }
+  await sincronizarPlanilha();
+  console.log('');
+  process.exit(0);
 }
 
 if (tem('--orfas')) {
@@ -143,6 +245,7 @@ if (tem('--id')) {
   }
   console.log(APAGAR ? '\nBorrando:' : '\nSe borraría:');
   await apagarInscricao(data);
+  if (APAGAR) await sincronizarPlanilha();
   console.log(APAGAR ? '' : '\n  Añade --apagar para borrar de verdad.\n');
   process.exit(0);
 }
@@ -154,11 +257,17 @@ if (tem('--tudo')) {
     .order('criado_em');
   if (error) throw new Error(error.message);
   if (!data.length) {
-    console.log('\n  No hay ninguna ficha.\n');
+    /* Sin fichas pero con `--apagar`, igual se sincroniza: es exactamente el
+       caso en que la hoja quedó mostrando filas que ya no existen —alguien
+       borró por otra vía— y salir aquí la dejaría así. */
+    console.log('\n  No hay ninguna ficha.');
+    if (APAGAR) await sincronizarPlanilha();
+    console.log('');
     process.exit(0);
   }
   console.log(APAGAR ? `\nBorrando ${data.length}:` : `\nSe borrarían ${data.length}:`);
   for (const ficha of data) await apagarInscricao(ficha);
+  if (APAGAR) await sincronizarPlanilha();
   console.log(APAGAR ? '' : '\n  Añade --apagar para borrar de verdad.\n');
   process.exit(0);
 }

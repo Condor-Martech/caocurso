@@ -915,6 +915,20 @@ const exigirCpf = await cpfObrigatorio();
     }
   }
 
+  /* Dos cosas que el envío y el modal tienen que compartir.
+   *
+   * `enviando` vive aquí, y no dentro de `iniciar()`, porque también manda sobre
+   * el cierre: mientras una inscripción está en vuelo no se puede cerrar el
+   * modal. Cerrarlo no cancelaría nada —la petición ya salió— pero dejaría a la
+   * persona sin saber si su pet quedó inscrito, y lo más probable es que
+   * volviera a enviarlo todo otra vez.
+   *
+   * `fecharModal` es la única forma que tiene el envío de cerrar. Se queda en
+   * `null` cuando no hay modal —sin JavaScript el formulario es una sección
+   * normal— y entonces no se cierra nada, que es lo correcto. */
+  let enviando = false;
+  let fecharModal: (() => void) | null = null;
+
   const form = document.querySelector<HTMLFormElement>('#form-inscricao');
   if (form) iniciar(form);
 
@@ -971,6 +985,13 @@ const exigirCpf = await cpfObrigatorio();
 
     function fechar() {
       if (!modal!.classList.contains('aberto')) return;
+
+      /* Mientras la inscripción está en vuelo, no se cierra: ni con Escape, ni
+         con la X, ni tocando el velo. La petición ya salió y cerrar no la
+         cancela; lo único que consigue es que la persona no vea si quedó
+         inscrita, y que lo intente otra vez. El estado «Enviando…» sigue a la
+         vista, que es la respuesta a por qué no se cierra. */
+      if (enviando) return;
 
       modal!.classList.remove('aberto');
       modal!.removeAttribute('role');
@@ -1040,6 +1061,8 @@ const exigirCpf = await cpfObrigatorio();
     /* Un enlace compartido con la ancla puesta abre el formulario directamente,
        en vez de dejar al visitante mirando una página donde no pasa nada. */
     if (window.location.hash === '#modal-inscricao') abrir();
+
+    fecharModal = fechar;
   }
 
   function iniciar(form: HTMLFormElement) {
@@ -1048,7 +1071,25 @@ const exigirCpf = await cpfObrigatorio();
     const inputFoto = form.querySelector<HTMLInputElement>('#petFoto');
     const nomeArquivo = form.querySelector<HTMLElement>('[data-arquivo]');
     const rotuloBotao = botao ? botao.textContent : '';
-    let enviando = false;
+
+    /* Cuánto se deja el «Inscrição enviada!» a la vista antes de cerrar.
+       Cerrar de golpe se lleva por delante la única confirmación que la persona
+       va a recibir; dejarlo abierto la obliga a cerrar algo que ya terminó.
+       Tres segundos dan para leer una línea sin que parezca colgado, y la X
+       sigue funcionando por si quiere cerrar antes. */
+    const ESPERA_ANTES_DE_FECHAR = 3000;
+
+    /* Los campos se bloquean mientras se envía. Un `disabled` NO viaja en el
+       FormData, así que se pone DESPUÉS de construirlo — al revés se enviaría
+       una ficha vacía. */
+    const campos = Array.from(
+      form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'input, select, textarea'
+      )
+    );
+    const bloquearCampos = (bloquear: boolean) => {
+      for (const campo of campos) campo.disabled = bloquear;
+    };
 
     /* ---------------------------------------------------------- máscaras */
 
@@ -1160,7 +1201,10 @@ const exigirCpf = await cpfObrigatorio();
       /* Todo lo que sigue va dentro del try para que el `finally` devuelva el
          botón a su sitio, incluidos los `return` por foto rechazada. */
       try {
+        /* El FormData PRIMERO y el bloqueo después: un campo `disabled` no
+           viaja en el envío, así que hacerlo al revés mandaría la ficha vacía. */
         const envio = new FormData(form);
+        bloquearCampos(true);
 
         if (arquivo) {
           mostrar('Preparando a foto…', 'enviando');
@@ -1170,6 +1214,10 @@ const exigirCpf = await cpfObrigatorio();
           /* Se comprueba lo que se va a enviar de verdad, no el original: si la
              reducción funcionó, un original de 40 MB pasa sin problema. */
           if ((reduzida ?? arquivo).size > MAX_FOTO_BYTES) {
+            /* Desbloquear ANTES de marcar: `marcar()` enfoca el campo, y un
+               campo `disabled` no acepta el foco. El `finally` lo haría igual,
+               pero después — y para entonces el foco ya se habría perdido. */
+            bloquearCampos(false);
             marcar('petFoto');
             mostrar('A foto é grande demais. Escolha outra imagem.', 'erro');
             return;
@@ -1187,12 +1235,36 @@ const exigirCpf = await cpfObrigatorio();
 
         if (resposta.ok && dados && dados.success) {
           mostrar(dados.message || 'Inscrição enviada com sucesso!', 'ok');
+
+          /* El formulario se limpia pero los campos siguen bloqueados hasta que
+             el modal cierre: ya no hay nada que hacer aquí, y un formulario
+             vacío y editable justo después de enviar invita a rellenarlo otra
+             vez — que acabaría en un 409 por duplicado. */
           form.reset();
           if (nomeArquivo) {
             nomeArquivo.textContent = '';
             nomeArquivo.hidden = true;
           }
+          if (botao) botao.textContent = 'Enviado ✓';
+
+          /* Cerrar deja de estar bloqueado ANTES del temporizador: a partir de
+             aquí la persona puede cerrar con la X o con Escape si no quiere
+             esperar los tres segundos. */
+          enviando = false;
+          window.setTimeout(() => {
+            bloquearCampos(false);
+            if (botao) {
+              botao.disabled = false;
+              botao.textContent = rotuloBotao;
+            }
+            if (status) status.hidden = true;
+            fecharModal?.();
+          }, ESPERA_ANTES_DE_FECHAR);
+          return;
         } else {
+          /* Mismo motivo que arriba: primero se devuelven los campos, y sólo
+             entonces se marca y se enfoca el que el servidor señaló. */
+          bloquearCampos(false);
           mostrar(
             (dados && dados.message) ||
               'Não foi possível enviar a inscrição. Tente novamente.',
@@ -1203,10 +1275,16 @@ const exigirCpf = await cpfObrigatorio();
       } catch {
         mostrar('Falha de conexão. Verifique sua internet e tente de novo.', 'erro');
       } finally {
-        enviando = false;
-        if (botao) {
-          botao.disabled = false;
-          botao.textContent = rotuloBotao;
+        /* El camino de éxito ya devolvió `enviando` a false y programó su propia
+           limpieza para cuando cierre; aquí sólo se recupera el formulario
+           cuando algo salió mal y la persona tiene que poder corregir. */
+        if (enviando) {
+          enviando = false;
+          bloquearCampos(false);
+          if (botao) {
+            botao.disabled = false;
+            botao.textContent = rotuloBotao;
+          }
         }
       }
     });

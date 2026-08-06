@@ -38,6 +38,11 @@
 var CONFIG = {
   ABA: 'Inscrições',
 
+  // Curitiba. O servidor manda as datas em UTC (é o que o Postgres guarda), e
+  // sem isto a planilha as mostraria três horas adiantadas.
+  FUSO: 'America/Sao_Paulo',
+  FORMATO_DATA: 'dd/MM/yyyy HH:mm',
+
   // Só para o «Atualizar agora» do menu, que é o conserto manual. Trocar pelo
   // domínio de produção quando ele existir. Vazio = o item do menu avisa e não
   // faz nada. O caminho normal —o servidor empurrando— não usa isto.
@@ -109,7 +114,7 @@ function onOpen() {
     .createMenu('Cãocurso')
     .addItem('Configurar token…', 'configurarToken')
     .addSeparator()
-    .addItem('Atualizar agora (puxar do servidor)', 'atualizar')
+    .addItem('Reconstruir a aba (só com o site publicado)', 'atualizar')
     .addToUi();
 }
 
@@ -151,7 +156,11 @@ function configurarToken() {
  */
 function atualizar() {
   if (!CONFIG.URL_EXPORTACAO) {
-    avisar('Falta preencher URL_EXPORTACAO no script. As inscrições novas chegam sozinhas mesmo assim.');
+    avisar(
+      'Este item não é necessário: as inscrições chegam sozinhas assim que alguém se ' +
+      'inscreve.\n\nSó serve para RECONSTRUIR a aba se ela ficar para trás, e para isso ' +
+      'precisa do site publicado — falta preencher URL_EXPORTACAO no script.'
+    );
     return;
   }
 
@@ -213,6 +222,14 @@ function escrever(dados) {
   var planilha = SpreadsheetApp.getActiveSpreadsheet();
   var aba = planilha.getSheetByName(CONFIG.ABA) || planilha.insertSheet(CONFIG.ABA);
 
+  /* O Sheets desenha uma data no fuso DA PLANILHA, não no do script. Se a
+     planilha estiver em UTC, uma inscrição das 22h do dia 21 aparece como dia
+     22 — e na última noite do prazo isso decide quem entra. Fixa-se aqui para
+     não depender de como a planilha foi criada. */
+  if (planilha.getSpreadsheetTimeZone() !== CONFIG.FUSO) {
+    planilha.setSpreadsheetTimeZone(CONFIG.FUSO);
+  }
+
   var colunas = dados.colunas;
   var linhas = dados.linhas;
 
@@ -220,8 +237,29 @@ function escrever(dados) {
 
   aba.getRange(1, 1, 1, colunas.length).setValues([colunas]).setFontWeight('bold');
 
+  /* A data chega como texto ISO em UTC: «2026-08-06T16:02:45.22797+00:00».
+     Escrita assim vira TEXTO na célula — ilegível, no fuso errado, e sem poder
+     ordenar nem filtrar por intervalo, que é o primeiro que o júri vai querer
+     fazer. Convertida a Date de verdade, o Sheets a trata como data e a mostra
+     no fuso da planilha, que se fixou acima.
+
+     Se a conversão falhar, fica o texto original: uma célula feia é melhor que
+     uma célula vazia onde havia um dado. */
+  var iData = colunas.indexOf('Data da inscrição');
+  if (iData >= 0) {
+    for (var i = 0; i < linhas.length; i++) {
+      var bruto = linhas[i][iData];
+      if (!bruto) continue;
+      var d = new Date(bruto);
+      if (!isNaN(d.getTime())) linhas[i][iData] = d;
+    }
+  }
+
   if (linhas.length) {
     aba.getRange(2, 1, linhas.length, colunas.length).setValues(linhas);
+    if (iData >= 0) {
+      aba.getRange(2, iData + 1, linhas.length, 1).setNumberFormat(CONFIG.FORMATO_DATA);
+    }
   }
 
   aba.setFrozenRows(1);
@@ -235,7 +273,7 @@ function escrever(dados) {
   var carimbo = dados.atualizadoEm ? new Date(dados.atualizadoEm) : new Date();
   aba
     .getRange(1, colunas.length + 2)
-    .setValue('Atualizado: ' + Utilities.formatDate(carimbo, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'))
+    .setValue('Atualizado: ' + Utilities.formatDate(carimbo, CONFIG.FUSO, CONFIG.FORMATO_DATA))
     .setFontColor('#888888');
 
   return {

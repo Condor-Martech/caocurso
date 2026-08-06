@@ -247,13 +247,30 @@ Três coisas que explicam o desenho:
 O envio precisa de `PLANILHA_WEBHOOK_URL` e `PLANILHA_WEBHOOK_TOKEN`. Vazias, não faz nada.
 
 **Quando a planilha ficar para trás** — a Google fora do ar num envio, alguém que apagou a
-aba, uma exclusão LGPD sem inscrições novas depois — o conserto é `GET /api/exportar`, o
-item «Atualizar agora» do menu «Cãocurso». Esse sim exige o domínio no ar, e a `URL_EXPORTACAO`
-preenchida no script.
+aba — o conserto mais direto não precisa de domínio nenhum:
 
-> ⚠️ **`SITE_URL`.** É o que monta o link da foto que vai à planilha. Sem ela se usa a origem
-> da requisição, que atrás do nginx chega como `http://` — o júri clicaria num endereço que
-> redireciona. Em produção: `SITE_URL=https://pet.condor.com.br`.
+```bash
+node scripts/limpar-inscricoes.mjs --sincronizar
+```
+
+Reescreve a aba com o que houver no banco. **Não apaga nada**, apesar do nome do arquivo.
+
+O item do menu «Cãocurso» dentro da planilha faz o mesmo pelo caminho contrário —puxando
+por `GET /api/exportar`— e por isso exige o domínio no ar e a `URL_EXPORTACAO` preenchida
+no script. Enquanto não existirem, use o comando.
+
+> ⚠️ **`SITE_URL`, e é o passo que se esquece no deploy.** É o que monta o link da foto que
+> vai à planilha. Sem ela se usa a origem da requisição, que atrás do nginx chega como
+> `http://` — o júri clicaria num endereço que redireciona.
+>
+> ```
+> SITE_URL=https://pet.condor.com.br
+> node scripts/limpar-inscricoes.mjs --sincronizar
+> ```
+>
+> O segundo comando não é opcional: os links já escritos na planilha continuam apontando
+> para onde apontavam, e só se refazem no envio seguinte. Se ninguém se inscrever depois do
+> deploy, o júri fica com uma coluna de links mortos.
 
 Para uma cópia crua e pontual, sem passar por nada disto: Dashboard do Supabase → Table
 Editor → `cao_inscricao` → exportar CSV.

@@ -138,11 +138,25 @@ async function enviar(planilha: Planilha): Promise<void> {
  * enquanto a planilha não existir.
  */
 export function sincronizarPlanilha(origem: string): void {
-  if (!PLANILHA_WEBHOOK_URL || !PLANILHA_WEBHOOK_TOKEN) return;
+  if (!PLANILHA_WEBHOOK_URL || !PLANILHA_WEBHOOK_TOKEN) {
+    console.log('planilha: sem URL ou token configurados, não envio nada');
+    return;
+  }
+
+  /* Registra as TRÊS coisas: que começou, que terminou bem, e quanto demorou.
+     Só registrar o erro foi um engano caro: «não há erros no log» passa a
+     significar as duas coisas ao mesmo tempo —correu bem, ou nunca correu— e
+     não há como distinguir. Com a linha de saída, a ausência dela é
+     informação. */
+  const t0 = Date.now();
+  console.log('planilha: enviando…');
 
   void montarPlanilha(origem)
-    .then(enviar)
+    .then(async (planilha) => {
+      await enviar(planilha);
+      console.log(`planilha: ${planilha.total} linhas enviadas em ${Date.now() - t0} ms`);
+    })
     .catch((e: unknown) => {
-      console.error('planilha:', e instanceof Error ? e.message : e);
+      console.error('planilha: FALHOU —', e instanceof Error ? e.message : e);
     });
 }
