@@ -661,10 +661,18 @@ rm -rf .astro dist           # Limpar cache/build
 npm install                  # Reinstalar deps
 ```
 
-As fichas de teste **não se apagam com `rm`**: vivem no Supabase. Dashboard → Table
-Editor → `cao_inscricao`, e a foto correspondente no bucket `fotos-caocurso`. A coluna
-`excluido_em` existe para o apagamento lógico da LGPD — uma ficha com data ali some da
-planilha no envio seguinte, mas continua no banco.
+As fichas de teste **não se apagam com `rm`** nem pelo painel: vivem no Supabase, e cada
+uma tem uma foto num bucket à parte que o Table Editor não toca. Apagar a linha por ali
+deixa a foto órfã — sem nada apontando para ela e impossível de achar depois.
+
+```bash
+node scripts/limpar-inscricoes.mjs --tudo            # mostra
+node scripts/limpar-inscricoes.mjs --tudo --apagar   # faz, ficha e foto
+node scripts/limpar-inscricoes.mjs --orfas --apagar  # recolhe o que já sobrou
+```
+
+Para uma exclusão de LGPD é outra coisa: preenche-se `excluido_em`, e aí a ficha some da
+planilha e devolve a vaga, mas fica o registro de quando foi atendida.
 
 ---
 

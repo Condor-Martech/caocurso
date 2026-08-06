@@ -192,17 +192,37 @@ leem a mesma coluna —, e pega na carga seguinte, com os mesmos 10 segundos de 
 `https://pet.condor.com.br/foto/<id>`, onde `<id>` é o `id` da linha. O endereço é estável e
 não expira; ele consulta a key, assina na hora e redireciona. O bucket continua privado.
 
-### Apagar uma inscrição
+### Apagar uma inscrição — **não pelo painel**
 
-**Pelo painel, apague a linha E a foto.** O Table Editor mexe só na tabela: a foto continua
-no bucket `fotos-caocurso`, sem nada que aponte para ela e sem forma de encontrá-la a não
-ser comparando à mão. Já aconteceu uma vez.
+Uma inscrição vive em dois lugares: a ficha na tabela e a foto no bucket. **A ficha é a
+única coisa que sabe onde a foto está.** O Table Editor mexe só na tabela, então apagar a
+linha por ali deixa a foto no bucket sem nada que aponte para ela — invisível, impossível
+de achar depois a não ser comparando à mão. Já aconteceu uma vez.
 
-A `foto_key` da linha é onde ela está (`2026/<uuid>.webp`) — copie antes de apagar.
+Use o script, que faz as duas coisas na ordem certa:
 
-Para uma exclusão de LGPD é outra coisa: aí **não se apaga**, se preenche `excluido_em`.
-A linha some da planilha no envio seguinte e a vaga volta ao concurso, mas fica o registro
-de quando foi atendido — que é justamente o que um `DELETE` não deixa.
+```bash
+node scripts/limpar-inscricoes.mjs --id <uuid>            # mostra o que faria
+node scripts/limpar-inscricoes.mjs --id <uuid> --apagar   # faz
+
+node scripts/limpar-inscricoes.mjs --orfas               # fotos sem ficha
+node scripts/limpar-inscricoes.mjs --orfas --apagar      # recolhe as que sobraram
+
+node scripts/limpar-inscricoes.mjs --tudo --apagar       # todas. Só para testes.
+```
+
+**Sem `--apagar` não apaga nada:** mostra o que faria e sai. Um script que apaga por padrão
+é um script que um dia apaga o que não era.
+
+Ele apaga a foto **antes** da ficha, de propósito. Se algo falhar no meio, o que sobra é
+uma ficha sem foto — visível, com nome e e-mail, fácil de resolver. Ao contrário sobraria
+uma foto sem ficha, que é exatamente o problema que se está evitando.
+
+> ⚠️ **Isto é apagar de verdade, e não é o que a LGPD pede.** Quando alguém exerce o
+> direito de exclusão é preciso poder demonstrar *quando* aquilo foi atendido, e para isso
+> existe `excluido_em`: a linha some da planilha no envio seguinte e a vaga volta ao
+> concurso, mas fica o registro. Um `DELETE` não deixa rastro de ter cumprido. O script é
+> para dados de teste e para recolher órfãs.
 
 ### A planilha do júri e do CRM
 
