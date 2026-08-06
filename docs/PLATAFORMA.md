@@ -317,11 +317,44 @@ mortos.
 | 1 | **Consentimento agrupado** | ⛔ **Pendente, e é o único bloqueio real.** Ver abaixo |
 | 2 | EXIF com GPS | ✅ Resolvido: `lib/foto.ts` recodifica e descarta metadados |
 | 3 | Bucket privado | ✅ Resolvido: `fotos-caocurso` não é público, URLs assinadas de 300 s |
-| 4 | Direito de exclusão | ✅ Resolvido: `excluido_em` + a reescrita completa da aba (§3) |
+| 4 | Direito de exclusão | ✅ Resolvido de verdade — ver abaixo |
 | 5 | Base legal | consentimento — falta documentá-la no regulamento |
 | 6 | Retenção | ⚠️ sem definir. Prazo pós-campanha + expurgo, **também da planilha** |
 | 7 | Menores | ⚠️ o endpoint exige +18 pela data de nascimento quando ela é informada, mas o campo é opcional. O simples é exigir +18 no regulamento |
 | 8 | Transferência internacional | ⚠️ o Supabase é Brasil, a planilha não. Cláusulas + acesso nominal |
+
+### O ponto 4 esteve resolvido pela metade, e vale saber por quê
+
+Durante um tempo, atender um pedido de exclusão era marcar `excluido_em`. Isso tirava a
+pessoa da planilha e devolvia a sua vaga — mas nome, nascimento, CPF, e-mail, telefone e a
+foto seguiam inteiros no banco.
+
+**Isso não é apagar, é esconder.** Se a pessoa perguntasse «vocês apagaram meus dados?», a
+resposta honesta era «não completamente». O mecanismo parecia pronto porque o efeito
+visível —sumir da planilha— era o esperado.
+
+Hoje quem atende é um comando:
+
+```bash
+node scripts/limpar-inscricoes.mjs --excluir <uuid> --apagar
+```
+
+| Some | Fica |
+|---|---|
+| A foto, do bucket | O `id` |
+| Nome, nascimento, CPF, e-mail, telefone | `criado_em` e `excluido_em` |
+| Nome, raça, sexo, espécie e descrição do pet | Os `consentimentos` |
+
+**Os consentimentos ficam de propósito.** Não identificam ninguém —são
+`{tipo, versao, texto_sha256, em}`— e são a prova de que houve base legal para tratar
+aqueles dados enquanto foram tratados. Apagá-los deixaria a Condor sem como demonstrá-lo.
+
+A foto sai **antes** da ficha: ao contrário, se algo falhasse no meio, perder-se-ia a
+`foto_key` e com ela a única forma de saber qual arquivo era daquela pessoa. A planilha se
+reescreve no mesmo comando, e repetir a operação não faz nada.
+
+> ⚠️ **Marcar `excluido_em` à mão pelo painel não serve** — é exatamente o meio-caminho
+> descrito acima. Ficou anotado no `README.md`.
 
 ### O ponto 1, em detalhe — e por que tem prazo
 
@@ -417,7 +450,6 @@ pets, e isso também é decisão de negócio.
 | | O quê | Tamanho |
 |---|---|---|
 | 1 | **Separar os consentimentos** (§5.1) — depende de decisão do cliente | 1 dia depois da resposta |
-| 2 | **Limite de tentativas em `POST /api/inscricao`** — hoje nada impede queimar as 50 vagas num script | ~30 min |
 | 3 | **O CPF e o Clube Condor** (§6) — depende de saber quem verifica | decisão |
 | 4 | Definir retenção e o expurgo pós-campanha, incluindo a planilha | decisão + 1 h |
 | 5 | Deploy no VPS — artefatos prontos, executa a equipe de infra | fora deste repositório |

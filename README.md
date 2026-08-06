@@ -470,8 +470,10 @@ vários sistemas de deploy, a mesma.
 O teto real é o **storage**: cerca de 4.500 inscrições, medido com fotos reais depois do
 reprocessamento (média 113 KB, pior caso 228 KB). Bem acima do previsto.
 
-> ⚠️ **Não há limite de tentativas no endpoint.** A capacidade técnica é essa, mas nada impede
-> alguém de roteirizar envios. Está identificado como próximo trabalho.
+> O limite real não é técnico, são as **50 vagas** de `cao_campanha`. E o que impede alguém
+> de queimá-las com um laço é o limite de tentativas: **8 por IP a cada 10 minutos**
+> (`src/lib/limite.ts`). Mora em memória, então reinicia junto com o contêiner — e funciona
+> porque há uma instância só.
 
 ---
 
@@ -498,7 +500,6 @@ reprocessamento (média 113 KB, pior caso 228 KB). Bem acima do previsto.
 
 **Técnico:**
 
-- Limite de tentativas em `/api/inscricao`
 - Servir imagens e o PDF a partir do MinIO (`lp-content/caocurso/`, já subidos) para trocar
   um logo sem build. O código ainda aponta para `/assets/`
 - Sem JavaScript, a resposta do formulário aparece como JSON cru. O dado é gravado, mas é feio

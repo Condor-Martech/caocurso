@@ -18,8 +18,8 @@ quanto a documentação e as mensagens de commit deste repositório.
 planilha do júri se abastecendo sozinha. Build limpo, `astro check` com 0 erros, sem
 caminhos de assets quebrados. A tag `v2026-base` marca o fim do saneamento visual: é para
 lá que se volta se um retoque de layout der errado. O que falta antes de abrir ao público
-não é arquitetura — é uma decisão de LGPD, um limite de tentativas e o deploy no VPS. Ver
-«Estado de implementação».
+não é arquitetura: é uma decisão de LGPD que cabe ao cliente e o deploy no VPS, que é da
+equipe de infra. Ver «Estado de implementação».
 
 **Onde isto vive de verdade:** o [`README.md`](README.md) é o manual de operação — como
 subir, que variáveis existem, como consertar a planilha, o que fazer quando algo quebra.
@@ -410,6 +410,7 @@ curl -s localhost:4321/healthz   # 200 = o Supabase responde. 503 = não.
 | 6 | **Saneamento**: ponto base no git (`v2026-base`), nav retirado, caminhos quebrados fechados | ✅ feito |
 | 7 | **Persistência**: Supabase (tabela + bucket privado), foto reprocessada, deploy em Docker | ✅ feito |
 | 8 | **Vagas e planilha**: 4º estado «Esgotado», teto de 50, espelho automático na planilha do júri | ✅ feito |
+| 9 | **Fechamento do fluxo**: CPF obrigatório por interruptor, limite de tentativas, exclusão LGPD que apaga de verdade | ✅ feito |
 
 **Verificado (2026-08-06):** `astro check` 0/0/0 · `npm run build` limpo · endpoint testado
 em 5 casos (201 válido, 400 sem aceite, 409 duplicado, 400 CPF inválido, 400 menor de
@@ -433,8 +434,9 @@ Script → linha na aba → link da foto abrindo a imagem).
    próprio e separado. **É decisão do cliente, e é irreversível uma vez que os dados
    comecem a entrar** — pedir de novo a 50 pessoas depois não é viável. Ver
    `docs/PLATAFORMA.md` §5.
-2. **Limite de tentativas em `POST /api/inscricao`.** Hoje não há nenhum: nada impede
-   alguém de queimar as 50 vagas num script. ~30 min de trabalho.
+2. **~~Limite de tentativas~~** — feito: 8 por IP a cada 10 minutos, em `src/lib/limite.ts`.
+   Vale a pena saber que **mora em memória e conta por processo**: no dia em que houver duas
+   instâncias atrás de um balanceador, o limite real dobra.
 2b. **O CPF é obrigatório, por interruptor.** Decisão do cliente em 2026-08-06. Mas
    obrigatório **não é verificado**: o briefing pede «cadastrado no Clube Condor» e não há
    acesso à base de sócios, então o que se confere é só o dígito verificador. O que se
@@ -521,9 +523,12 @@ Esta pasta é **isolada e autossuficiente**:
 ├── supabase/
 │   └── migrations/
 │       ├── 0001_cao_inscricao.sql        (tabela, índices únicos, RLS, bucket privado)
-│       └── 0002_cao_campanha_e_vagas.sql (cao_campanha, vista, criar_inscricao())
+│       ├── 0002_cao_campanha_e_vagas.sql (cao_campanha, vista, criar_inscricao())
+│       └── 0003_cao_cpf_obrigatorio.sql  (o interruptor do CPF)
 ├── scripts/
-│   └── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
+│   ├── optimizar-assets.mjs   (assets-fonte/ → public/assets/2026/ + galeria/, WebP)
+│   └── limpar-inscricoes.mjs  (apagar sem deixar fotos órfãs · --excluir da LGPD ·
+│                               --sincronizar reescreve a planilha)
 ├── assets-fonte/              ⚠️ ~997 MB de gráfica + fotos. NO GITIGNORE.
 ├── src/
 │   ├── pages/
@@ -554,7 +559,8 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   ├── supabase.ts        (o cliente service_role. SÓ servidor)
 │   │   ├── storage.ts         (o ÚNICO módulo que sabe onde vivem as fotos)
 │   │   ├── foto.ts            (sharp: valida os magic bytes, gira, apaga o EXIF, WebP)
-│   │   └── planilha.ts        (monta e empurra a lista ao Web App do júri)
+│   │   ├── planilha.ts        (monta e empurra a lista ao Web App do júri)
+│   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
 │   ├── data/
 │   │   ├── site.json          (TODO o conteúdo visível: 179 strings, 15 blocos)
 │   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)
@@ -699,8 +705,8 @@ planilha e devolve a vaga, mas fica o registro de quando foi atendida.
 
 👉 **Depois:** `npm run dev` — a LP está construída e alinhada ao KV 2026.
 
-👉 **O que falta de código são duas coisas pequenas:** o limite de tentativas em
-`POST /api/inscricao` e apontar o regulamento de 2026 quando ele chegar.
+👉 **De código falta pouco:** apontar o regulamento de 2026 quando ele chegar, e servir o
+regulamento e os logos a partir do MinIO para poder trocá-los sem rebuild.
 
 👉 **O que falta de verdade não é código:** a decisão do cliente sobre o consentimento do
 CRM —e essa é irreversível assim que a primeira ficha entrar— e o deploy no VPS, que faz a
