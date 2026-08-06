@@ -802,7 +802,73 @@ const { campos: c } = formulario;
    * por si algún día se cambia de idea.
    */
 
-  const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+  /* Techo del servidor. Ya no es una restricción real de uso: `reduzirImagem`
+     encoge la foto antes de subirla, así que lo habitual es enviar ~300 KB
+     venga el original de donde venga. Queda como tope contra abusos y para el
+     camino sin JavaScript, donde sí sube el fichero original.
+
+     Eran 2 MB, y eso rechazaba a casi todo el mundo: prácticamente ningún
+     móvil actual hace fotos de menos de 2 MB. */
+  const MAX_FOTO_BYTES = 25 * 1024 * 1024;
+
+  /* El mismo lado máximo que aplica el servidor. Reducir más aquí sería tirar
+     calidad que allí ya no se recupera. */
+  const LADO_MAXIMO = 1600;
+
+  /**
+   * Reduce la foto en el navegador antes de subirla.
+   *
+   * Es la mejora que de verdad se nota: una foto de móvil son 3-8 MB —hasta 40
+   * en un Samsung de 200MP— y por datos móviles eso es un minuto largo de
+   * espera con el formulario bloqueado. Reducida son ~300 KB y un par de
+   * segundos.
+   *
+   * Devuelve `null` si no se puede: formato que el navegador no decodifica,
+   * canvas no disponible, o un resultado que no es más pequeño que el original.
+   * En ese caso se sube el fichero tal cual y el servidor lo reprocesa igual.
+   * **Esto nunca debe impedir un envío**: es una optimización, no una
+   * validación.
+   *
+   * `imageOrientation: 'from-image'` aplica la orientación del EXIF al dibujar.
+   * Sin eso las fotos verticales llegan tumbadas, porque el canvas descarta los
+   * metadatos y con ellos la rotación.
+   *
+   * Que el canvas se lleve por delante el EXIF es un efecto agradable —ahí van
+   * las coordenadas GPS de la casa del tutor— pero no es la defensa: el cliente
+   * se puede saltar. Quien lo garantiza es `lib/foto.ts`, en el servidor.
+   */
+  async function reduzirImagem(arquivo: File): Promise<File | null> {
+    if (!arquivo.type.startsWith('image/')) return null;
+    if (typeof createImageBitmap !== 'function') return null;
+
+    try {
+      const bitmap = await createImageBitmap(arquivo, { imageOrientation: 'from-image' });
+      const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
+      const largura = Math.round(bitmap.width * escala);
+      const altura = Math.round(bitmap.height * escala);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = largura;
+      canvas.height = altura;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        bitmap.close();
+        return null;
+      }
+      ctx.drawImage(bitmap, 0, 0, largura, altura);
+      bitmap.close();
+
+      const blob = await new Promise<Blob | null>((resolver) =>
+        canvas.toBlob(resolver, 'image/webp', 0.85)
+      );
+      if (!blob || blob.size >= arquivo.size) return null;
+
+      return new File([blob], 'pet.webp', { type: 'image/webp' });
+    } catch {
+      return null;
+    }
+  }
 
   const form = document.querySelector<HTMLFormElement>('#form-inscricao');
   if (form) iniciar(form);
@@ -1015,11 +1081,10 @@ const { campos: c } = formulario;
           nomeArquivo.textContent = arquivo ? arquivo.name : '';
           nomeArquivo.hidden = !arquivo;
         }
-        // Se avisa del tamaño aquí y no tras subir 8 MB por una red móvil.
-        if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
-          inputFoto.setAttribute('aria-invalid', 'true');
-          mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
-        }
+        /* Ya no se comprueba el tamaño aquí. Lo que cuenta es cuánto pesa
+           DESPUÉS de reducir, y eso no se sabe hasta el envío. Avisar ahora de
+           un original de 8 MB que va a viajar como 300 KB sería asustar sin
+           motivo, y es justo lo que hacía el aviso de 2 MB. */
       });
     }
 
@@ -1039,11 +1104,6 @@ const { campos: c } = formulario;
       if (enviando) return;
 
       const arquivo = inputFoto && inputFoto.files && inputFoto.files[0];
-      if (arquivo && arquivo.size > MAX_FOTO_BYTES) {
-        marcar('petFoto');
-        mostrar('A foto deve ter no máximo 2 MB. Escolha outra imagem.', 'erro');
-        return;
-      }
 
       enviando = true;
       limparTudo();
@@ -1051,12 +1111,31 @@ const { campos: c } = formulario;
         botao.disabled = true;
         botao.textContent = 'Enviando…';
       }
-      mostrar('Enviando sua inscrição…', 'enviando');
 
+      /* Todo lo que sigue va dentro del try para que el `finally` devuelva el
+         botón a su sitio, incluidos los `return` por foto rechazada. */
       try {
+        const envio = new FormData(form);
+
+        if (arquivo) {
+          mostrar('Preparando a foto…', 'enviando');
+          const reduzida = await reduzirImagem(arquivo);
+          if (reduzida) envio.set('petFoto', reduzida, reduzida.name);
+
+          /* Se comprueba lo que se va a enviar de verdad, no el original: si la
+             reducción funcionó, un original de 40 MB pasa sin problema. */
+          if ((reduzida ?? arquivo).size > MAX_FOTO_BYTES) {
+            marcar('petFoto');
+            mostrar('A foto é grande demais. Escolha outra imagem.', 'erro');
+            return;
+          }
+        }
+
+        mostrar('Enviando sua inscrição…', 'enviando');
+
         const resposta = await fetch(form.action, {
           method: 'POST',
-          body: new FormData(form),
+          body: envio,
           headers: { Accept: 'application/json' },
         });
         const dados = await resposta.json().catch(() => null);
