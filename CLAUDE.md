@@ -253,8 +253,31 @@ antes da faixa Cãocurso e depois dela.
   `prefers-reduced-motion`. Os slides **não levam fotos**, só logo, datas e CTA. As suas
   duas colunas dependem da variante **`fila:`** (largura **e** orientação), não de `md:`:
   em tablet na vertical o mockup deixa meia tela vazia e ali manda o bloco empilhado.
-  **As setas e o contador só aparecem de tablet na horizontal para cima**: no celular a
-  pista se passa com o dedo e aquela faixa inferior é o que dá corpo ao selo.
+  **As setas, o contador e o botão de pausa só aparecem de tablet na horizontal para
+  cima**: no celular a pista se passa com o dedo e aquela faixa inferior é o que dá corpo
+  ao selo.
+- **A rotação do hero gira a cada 7 s, e quanto tempo gira depende de haver um botão de
+  pausa à vista.** É a WCAG 2.2.2: movimento automático que dura mais de 5 s precisa de um
+  comando visível para detê-lo. Onde os controles são pintados a rotação é indefinida e o
+  botão ‖/▶ ao lado do contador a para e a retoma; **no celular, onde eles não são
+  pintados, dá uma volta completa e fica quieta no primeiro slide**. Quem decide isso não é
+  uma media query repetida no script: é `getComputedStyle(controles).display`, para que a
+  regra viva só no CSS.
+  ⚠️ **A pausa por ponteiro em cima vai na `.bloco-slider`, nunca na seção do hero.**
+  Esteve no `#conteudo`, que mede uma tela inteira: no desktop o mouse está dentro quase
+  sempre, então ao primeiro movimento depois de carregar a rotação congelava e só voltava
+  ao sair da primeira tela. Na prática o carrossel não girava nunca.
+- **A grade de linhas do slide cede antes de cortar texto.** `--h-logo` e `--h-msg` são
+  altura fixa —é o que faz o CTA cair na mesma altura nas duas ofertas—, mas `.dados` é
+  **`min-height`**: abaixo de uns 375 px as três datas do AuMigo passam a três linhas e um
+  alto fixo cortava «22/08 Boa Vista» pela metade. Não era só o celular pequeno; num
+  360×640 acontecia igual. Onde não cabe, a fila cresce e o CTA desalinha uns pixels entre
+  os slides — que é infinitamente melhor que uma data cortada.
+  Duas coisas que vão juntas com isso: as linhas compactas passaram a valer **também por
+  largura** (`(max-height: 700px), (max-width: 380px)`), porque uma janela estreita pede
+  mais espaço mesmo sendo alta —um 360×740 ficava 58 px curto—; e `.dados` e `.nota` levam
+  `line-height` próprio, porque herdavam o 1,5 do documento e em três linhas isso eram 79 px
+  de fila para 45 de texto. Medido sem corte de 320×480 a 1366×768.
 - `Requisitos` é **um painel único com 6 bullets em duas colunas**, não três cards.
 - `Eventos` são **2 cartões em cima e 1 centralizado embaixo**, não uma fileira de três.
 - O bloco 7 se chama `Evento30Agosto.astro` por herança de 2025, mas em 2026 a data é o
@@ -550,6 +573,15 @@ Script → linha na aba → link da foto abrindo a imagem).
 3. **Deploy no VPS.** Os artefatos estão prontos (`Dockerfile`, `docker-compose.yml`,
    `deploy/nginx.conf.example`) e quem os executa é a equipe de infra, não este repositório.
    As duas linhas inegociáveis do Nginx estão no `README.md`.
+4. **A medição do Google está pronta e desligada.** Falta o ID e a decisão de LGPD, não
+   código: preencher `GOOGLE_TAG_ID` no `.env` liga, esvaziar desliga, e **nenhum dos dois
+   pede rebuild** — a variável é lida em tempo de execução (por isso é `access: 'secret'`
+   apesar de acabar impressa no HTML; as públicas se incrustam ao construir). Com ela vazia
+   não sai script nenhum, então não há cookie do Google enquanto ninguém decidir. O site
+   escolhe entre a etiqueta do Google (`G-…`) e o Tag Manager (`GTM-…`) pelo prefixo do ID.
+   ⚠️ **Ligar cria uma cookie de medição numa página que não tem aviso de cookies** — é o
+   mesmo assunto do ponto 1, e a mesma pessoa que decide. Ver `README.md`, «Medição do
+   Google».
 
 **Pendente de o cliente fornecer material** (não é trabalho de código):
 
@@ -558,10 +590,17 @@ Script → linha na aba → link da foto abrindo a imagem).
    Petcare, Caats e Doguitos **já têm material** em
    `assets-fonte/patrocinadores/Apoio/`; falta tirar de cada pasta o arquivo web e
    repontar o `site.ts`. `Logo-Purina-One-Caes.png` **não** é Doguitos.
-2. **Regulamento 2026:** o botão já está **ativo**, mas apontando para o PDF **de 2025**
-   (`regulamentoPdf` em `site.json`, hospedado no MinIO). Quando o de 2026 chegar é trocar
-   essa URL — o interruptor `regulamentoDisponivel` já está em `true` e o ramo que mostra
-   «disponível em breve» segue escrito para o caso de precisar voltar atrás.
+2. **Regulamento 2026:** o botão está **ativo** e aponta para
+   `lp-content/caocurso/docs/regulamento caocurso.pdf` (`regulamentoPdf` em `site.json`),
+   que foi o arquivo indicado pelo cliente em 2026-08-07. **Mas o PDF que está lá não é o
+   regulamento:** é um «Termo de Adesão e Declaração de Mandato» de uma página — a Condor
+   outorgando poderes à Polypromo perante a SPA/ME — e declara o período 11/08–29/08/2026,
+   que não é a janela de inscrição de `cao_campanha`. Trocou-se assim mesmo porque o PDF de
+   2025 **já não existe**: aquela URL devolve 404 desde que o bucket foi reorganizado, e o
+   botão apontava para o nada. Quando o regulamento de verdade chegar, sobe-se com **a
+   mesma key** e não é preciso tocar em código. O interruptor `regulamentoDisponivel` segue
+   em `true`, e o ramo «disponível em breve» continua escrito para o caso de precisar
+   voltar atrás.
 3. **Fotos da galeria:** a arte mostra 13 fotos e no repositório há 12, que além disso não
    são a mesma seleção que o designer usou.
 
@@ -617,10 +656,10 @@ Esta pasta é **isolada e autossuficiente**:
 ```
 /home/diego/armando/Sites/petcondor/
 ├── astro.config.mjs           (output: 'server' + @astrojs/node standalone,
-│                               passthroughImageService, env.schema com 11 variáveis)
+│                               passthroughImageService, env.schema com 12 variáveis)
 ├── Dockerfile                 (multi-stage node:22-slim, USER node, HEALTHCHECK /healthz)
 ├── docker-compose.yml         (127.0.0.1:4321, init: true, env_file: .env)
-├── .env.example               (a planta das 11 variáveis; o .env NÃO é versionado)
+├── .env.example               (a planta das 12 variáveis; o .env NÃO é versionado)
 ├── deploy/
 │   ├── nginx.conf.example     (proxy reverso — leia o `map` do Origin antes de tocar)
 │   └── planilha.gs            (o Apps Script que recebe e reescreve a aba do júri)
@@ -672,7 +711,9 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   │                       .mjs para que o script de limpeza importe A MESMA lista:
 │   │   │                       tê-la duplicada já custou o CPF)
 │   │   ├── planilha-colunas.d.ts (os tipos do anterior, para o astro check)
-│   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
+│   │   ├── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
+│   │   └── tag-google.ts      (valida GOOGLE_TAG_ID uma vez por processo.
+│   │                           Vazia = nenhum script do Google sai no HTML)
 │   ├── data/
 │   │   ├── site.json          (TODO o conteúdo visível: 192 strings, 15 blocos)
 │   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)

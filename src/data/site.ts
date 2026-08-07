@@ -48,10 +48,21 @@ export interface Imagem {
  * enseña el navegador de la consola (`/browser/lp-content/caocurso%2F…`) abre el
  * gestor de archivos, no el documento.
  *
- * ⚠️ **Hoy sirve el regulamento de 2025**: es el único que existe. El botón dice
- * «Confira o regulamento» sin año, así que no miente, pero las fechas y las
- * reglas de dentro son las del año pasado. Cuando llegue el de 2026 se sube al
- * mismo bucket y se cambia la key aquí.
+ * OJO también con el espacio de la key: el archivo se llama
+ * `regulamento caocurso.pdf`, con espacio, y en la URL va como `%20`. Escribirlo
+ * crudo en el JSON deja un href con un espacio dentro.
+ *
+ * ⚠️ **Lo que hay hoy detrás de esa key es un «Termo de Adesão e Declaração de
+ * Mandato»**, no el reglamento: una página donde Condor otorga poderes a
+ * Polypromo para pedir la autorización de la promoción ante la SPA/ME, firmada
+ * el 05/08/2026. No son las reglas que busca quien pulsa «Confira o
+ * regulamento», y de paso declara el período 11/08–29/08/2026, que no es la
+ * ventana de inscripción de `cao_campanha`. Se puso porque es el documento que
+ * el cliente señaló y porque **el PDF de 2025 ya no existe** —esa URL devuelve
+ * 404 desde que el marketing reorganizó el bucket—, así que el botón enlazaba a
+ * nada. Cuando llegue el reglamento de verdad se sube al mismo bucket y se
+ * cambia la key aquí; si además se sube con ESTA misma key, no hay que tocar
+ * nada.
  *
  * `regulamentoDisponivel` sigue siendo el interruptor: en `false` el botón se
  * pinta igual pero deshabilitado, con aire de «em breve». Nada de enlaces rotos.

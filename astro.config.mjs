@@ -102,6 +102,22 @@ export default defineConfig({
       // local es http://localhost:4321 — sirve para probar, pero esos enlaces
       // no le valen al jurado. En producción: https://pet.condor.com.br
       SITE_URL: envField.string({ context: 'server', access: 'secret', default: '' }),
+
+      // Medición de Google. Vacía = no se inyecta NADA: ni script, ni cookie,
+      // ni petición a un dominio de Google. Ése es el interruptor.
+      //
+      // Acepta las dos cosas que marketing puede mandar, y el Layout elige el
+      // fragmento por el prefijo: `G-…` (etiqueta de Google / GA4) o `GTM-…`
+      // (Tag Manager). Quien reciba el identificador no tiene que saber cuál de
+      // los dos le tocó ni tocar código.
+      //
+      // ⚠️ `access: 'secret'` aquí NO significa que el valor sea secreto —
+      // acaba impreso en el HTML de cada página, que es su trabajo. Significa
+      // «léela en tiempo de ejecución». Las públicas se incrustan en el bundle
+      // AL CONSTRUIR, y entonces poner la medición o cambiar de propiedad
+      // pediría reconstruir la imagen Docker. Así es editar el .env y
+      // reiniciar el contenedor.
+      GOOGLE_TAG_ID: envField.string({ context: 'server', access: 'secret', default: '' }),
     },
   },
 
