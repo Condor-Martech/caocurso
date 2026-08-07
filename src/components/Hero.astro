@@ -243,7 +243,50 @@ const [slideCao, slideAdote] = hero.slides;
         </svg>
       </button>
 
+      {/* El botón de pausa NO es decoración: la rotación es indefinida, y
+          WCAG 2.2.2 pide un mando visible para detener cualquier movimiento
+          automático que dure más de 5 s. Los dos iconos viven en el DOM y el
+          CSS enseña uno según `data-parado`; así el cambio de estado no
+          depende de que el script sepa dibujar un `<path>`. */}
       <div class="estado" id="hero-controles">
+        <button
+          type="button"
+          class="pausa"
+          id="hero-pausa"
+          aria-label={hero.aria.pausar}
+          aria-controls="hero-pista"
+          data-rotulo-pausar={hero.aria.pausar}
+          data-rotulo-retomar={hero.aria.retomar}
+        >
+          <svg
+            class="ic-pausa"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M9 5v14M15 5v14"></path>
+          </svg>
+
+          <svg
+            class="ic-play"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            {/* Medio punto a la derecha del centro geométrico: el baricentro de
+                un triángulo cae a un tercio de la base, así que un ▶ centrado
+                por caja se lee escorado hacia la izquierda dentro del círculo. */}
+            <path d="M8.5 5.5v13l11-6.5z"></path>
+          </svg>
+        </button>
+
         <span class="conta"><span id="hero-atual">1</span>/2</span>
       </div>
     </div>
@@ -275,12 +318,23 @@ const [slideCao, slideAdote] = hero.slides;
      y el «Período de inscrição» por abajo. Se ve como una tarjeta cortada, no
      como un desbordamiento.
 
-     Va por ALTO de ventana, no por ancho: el que se queda sin sitio es el eje
-     vertical. */
-  @media (max-height: 700px) {
+     Iba SÓLO por alto de ventana, y ahí faltaba la mitad del caso: por debajo
+     de unos 375 px de ancho las fechas del AuMigo pasan a TRES líneas, así que
+     una ventana estrecha pide más sitio aunque sea alta. Un 360×740 —un
+     teléfono corriente— se quedaba 58 px corto y la pista recortaba. De ahí la
+     segunda condición: estrecha cuenta igual que baja.
+
+     El `--h-dados` menor sólo va con la ventana baja: en la estrecha lo que
+     hace falta es lo contrario, y de eso se ocupa el `min-height` de `.dados`. */
+  @media (max-height: 700px), (max-width: 380px) {
     .hero {
       --h-logo: min(32vw, 132px, calc(var(--hero-h) * 0.16));
       --h-msg: min(40vw, 84px, calc(var(--hero-h) * 0.085));
+    }
+  }
+
+  @media (max-height: 700px) {
+    .hero {
       --h-dados: 2.5rem;
     }
   }
@@ -531,14 +585,38 @@ const [slideCao, slideAdote] = hero.slides;
     justify-content: center;
     align-items: baseline;
     align-content: center;
-    height: var(--h-dados);
+
+    /* `min-height`, NO `height`. Con alto fijo, en cuanto las fechas pasan a
+       tres líneas —por debajo de unos 375 px de ancho— la tercera se cortaba
+       por la mitad: «22/08 Boa Vista» partido a media letra. Y no era sólo el
+       móvil pequeño; a 360×640, que es un teléfono corriente, pasaba igual.
+       El suelo sigue igualando la fila en las dos diapositivas mientras el
+       contenido quepa, que es el caso en todo lo que mide 375 o más. Donde no
+       cabe, la fila crece: un CTA que baila unos píxeles al pasar la pista es
+       infinitamente mejor que una fecha cortada. */
+    min-height: var(--h-dados);
     gap: 0.35rem 1.35rem;
+
+    /* Sin esto hereda el 1,5 del documento, y en tres líneas eso son 79 px de
+       fila para 45 de texto: la mitad del desbordamiento era interlínea. Es la
+       misma medida que usa `.claim`. */
+    line-height: 1.2;
     font-size: clamp(0.9375rem, 1.15vw, 1.0625rem);
     font-weight: 900;
   }
 
   .dados strong {
     white-space: nowrap;
+  }
+
+  /* A 320 las tres fechas van sí o sí en tres líneas: el aire entre ellas es lo
+     único prescindible que queda antes de tocar el sello, que es lo que hay que
+     leer. Va DESPUÉS de la regla base y no dentro del bloque de 359 de más
+     arriba: a igual especificidad manda la última, y allí la base la pisaba. */
+  @media (max-width: 359px) {
+    .dados {
+      gap: 0.2rem 1rem;
+    }
   }
 
   .acao {
@@ -551,6 +629,10 @@ const [slideCao, slideAdote] = hero.slides;
   .nota {
     font-size: 0.8125rem;
     font-weight: 600;
+    /* Mismo motivo que en `.dados`: heredaba el 1,5 del documento, y en un
+       móvil estrecho esto son dos o tres líneas. Es letra pequeña de apoyo, no
+       un párrafo de lectura. */
+    line-height: 1.3;
     opacity: 0.85;
   }
 
@@ -653,6 +735,46 @@ const [slideCao, slideAdote] = hero.slides;
     letter-spacing: 0.06em;
     opacity: 0.75;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Mismo material que las flechas —redondo, blanco al 14 %—, un punto más
+     pequeño: es un mando de servicio, no una de las dos formas de pasar la
+     pista. Los 1,9rem son 30 px, por encima del mínimo de 24 de WCAG 2.5.8. */
+  .pausa {
+    display: inline-flex;
+    height: 1.9rem;
+    width: 1.9rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+    color: var(--c-white);
+    cursor: pointer;
+    transition:
+      background 200ms ease,
+      scale 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .pausa:hover {
+    background: rgb(255 255 255 / 0.3);
+    scale: 1.08;
+  }
+
+  /* Un icono a la vez, y quien elige es el estado del contenedor: parado
+     enseña ▶ («ponlo en marcha»), en marcha enseña ‖. La pausa TEMPORAL
+     —ratón encima, pestaña oculta— no cambia el icono: eso vuelve solo, y un
+     botón que parpadea entre dos formas mientras el ratón pasa por encima
+     miente sobre lo que hace al pulsarlo. */
+  .ic-play {
+    display: none;
+  }
+
+  .estado[data-parado='true'] .ic-pausa {
+    display: none;
+  }
+
+  .estado[data-parado='true'] .ic-play {
+    display: inline;
   }
 
   /* ══ Botones ═════════════════════════════════════════════════════════════
@@ -836,7 +958,16 @@ const [slideCao, slideAdote] = hero.slides;
   if (raiz && pista && controles) {
     const slides = Array.from(pista.querySelectorAll('.slide'));
     const conta = document.getElementById('hero-atual');
+    const anterior = document.getElementById('hero-ant');
+    const seguinte = document.getElementById('hero-seg');
+    const pausa = document.getElementById('hero-pausa');
     const INTERVALO = 7000;
+
+    /* Los dos rótulos viajan en el propio botón: este script es un módulo
+       aparte y no ve el frontmatter, y los textos visibles —también los que
+       sólo oye un lector de pantalla— viven en `site.json`, no en el código. */
+    const ROTULO_PAUSAR = pausa?.dataset.rotuloPausar ?? '';
+    const ROTULO_RETOMAR = pausa?.dataset.rotuloRetomar ?? '';
 
     const reduz = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -869,15 +1000,20 @@ const [slideCao, slideAdote] = hero.slides;
       });
     };
 
-    /* Sin botón de pausa visible, la rotación NO puede ser indefinida: da una
-       vuelta completa —enseña las dos ofertas— y se queda quieta en la primera.
-       Así el movimiento automático tiene final, en vez de un carrusel girando
-       para siempre en la esquina del ojo. A partir de ahí manda el usuario con
-       las flechas. */
+    /* La rotación puede ser indefinida SÓLO donde el mando para detenerla se
+       ve: es lo que pide WCAG 2.2.2 para un movimiento automático que dura más
+       de 5 s. Y dónde se ve no lo decide esta línea, lo decide el CSS —los
+       controles no se pintan por debajo de tablet en horizontal—, así que se
+       pregunta al estilo calculado en vez de repetir aquí la media query. Una
+       condición copiada es una condición que un día discrepa.
+       Donde no hay mando, el comportamiento de siempre: una vuelta completa
+       —enseña las dos ofertas— y quieta en la primera. */
+    const comMando = () => getComputedStyle(controles).display !== 'none';
+
     const arrancar = () => {
       if (parado || timer) return;
       timer = setInterval(() => {
-        if (voltas >= slides.length) {
+        if (!comMando() && voltas >= slides.length) {
           parar();
           return;
         }
@@ -885,6 +1021,19 @@ const [slideCao, slideAdote] = hero.slides;
         irA((atual + 1) % slides.length);
       }, INTERVALO);
       controles.removeAttribute('data-pausado');
+      sincronizarAro();
+    };
+
+    /* El aro de la flecha «siguiente» es una animación CSS de 7 s en bucle y el
+       salto lo manda un `setInterval` de 7 s: arrancan juntos y se mantienen.
+       Pero al congelar, el aro se queda donde estaba —lo para el CSS— mientras
+       que el intervalo se destruye y vuelve a empezar de cero. Con una vuelta y
+       parar eso no se llegaba a ver; girando sin fin, el desfase se queda para
+       siempre y el aro se cierra sin que la tarjeta cambie. */
+    const sincronizarAro = () => {
+      seguinte?.getAnimations({ subtree: true }).forEach((a) => {
+        a.currentTime = 0;
+      });
     };
 
     /* Pausa temporal —ratón encima, foco dentro, pestaña del navegador oculta—:
@@ -897,19 +1046,26 @@ const [slideCao, slideAdote] = hero.slides;
       if (!parado) controles.setAttribute('data-pausado', 'true');
     };
 
-    /* Parada definitiva, la que decide el usuario. */
+    /* Parada definitiva, la que decide el usuario. El rótulo del botón cambia
+       con ella: el icono lo pinta el CSS a partir de `data-parado`, pero quien
+       usa un lector de pantalla no ve el icono, lee el `aria-label`. */
     const parar = () => {
       parado = true;
       congelar();
       controles.removeAttribute('data-pausado');
       controles.setAttribute('data-parado', 'true');
+      pausa?.setAttribute('aria-label', ROTULO_RETOMAR);
     };
 
     const retomar = () => {
       parado = false;
       controles.removeAttribute('data-parado');
+      pausa?.setAttribute('aria-label', ROTULO_PAUSAR);
+      voltas = 0;
       arrancar();
     };
+
+    pausa?.addEventListener('click', () => (parado ? retomar() : parar()));
 
     /* Quién está a la vista manda — también cuando se pasa con el dedo. */
     const observador = new IntersectionObserver(
@@ -931,8 +1087,8 @@ const [slideCao, slideAdote] = hero.slides;
       parar();
     };
 
-    document.getElementById('hero-ant')?.addEventListener('click', () => mover(-1));
-    document.getElementById('hero-seg')?.addEventListener('click', () => mover(1));
+    anterior?.addEventListener('click', () => mover(-1));
+    seguinte?.addEventListener('click', () => mover(1));
 
     /* Deslizar con el dedo también es elegir — pero SÓLO deslizar.
        Antes esto era `pointerdown → parar`, y en móvil mataba la rotación al
@@ -965,10 +1121,18 @@ const [slideCao, slideAdote] = hero.slides;
 
     /* La pausa por puntero encima sólo tiene sentido donde hay puntero: en una
        pantalla táctil `pointerenter` se dispara al tocar, no al pasar por
-       encima, así que aquí congelaba con cada toque. */
+       encima, así que aquí congelaba con cada toque.
+
+       Y va sobre la TARJETA, no sobre el hero. `#conteudo` mide exactamente una
+       pantalla, así que en escritorio el ratón está dentro casi siempre: al
+       primer movimiento después de cargar, `pointerenter` congelaba la rotación
+       y no volvía hasta salir de la primera pantalla. El resultado era que el
+       carrusel no giraba nunca — que es justo lo que se veía. */
+    const zonaPuntero = pista.closest('.bloco-slider') ?? pista;
+
     if (window.matchMedia('(hover: hover)').matches) {
-      raiz.addEventListener('pointerenter', congelar);
-      raiz.addEventListener('pointerleave', arrancar);
+      zonaPuntero.addEventListener('pointerenter', congelar);
+      zonaPuntero.addEventListener('pointerleave', arrancar);
     }
 
     /* Congelar mientras alguien navega con el teclado por dentro del hero es
@@ -990,7 +1154,14 @@ const [slideCao, slideAdote] = hero.slides;
     /* Si el usuario activa "reducir movimiento" con la página ya abierta. */
     reduz.addEventListener('change', () => (reduz.matches ? parar() : retomar()));
 
-    if (parado) controles.setAttribute('data-parado', 'true');
+    /* Arrancar parado es el caso de «reducir movimiento»: el carrusel se queda
+       quieto y el botón enseña ▶, que es la invitación a ponerlo en marcha a
+       quien lo quiera. */
+    if (parado) {
+      controles.setAttribute('data-parado', 'true');
+      pausa?.setAttribute('aria-label', ROTULO_RETOMAR);
+    }
+
     arrancar();
   }
 </script>

@@ -35,7 +35,9 @@
       "carrossel": "Destaques do Mês Pet",
       "pista": "Diapositivas",
       "anterior": "Destaque anterior",
-      "seguinte": "Próximo destaque"
+      "seguinte": "Próximo destaque",
+      "pausar": "Pausar a troca automática",
+      "retomar": "Retomar a troca automática"
     },
     "slides": [
       {

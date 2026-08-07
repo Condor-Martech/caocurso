@@ -253,8 +253,31 @@ antes da faixa Cãocurso e depois dela.
   `prefers-reduced-motion`. Os slides **não levam fotos**, só logo, datas e CTA. As suas
   duas colunas dependem da variante **`fila:`** (largura **e** orientação), não de `md:`:
   em tablet na vertical o mockup deixa meia tela vazia e ali manda o bloco empilhado.
-  **As setas e o contador só aparecem de tablet na horizontal para cima**: no celular a
-  pista se passa com o dedo e aquela faixa inferior é o que dá corpo ao selo.
+  **As setas, o contador e o botão de pausa só aparecem de tablet na horizontal para
+  cima**: no celular a pista se passa com o dedo e aquela faixa inferior é o que dá corpo
+  ao selo.
+- **A rotação do hero gira a cada 7 s, e quanto tempo gira depende de haver um botão de
+  pausa à vista.** É a WCAG 2.2.2: movimento automático que dura mais de 5 s precisa de um
+  comando visível para detê-lo. Onde os controles são pintados a rotação é indefinida e o
+  botão ‖/▶ ao lado do contador a para e a retoma; **no celular, onde eles não são
+  pintados, dá uma volta completa e fica quieta no primeiro slide**. Quem decide isso não é
+  uma media query repetida no script: é `getComputedStyle(controles).display`, para que a
+  regra viva só no CSS.
+  ⚠️ **A pausa por ponteiro em cima vai na `.bloco-slider`, nunca na seção do hero.**
+  Esteve no `#conteudo`, que mede uma tela inteira: no desktop o mouse está dentro quase
+  sempre, então ao primeiro movimento depois de carregar a rotação congelava e só voltava
+  ao sair da primeira tela. Na prática o carrossel não girava nunca.
+- **A grade de linhas do slide cede antes de cortar texto.** `--h-logo` e `--h-msg` são
+  altura fixa —é o que faz o CTA cair na mesma altura nas duas ofertas—, mas `.dados` é
+  **`min-height`**: abaixo de uns 375 px as três datas do AuMigo passam a três linhas e um
+  alto fixo cortava «22/08 Boa Vista» pela metade. Não era só o celular pequeno; num
+  360×640 acontecia igual. Onde não cabe, a fila cresce e o CTA desalinha uns pixels entre
+  os slides — que é infinitamente melhor que uma data cortada.
+  Duas coisas que vão juntas com isso: as linhas compactas passaram a valer **também por
+  largura** (`(max-height: 700px), (max-width: 380px)`), porque uma janela estreita pede
+  mais espaço mesmo sendo alta —um 360×740 ficava 58 px curto—; e `.dados` e `.nota` levam
+  `line-height` próprio, porque herdavam o 1,5 do documento e em três linhas isso eram 79 px
+  de fila para 45 de texto. Medido sem corte de 320×480 a 1366×768.
 - `Requisitos` é **um painel único com 6 bullets em duas colunas**, não três cards.
 - `Eventos` são **2 cartões em cima e 1 centralizado embaixo**, não uma fileira de três.
 - O bloco 7 se chama `Evento30Agosto.astro` por herança de 2025, mas em 2026 a data é o
