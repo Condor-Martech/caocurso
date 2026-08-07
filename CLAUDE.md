@@ -590,10 +590,17 @@ Script → linha na aba → link da foto abrindo a imagem).
    Petcare, Caats e Doguitos **já têm material** em
    `assets-fonte/patrocinadores/Apoio/`; falta tirar de cada pasta o arquivo web e
    repontar o `site.ts`. `Logo-Purina-One-Caes.png` **não** é Doguitos.
-2. **Regulamento 2026:** o botão já está **ativo**, mas apontando para o PDF **de 2025**
-   (`regulamentoPdf` em `site.json`, hospedado no MinIO). Quando o de 2026 chegar é trocar
-   essa URL — o interruptor `regulamentoDisponivel` já está em `true` e o ramo que mostra
-   «disponível em breve» segue escrito para o caso de precisar voltar atrás.
+2. **Regulamento 2026:** o botão está **ativo** e aponta para
+   `lp-content/caocurso/docs/regulamento caocurso.pdf` (`regulamentoPdf` em `site.json`),
+   que foi o arquivo indicado pelo cliente em 2026-08-07. **Mas o PDF que está lá não é o
+   regulamento:** é um «Termo de Adesão e Declaração de Mandato» de uma página — a Condor
+   outorgando poderes à Polypromo perante a SPA/ME — e declara o período 11/08–29/08/2026,
+   que não é a janela de inscrição de `cao_campanha`. Trocou-se assim mesmo porque o PDF de
+   2025 **já não existe**: aquela URL devolve 404 desde que o bucket foi reorganizado, e o
+   botão apontava para o nada. Quando o regulamento de verdade chegar, sobe-se com **a
+   mesma key** e não é preciso tocar em código. O interruptor `regulamentoDisponivel` segue
+   em `true`, e o ramo «disponível em breve» continua escrito para o caso de precisar
+   voltar atrás.
 3. **Fotos da galeria:** a arte mostra 13 fotos e no repositório há 12, que além disso não
    são a mesma seleção que o designer usou.
 

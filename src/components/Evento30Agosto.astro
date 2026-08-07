@@ -29,8 +29,10 @@ const [horarioPrefixo = '', ...horarioResto] = caocurso.horario.split(' ');
 const horarioValor = horarioResto.join(' ');
 
 /* El regulamento de 2026 todavía no ha llegado: `regulamentoPdf` apunta hoy al
-   PDF de 2025 y `regulamentoDisponivel` está en true, así que el botón enlaza.
-   Cuando llegue el de 2026 se cambia esa URL en src/data/site.json y ya está.
+   PDF que el cliente señaló el 2026-08-07 —que es un termo de adesão, no el
+   reglamento; ver la nota en src/data/site.ts— y `regulamentoDisponivel` está en
+   true, así que el botón enlaza. Cuando llegue el de verdad se cambia esa URL en
+   src/data/site.json y ya está.
 
    La rama del botón deshabilitado se mantiene por si hay que volver atrás:
    con el flag en false se pinta igual pero sin enlace, porque un
