@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE } from '../data/site';
+import { tagGoogle, ehGtm } from '../lib/tag-google';
 
 interface Props {
   title?: string;
@@ -32,6 +33,33 @@ const {
     <!-- Sello 2026. El anterior (/assets/images/Selo.png) era el sello ROJO de 2025.
          WebP como favicon lo soportan todos los navegadores modernos. -->
     <link rel="icon" type="image/webp" href="/assets/2026/selo-mespet-2026.webp" />
+
+    {/* Google pide su etiqueta «lo más arriba posible» del head, y aquí no
+        cuesta nada: los dos scripts son `async`, así que no retrasan ni el
+        parseo ni el descubrimiento de las precargas de abajo.
+        `is:inline` es obligatorio — sin él Astro se lleva el script al bundle
+        y lo sirve como módulo diferido, que es justo lo contrario de lo que
+        estos dos fragmentos necesitan. */}
+    {
+      tagGoogle && !ehGtm && (
+        <Fragment>
+          <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${tagGoogle}`} />
+          <script
+            is:inline
+            set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${tagGoogle}');`}
+          />
+        </Fragment>
+      )
+    }
+
+    {
+      tagGoogle && ehGtm && (
+        <script
+          is:inline
+          set:html={`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${tagGoogle}');`}
+        />
+      )
+    }
 
     <!-- La fuente de marca es crítica para el render: precargar los pesos usados -->
     <link
@@ -70,6 +98,23 @@ const {
   </head>
 
   <body>
+    {/* Sólo el Tag Manager lleva esto, y va pegado a la apertura del body por
+        indicación de Google. Es lo único que mide a quien no ejecuta scripts;
+        la etiqueta de Google no tiene equivalente. */}
+    {
+      tagGoogle && ehGtm && (
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${tagGoogle}`}
+            height="0"
+            width="0"
+            style="display:none;visibility:hidden"
+            title="Google Tag Manager"
+          />
+        </noscript>
+      )
+    }
+
     <a href="#conteudo" class="sr-only">Pular para o conteúdo</a>
     <slot />
 

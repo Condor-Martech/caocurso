@@ -573,6 +573,15 @@ Script → linha na aba → link da foto abrindo a imagem).
 3. **Deploy no VPS.** Os artefatos estão prontos (`Dockerfile`, `docker-compose.yml`,
    `deploy/nginx.conf.example`) e quem os executa é a equipe de infra, não este repositório.
    As duas linhas inegociáveis do Nginx estão no `README.md`.
+4. **A medição do Google está pronta e desligada.** Falta o ID e a decisão de LGPD, não
+   código: preencher `GOOGLE_TAG_ID` no `.env` liga, esvaziar desliga, e **nenhum dos dois
+   pede rebuild** — a variável é lida em tempo de execução (por isso é `access: 'secret'`
+   apesar de acabar impressa no HTML; as públicas se incrustam ao construir). Com ela vazia
+   não sai script nenhum, então não há cookie do Google enquanto ninguém decidir. O site
+   escolhe entre a etiqueta do Google (`G-…`) e o Tag Manager (`GTM-…`) pelo prefixo do ID.
+   ⚠️ **Ligar cria uma cookie de medição numa página que não tem aviso de cookies** — é o
+   mesmo assunto do ponto 1, e a mesma pessoa que decide. Ver `README.md`, «Medição do
+   Google».
 
 **Pendente de o cliente fornecer material** (não é trabalho de código):
 
@@ -640,10 +649,10 @@ Esta pasta é **isolada e autossuficiente**:
 ```
 /home/diego/armando/Sites/petcondor/
 ├── astro.config.mjs           (output: 'server' + @astrojs/node standalone,
-│                               passthroughImageService, env.schema com 11 variáveis)
+│                               passthroughImageService, env.schema com 12 variáveis)
 ├── Dockerfile                 (multi-stage node:22-slim, USER node, HEALTHCHECK /healthz)
 ├── docker-compose.yml         (127.0.0.1:4321, init: true, env_file: .env)
-├── .env.example               (a planta das 11 variáveis; o .env NÃO é versionado)
+├── .env.example               (a planta das 12 variáveis; o .env NÃO é versionado)
 ├── deploy/
 │   ├── nginx.conf.example     (proxy reverso — leia o `map` do Origin antes de tocar)
 │   └── planilha.gs            (o Apps Script que recebe e reescreve a aba do júri)
@@ -695,7 +704,9 @@ Esta pasta é **isolada e autossuficiente**:
 │   │   │                       .mjs para que o script de limpeza importe A MESMA lista:
 │   │   │                       tê-la duplicada já custou o CPF)
 │   │   ├── planilha-colunas.d.ts (os tipos do anterior, para o astro check)
-│   │   └── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
+│   │   ├── limite.ts          (8 tentativas por IP a cada 10 min. EM MEMÓRIA)
+│   │   └── tag-google.ts      (valida GOOGLE_TAG_ID uma vez por processo.
+│   │                           Vazia = nenhum script do Google sai no HTML)
 │   ├── data/
 │   │   ├── site.json          (TODO o conteúdo visível: 192 strings, 15 blocos)
 │   │   └── site.ts            (os tipos e o porquê: comentários que o JSON não aceita)

@@ -121,6 +121,7 @@ Copie `.env.example` para `.env`. **O `.env` não é versionado e não entra na 
 | `PLANILHA_WEBHOOK_TOKEN` | O mesmo segredo que se cola no menu «Cãocurso» da planilha |
 | `SITE_URL` | Endereço público, só para o link da foto. Em produção: `https://pet.condor.com.br` |
 | `EXPORTACAO_TOKEN` | Segredo de `GET /api/exportar`, o conserto manual. Vazio = rota desativada |
+| `GOOGLE_TAG_ID` | `G-…` (GA4) ou `GTM-…` (Tag Manager). Vazio = nenhum script do Google. Ver abaixo |
 
 Onde achar as do Supabase: Dashboard → Project Settings → API. As da planilha saem do
 Apps Script, e estão explicadas no cabeçalho de [`deploy/planilha.gs`](deploy/planilha.gs).
@@ -134,6 +135,48 @@ Apps Script, e estão explicadas no cabeçalho de [`deploy/planilha.gs`](deploy/
 > usa é importado pela primeira vez. Um contêiner com o `.env` incompleto **sobe, serve a
 > página e sai `healthy`** — e só quebra na primeira inscrição. Quem detecta isso é
 > `/healthz`, que é o alvo do healthcheck exatamente por esse motivo.
+
+---
+
+## Medição do Google
+
+Está **pronta e desligada**. Ligar são três passos e nenhum é de código:
+
+```bash
+# 1. no .env do VPS
+GOOGLE_TAG_ID=G-XXXXXXXXXX      # ou GTM-XXXXXXX
+
+# 2. reiniciar — SEM rebuild: a variável é lida em tempo de execução
+docker compose up -d
+
+# 3. conferir que o script saiu no HTML
+curl -s https://pet.condor.com.br | grep -o 'googletagmanager[^"]*'
+```
+
+Desligar é o inverso: esvaziar a variável e reiniciar. Com ela vazia **não sai nenhum
+script**, o navegador não pede nada a um domínio do Google e nenhuma cookie de medição é
+escrita — não é preciso comentar código nem publicar outra versão.
+
+| Prefixo | O que é | Onde se acha |
+|---|---|---|
+| `G-XXXXXXXXXX` | Etiqueta do Google (GA4) | GA4 → Admin → Fluxos de dados |
+| `GTM-XXXXXXX` | Tag Manager | No topo do painel do contêiner |
+| `AW-…` / `DC-…` | Google Ads / Campaign Manager | Painel de cada produto |
+
+O site **escolhe o trecho de instalação pelo prefixo**, então quem recebe o ID do
+marketing não precisa saber qual dos dois lhe tocou. O Tag Manager leva também o
+`<noscript>` com o iframe, que é o único jeito de medir quem não executa scripts; a
+etiqueta do Google não tem equivalente.
+
+Um valor que não tenha cara de ID —com aspas, com espaço, com a URL inteira colada— é
+**ignorado**, e o motivo aparece no log do contêiner (`docker logs petcondor-lp`). É de
+propósito: um valor mal colado emendaria texto de fora dentro de um `<script>` da página.
+
+> ⚠️ **Ligar isto é uma decisão de LGPD, não só técnica.** Passa a existir cookie de
+> medição e transferência de dados de navegação para o Google, e **a página não tem aviso
+> de cookies**. Se a Condor for medir, o aviso e a base legal precisam vir junto — não
+> depois. É o mesmo assunto do consentimento agrupado que já está pendente em
+> [`docs/PLATAFORMA.md`](docs/PLATAFORMA.md) §5.
 
 ---
 
